@@ -90,6 +90,10 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 
 **Manual Sale:** Admin can directly sell any PENDING or UNSOLD player to any team at a chosen price via `admin:manualSale` (SETUP or ENDED phase only). Uses the same `computeMaxBid` budget validation as live bidding. UI is the collapsible **💰 Manual Sale** panel at the bottom of Auction Controls. On success broadcasts `auction:sold` to all clients. `AuctionContext` exposes `adminError` / `clearAdminError()` (sourced from `admin:error` socket events) for in-panel error display.
 
+**Owner Players:** If a player's CSV has a `type` column set to `owner` (case-insensitive), that player is an owner. Owners skip the bidding queue entirely. Their `soldFor` price is automatically set to the **average soldFor** of all non-owner SOLD players in the same pool (`syncOwnerAverages` in `auction.js`). Owners are assigned to teams via a `team` CSV column (case-insensitive match to team name); no budget is deducted. Owner averages are recalculated whenever any player in their pool is sold (bid, manual sale, admin edit) or rolled back. The Player Data tab shows an OWNER badge on owner players; their sold price shows with an "avg" indicator.
+
+**Edit Sale Price:** Admin can edit the sold price of any non-owner SOLD player via the ✏ button in the Player Data tab. The `admin:editSalePrice` socket event refunds the old price to the team, deducts the new price, updates the roster entry, and recalculates owner pool averages.
+
 ### Socket Events Reference
 
 | Event | Direction | Description |
@@ -110,6 +114,7 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 | `admin:acceptBid` | client→server | Admin hammers sale (manual mode) |
 | `admin:reAuction` | client→server | Admin re-queues unsold/sold player |
 | `admin:manualSale` | client→server | Admin directly sells a PENDING/UNSOLD player to a team at a chosen price |
+| `admin:editSalePrice` | client→server | Admin edits the sold price of an already-sold non-owner player; adjusts team budget and recalculates owner pool averages |
 | `admin:updateSettings` | client→server | Admin changes live settings |
 
 ### Authentication

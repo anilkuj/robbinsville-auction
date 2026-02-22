@@ -9,6 +9,8 @@ const {
   processUnsold,
   clearAuctionTimer,
   computeMaxBid,
+  isOwner,
+  syncOwnerAverages,
 } = require('../auction');
 
 function registerAdminHandlers(io, socket) {
@@ -80,6 +82,7 @@ function registerAdminHandlers(io, socket) {
       }
     }
 
+    const prevPool = player.pool;
     player.status = 'PENDING';
     player.soldTo = null;
     player.soldFor = null;
@@ -92,10 +95,13 @@ function registerAdminHandlers(io, socket) {
     for (const team of Object.values(state.teams)) {
       const rosterIdx = team.roster.findIndex(r => r.playerId === playerId);
       if (rosterIdx !== -1) {
-        team.budget += team.roster[rosterIdx].price;
+        if (!isOwner(player)) team.budget += team.roster[rosterIdx].price;
         team.roster.splice(rosterIdx, 1);
       }
     }
+
+    // Recalculate owner averages for this pool (pool avg changed now that player is PENDING)
+    syncOwnerAverages(state, prevPool);
 
     saveState();
     io.emit('state:full', getPublicState());
@@ -173,6 +179,9 @@ function registerAdminHandlers(io, socket) {
     const unsoldIdx = state.unsoldPlayers.indexOf(playerId);
     if (unsoldIdx !== -1) state.unsoldPlayers.splice(unsoldIdx, 1);
 
+    // Recalculate owner averages for this pool
+    syncOwnerAverages(state, player.pool);
+
     state.lastSoldPlayerId = player.id;
     saveState();
 
@@ -183,6 +192,53 @@ function registerAdminHandlers(io, socket) {
       teamName: team.name,
       publicState: getPublicState(),
     });
+  });
+
+  socket.on('admin:editSalePrice', ({ playerId, newAmount }) => {
+    const state = getState();
+
+    const player = state.players.find(p => p.id === playerId);
+    if (!player) {
+      socket.emit('admin:error', { message: 'Player not found' });
+      return;
+    }
+    if (player.status !== 'SOLD') {
+      socket.emit('admin:error', { message: 'Player is not sold' });
+      return;
+    }
+    if (isOwner(player)) {
+      socket.emit('admin:error', { message: 'Cannot manually edit owner sale price (it is calculated automatically)' });
+      return;
+    }
+
+    const amount = parseInt(newAmount);
+    if (isNaN(amount) || amount <= 0) {
+      socket.emit('admin:error', { message: 'Amount must be a positive number' });
+      return;
+    }
+
+    const team = player.soldTo ? state.teams[player.soldTo] : null;
+    const oldAmount = player.soldFor || 0;
+
+    // Adjust team budget: refund old, deduct new
+    if (team) {
+      team.budget += oldAmount;
+      team.budget -= amount;
+    }
+
+    player.soldFor = amount;
+
+    // Update roster entry price
+    if (team) {
+      const entry = team.roster.find(r => r.playerId === playerId);
+      if (entry) entry.price = amount;
+    }
+
+    // Recalculate owner averages for this pool
+    syncOwnerAverages(state, player.pool);
+
+    saveState();
+    io.emit('state:full', getPublicState());
   });
 
   socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool }) => {

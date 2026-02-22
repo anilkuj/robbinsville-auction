@@ -123,7 +123,7 @@ export default function AdminPage() {
               <TeamsTab auctionState={auctionState} />
             )}
             {tab === 'Player Data' && (
-              <PlayerDataTab auctionState={auctionState} />
+              <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />
             )}
             {tab === 'Settings' && (
               <SettingsTab auctionState={auctionState} />
@@ -1094,9 +1094,16 @@ function TeamsTab({ auctionState }) {
 
 // ─── Player Data Tab ──────────────────────────────────────────────────────────
 
-function PlayerDataTab({ auctionState }) {
+function playerIsOwner(player) {
+  if (!player.extra) return false;
+  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type');
+  return typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
+}
+
+function PlayerDataTab({ auctionState, adminAction }) {
   const { players = [], teams = {} } = auctionState;
   const [filter, setFilter] = useState('ALL');
+  const [editPlayer, setEditPlayer] = useState(null);
 
   if (players.length === 0) {
     return (
@@ -1127,15 +1134,21 @@ function PlayerDataTab({ auctionState }) {
   const poolColor = (poolId) => {
     if (poolId?.startsWith('A')) return { color: '#f59e0b', bg: '#1c0d00', border: '#f59e0b40' };
     if (poolId?.startsWith('B')) return { color: '#60a5fa', bg: '#0d1c35', border: '#3b82f640' };
-    if (poolId === 'C')          return { color: '#a78bfa', bg: '#150d2e', border: '#8b5cf640' };
+    if (poolId?.startsWith('C')) return { color: '#a78bfa', bg: '#150d2e', border: '#8b5cf640' };
     return { color: '#94a3b8', bg: '#0f1a2e', border: '#64748b40' };
   };
 
-  // Fixed columns: #, Pool, Name, [extra...], Base, Status, Sold To, Sold Price
-  const totalCols = 4 + extraKeys.length + 3; // rough count for coloring
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {editPlayer && (
+        <EditPriceModal
+          player={editPlayer}
+          teams={teams}
+          adminAction={adminAction}
+          onClose={() => setEditPlayer(null)}
+        />
+      )}
+
       {/* Header row: title + filter chips */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
@@ -1178,10 +1191,12 @@ function PlayerDataTab({ auctionState }) {
               <TH center>Status</TH>
               <TH>Sold To</TH>
               <TH right>Sold Price</TH>
+              <TH center></TH>
             </tr>
           </thead>
           <tbody>
             {filtered.map((p, i) => {
+              const owner = playerIsOwner(p);
               const sc = statusCfg[p.status] || statusCfg.PENDING;
               const pc = poolColor(p.pool);
               const soldTeam = p.soldTo ? teams[p.soldTo] : null;
@@ -1201,7 +1216,19 @@ function PlayerDataTab({ auctionState }) {
                       fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
                     }}>{p.pool}</span>
                   </TD>
-                  <TD style={{ color: '#f1f5f9', fontWeight: 500 }}>{p.name}</TD>
+                  <TD style={{ color: '#f1f5f9', fontWeight: 500 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      {p.name}
+                      {owner && (
+                        <span style={{
+                          background: '#1e1035', color: '#a78bfa',
+                          border: '1px solid #7c3aed60',
+                          borderRadius: '3px', padding: '0.05rem 0.35rem',
+                          fontSize: '0.62rem', fontWeight: 700,
+                        }}>OWNER</span>
+                      )}
+                    </span>
+                  </TD>
                   {extraKeys.map(k => (
                     <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
                   ))}
@@ -1214,8 +1241,31 @@ function PlayerDataTab({ auctionState }) {
                     }}>{sc.label}</span>
                   </TD>
                   <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
-                  <TD right style={{ color: p.soldFor ? '#22c55e' : '#334155', fontWeight: p.soldFor ? 600 : 400, whiteSpace: 'nowrap' }}>
-                    {p.soldFor ? formatPts(p.soldFor) : '—'}
+                  <TD right style={{ whiteSpace: 'nowrap' }}>
+                    {owner && p.soldFor ? (
+                      <span style={{ color: '#a78bfa', fontWeight: 600 }}>
+                        {formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span>
+                      </span>
+                    ) : p.soldFor ? (
+                      <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
+                    ) : (
+                      <span style={{ color: '#334155' }}>—</span>
+                    )}
+                  </TD>
+                  <TD center>
+                    {p.status === 'SOLD' && !owner && (
+                      <button
+                        onClick={() => setEditPlayer(p)}
+                        style={{
+                          background: 'none', border: '1px solid #334155', color: '#94a3b8',
+                          borderRadius: '4px', padding: '0.2rem 0.5rem',
+                          fontSize: '0.7rem', cursor: 'pointer',
+                        }}
+                        title="Edit sold price"
+                      >
+                        ✏
+                      </button>
+                    )}
                   </TD>
                 </tr>
               );
@@ -1224,6 +1274,93 @@ function PlayerDataTab({ auctionState }) {
         </table>
       </div>
     </div>
+  );
+}
+
+// ─── Edit Price Modal ─────────────────────────────────────────────────────────
+
+function EditPriceModal({ player, teams, adminAction, onClose }) {
+  const soldTeam = player.soldTo ? teams[player.soldTo] : null;
+  const [amount, setAmount] = useState(String(player.soldFor || ''));
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function handleSave() {
+    const parsed = parseInt(amount);
+    if (isNaN(parsed) || parsed <= 0) {
+      setError('Enter a valid positive amount');
+      return;
+    }
+    setSaving(true);
+    setError('');
+    adminAction('admin:editSalePrice', { playerId: player.id, newAmount: parsed });
+    // Close optimistically — if there's an error it'll show via admin:error
+    setTimeout(onClose, 200);
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>✏</div>
+      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+        Edit Sold Price
+      </div>
+
+      <div style={{
+        background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem',
+        marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem',
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b' }}>Player</span>
+          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{player.name}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b' }}>Pool</span>
+          <span style={{ color: '#94a3b8' }}>{player.pool}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b' }}>Sold to</span>
+          <span style={{ color: '#f1f5f9' }}>{soldTeam?.name || '—'}</span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+          <span style={{ color: '#64748b' }}>Current price</span>
+          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{player.soldFor?.toLocaleString()} pts</span>
+        </div>
+      </div>
+
+      <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>New sold price (pts):</div>
+      <input
+        type="number"
+        min="1"
+        value={amount}
+        onChange={e => { setAmount(e.target.value); setError(''); }}
+        onKeyDown={e => e.key === 'Enter' && handleSave()}
+        autoFocus
+        style={{
+          width: '100%', boxSizing: 'border-box',
+          background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
+          color: '#f1f5f9', borderRadius: '7px',
+          padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
+          marginBottom: '0.5rem',
+        }}
+      />
+
+      <div style={{ color: '#64748b', fontSize: '0.72rem', marginBottom: '1rem' }}>
+        Team budget will be adjusted automatically. Owner averages in Pool {player.pool} will be recalculated.
+      </div>
+
+      {error && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
+
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{ ...modalBtn('#22c55e'), flex: 2, opacity: saving ? 0.5 : 1 }}
+        >
+          {saving ? 'Saving…' : 'Save Price'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

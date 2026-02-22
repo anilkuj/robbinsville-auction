@@ -6,7 +6,7 @@ const authenticate = require('../middleware/authenticate');
 const requireAdmin = require('../middleware/requireAdmin');
 const { getState, DEFAULT_POOLS } = require('../state');
 const { saveState } = require('../persistence');
-const { getPublicState, clearAuctionTimer } = require('../auction');
+const { getPublicState, clearAuctionTimer, syncOwnerAverages } = require('../auction');
 const config = require('../config');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -399,6 +399,9 @@ router.post('/rollback-last-sale', authenticate, requireAdmin, (req, res) => {
     if (idx !== -1) team.roster.splice(idx, 1);
     team.budget += refundAmount;
   }
+
+  // Recalculate owner averages for this pool (one less sold player now)
+  syncOwnerAverages(state, player.pool);
 
   // Update lastSoldPlayerId to the next most recent sold player
   const remainingSold = state.players

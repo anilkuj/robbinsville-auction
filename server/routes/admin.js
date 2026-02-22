@@ -237,8 +237,45 @@ router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
   res.json({ message: 'Auction reset successfully', publicState: getPublicState() });
 });
 
-// Load test data — 3 teams × 33 players (pools A/B/C)
+// Get current team passwords (admin only — not exposed in public state)
+router.get('/team-passwords', authenticate, requireAdmin, (req, res) => {
+  const state = getState();
+  const teams = {};
+  for (const [id, team] of Object.entries(state.teams)) {
+    teams[id] = { name: team.name, password: team.password };
+  }
+  res.json({ teams, dashboardPin: state.settings.dashboardPin });
+});
+
+// Update team passwords and/or dashboard PIN (works in any phase)
+router.post('/update-passwords', authenticate, requireAdmin, (req, res) => {
+  const { teams, dashboardPin } = req.body;
+  const state = getState();
+
+  if (teams) {
+    for (const [teamId, password] of Object.entries(teams)) {
+      if (state.teams[teamId] && typeof password === 'string' && password.trim()) {
+        state.teams[teamId].password = password.trim();
+      }
+    }
+  }
+  if (dashboardPin !== undefined) {
+    state.settings.dashboardPin = String(dashboardPin).trim();
+  }
+
+  saveState();
+  io.emit('auction:settingsChanged', getPublicState());
+  res.json({ message: 'Passwords updated successfully' });
+});
+
+// Load test data — 3 teams × 33 players (pools A/B/C) — requires admin password confirmation
 router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password !== config.admin.password) {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+
   const state = getState();
 
   if (state.phase !== 'SETUP') {

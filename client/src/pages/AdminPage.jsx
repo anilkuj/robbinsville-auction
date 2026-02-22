@@ -12,7 +12,7 @@ import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
 
-const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters'];
+const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Settings'];
 
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
@@ -37,7 +37,6 @@ export default function AdminPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '1.3rem' }}>🏏</span>
           <span style={{ fontWeight: 800, color: '#f59e0b' }}>RPL Admin</span>
-          <PhaseChip phase={phase} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{
@@ -122,6 +121,9 @@ export default function AdminPage() {
             )}
             {tab === 'Teams & Rosters' && (
               <TeamsTab auctionState={auctionState} />
+            )}
+            {tab === 'Settings' && (
+              <SettingsTab auctionState={auctionState} />
             )}
           </div>
         </div>
@@ -566,6 +568,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
 // ─── Load Test Data Modal ─────────────────────────────────────────────────────
 
 function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -574,7 +577,7 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
     setLoading(true);
     setError('');
     try {
-      await axios.post('/api/admin/load-test-data');
+      await axios.post('/api/admin/load-test-data', { password });
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load test data');
@@ -636,6 +639,24 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
             </div>
           )}
 
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Enter admin password to confirm:</div>
+            <input
+              type="password"
+              placeholder="Admin password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && password && handleLoad()}
+              autoFocus
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
+                color: '#f1f5f9', borderRadius: '7px',
+                padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
+              }}
+            />
+          </div>
+
           {error && (
             <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>
           )}
@@ -644,8 +665,8 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
             <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
             <button
               onClick={handleLoad}
-              disabled={loading}
-              style={{ ...modalBtn('#0369a1'), flex: 2, opacity: loading ? 0.6 : 1 }}
+              disabled={!password || loading}
+              style={{ ...modalBtn('#0369a1'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
             >
               {loading ? 'Loading…' : hasExistingData ? '⚠ Replace & Load' : '🧪 Load Test Data'}
             </button>
@@ -776,6 +797,141 @@ function TeamsTab({ auctionState }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '800px' }}>
       <SectionTitle>All Teams</SectionTitle>
       <TeamRosterTable teams={teams} leagueConfig={leagueConfig} />
+    </div>
+  );
+}
+
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
+
+function SettingsTab({ auctionState }) {
+  const { teams, settings } = auctionState;
+  const teamList = Object.values(teams);
+
+  // Local state for new passwords — empty means "keep current"
+  const [passwords, setPasswords] = useState({});
+  const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  // Reset local pin state when server state changes
+  useEffect(() => {
+    setDashPin(settings.dashboardPin || '');
+  }, [settings.dashboardPin]);
+
+  // Reset password fields when teams change (e.g. after load test data)
+  useEffect(() => {
+    setPasswords({});
+  }, [Object.keys(teams).join(',')]);
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await axios.post('/api/admin/update-passwords', {
+        teams: passwords,
+        dashboardPin: dashPin,
+      });
+      setPasswords({}); // clear after save
+      setMsg({ type: 'ok', text: 'Settings saved!' });
+    } catch (err) {
+      setMsg({ type: 'err', text: err.response?.data?.error || 'Save failed' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const inputSm = {
+    background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
+    borderRadius: '6px', padding: '0.4rem 0.5rem', fontSize: '0.85rem', width: '100%',
+    boxSizing: 'border-box',
+  };
+
+  const hasChanges = Object.values(passwords).some(p => p.trim()) || dashPin !== (settings.dashboardPin || '');
+
+  return (
+    <div style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+
+      {/* Team Passwords */}
+      <section>
+        <SectionTitle>Team Passwords</SectionTitle>
+        {teamList.length === 0 ? (
+          <div style={{ color: '#475569', fontSize: '0.85rem' }}>
+            No teams configured yet. Set up teams in League Setup first.
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', padding: '0 0.5rem' }}>
+              <span style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>Team Name</span>
+              <span style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>New Password</span>
+            </div>
+            {teamList.map(team => (
+              <div key={team.id} style={{
+                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem',
+                background: '#0f172a', padding: '0.5rem 0.6rem', borderRadius: '6px', alignItems: 'center',
+              }}>
+                <span style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{team.name}</span>
+                <input
+                  style={inputSm}
+                  type="text"
+                  placeholder="Leave empty to keep current"
+                  value={passwords[team.id] || ''}
+                  onChange={e => setPasswords(prev => ({ ...prev, [team.id]: e.target.value }))}
+                />
+              </div>
+            ))}
+            <div style={{ color: '#475569', fontSize: '0.72rem', marginTop: '0.25rem', paddingLeft: '0.25rem' }}>
+              Leave a field empty to keep the existing password unchanged.
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Dashboard PIN */}
+      <section>
+        <SectionTitle>Dashboard PIN</SectionTitle>
+        <div style={{ color: '#64748b', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
+          Spectators must enter this PIN to view the live dashboard at <code style={{ color: '#94a3b8' }}>/dashboard</code>.
+          Leave empty for open access.
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <input
+            style={{ ...inputSm, width: '200px' }}
+            type="text"
+            value={dashPin}
+            onChange={e => setDashPin(e.target.value)}
+            placeholder="No PIN — open access"
+            maxLength={20}
+          />
+          {settings.dashboardPin
+            ? <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>● PIN active</span>
+            : <span style={{ color: '#475569', fontSize: '0.78rem' }}>○ Open access</span>
+          }
+        </div>
+      </section>
+
+      {/* Save */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <button
+          onClick={save}
+          disabled={saving || !hasChanges}
+          style={{
+            padding: '0.65rem 2rem', fontWeight: 700, fontSize: '0.95rem',
+            background: hasChanges ? '#22c55e' : '#334155',
+            color: hasChanges ? '#fff' : '#64748b',
+            border: hasChanges ? 'none' : '1px dashed #475569',
+            borderRadius: '8px',
+            cursor: hasChanges && !saving ? 'pointer' : 'not-allowed',
+            opacity: saving ? 0.6 : 1,
+          }}
+        >
+          {saving ? 'Saving…' : 'Save Settings'}
+        </button>
+        {msg && (
+          <span style={{ fontSize: '0.85rem', color: msg.type === 'ok' ? '#22c55e' : '#ef4444' }}>
+            {msg.type === 'ok' ? '✓' : '✗'} {msg.text}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

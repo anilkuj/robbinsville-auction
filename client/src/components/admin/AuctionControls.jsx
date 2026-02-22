@@ -20,7 +20,6 @@ export default function AuctionControls() {
   const [increment, setIncrement] = useState('');
   const [bump, setBump] = useState('');
   const [pendingEndMode, setPendingEndMode] = useState(null); // null = no change pending
-  const [pendingPin, setPendingPin] = useState(null); // null = no change pending
 
   if (!auctionState) return null;
 
@@ -31,8 +30,7 @@ export default function AuctionControls() {
   const awaitingHammer = isLive && isManual && !timerEndsAt;
 
   const displayEndMode = pendingEndMode ?? settings.endMode;
-  const displayPin = pendingPin ?? (settings.dashboardPin || '');
-  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingPin !== null;
+  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null;
 
   function saveSettings() {
     const updates = {};
@@ -40,14 +38,12 @@ export default function AuctionControls() {
     if (increment && parseInt(increment) > 0) updates.bidIncrement = parseInt(increment);
     if (bump !== '' && parseInt(bump) >= 0) updates.timerBumpSeconds = parseInt(bump);
     if (pendingEndMode !== null) updates.endMode = pendingEndMode;
-    if (pendingPin !== null) updates.dashboardPin = pendingPin;
     if (Object.keys(updates).length) {
       adminAction('admin:updateSettings', updates);
       setTimer('');
       setIncrement('');
       setBump('');
       setPendingEndMode(null);
-      setPendingPin(null);
     }
   }
 
@@ -193,19 +189,6 @@ export default function AuctionControls() {
               </button>
             ))}
           </div>
-        </div>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Dashboard PIN {settings.dashboardPin ? '(set)' : '(open)'}
-          </div>
-          <input
-            style={{ ...inputStyle, width: '110px' }}
-            type="text"
-            maxLength={20}
-            placeholder={settings.dashboardPin ? '••••••' : 'No PIN'}
-            value={displayPin}
-            onChange={e => setPendingPin(e.target.value)}
-          />
         </div>
         <button
           style={btn('#475569', !hasChanges)}

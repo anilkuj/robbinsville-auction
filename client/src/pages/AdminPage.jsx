@@ -12,7 +12,7 @@ import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
 
-const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Settings'];
+const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Player Data', 'Settings'];
 
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
@@ -121,6 +121,9 @@ export default function AdminPage() {
             )}
             {tab === 'Teams & Rosters' && (
               <TeamsTab auctionState={auctionState} />
+            )}
+            {tab === 'Player Data' && (
+              <PlayerDataTab auctionState={auctionState} />
             )}
             {tab === 'Settings' && (
               <SettingsTab auctionState={auctionState} />
@@ -1086,6 +1089,179 @@ function TeamsTab({ auctionState }) {
       <SectionTitle>All Teams</SectionTitle>
       <TeamRosterTable teams={teams} leagueConfig={leagueConfig} />
     </div>
+  );
+}
+
+// ─── Player Data Tab ──────────────────────────────────────────────────────────
+
+function PlayerDataTab({ auctionState }) {
+  const { players = [], teams = {} } = auctionState;
+  const [filter, setFilter] = useState('ALL');
+
+  if (players.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>
+        No players imported yet. Use the League Setup tab to import a CSV.
+      </div>
+    );
+  }
+
+  // Collect all extra keys across all players (preserve insertion order)
+  const extraKeys = [];
+  for (const p of players) {
+    if (p.extra) {
+      for (const k of Object.keys(p.extra)) {
+        if (!extraKeys.includes(k)) extraKeys.push(k);
+      }
+    }
+  }
+
+  const filtered = filter === 'ALL' ? players : players.filter(p => p.status === filter);
+
+  const statusCfg = {
+    PENDING: { color: '#f59e0b', bg: '#451a03', label: 'Pending' },
+    SOLD:    { color: '#22c55e', bg: '#14532d', label: 'Sold' },
+    UNSOLD:  { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
+  };
+
+  const poolColor = (poolId) => {
+    if (poolId?.startsWith('A')) return { color: '#f59e0b', bg: '#1c0d00', border: '#f59e0b40' };
+    if (poolId?.startsWith('B')) return { color: '#60a5fa', bg: '#0d1c35', border: '#3b82f640' };
+    if (poolId === 'C')          return { color: '#a78bfa', bg: '#150d2e', border: '#8b5cf640' };
+    return { color: '#94a3b8', bg: '#0f1a2e', border: '#64748b40' };
+  };
+
+  // Fixed columns: #, Pool, Name, [extra...], Base, Status, Sold To, Sold Price
+  const totalCols = 4 + extraKeys.length + 3; // rough count for coloring
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Header row: title + filter chips */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>Player Data</div>
+          <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
+            {filtered.length} of {players.length} players
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '0.4rem' }}>
+          {['ALL', 'PENDING', 'SOLD', 'UNSOLD'].map(f => {
+            const count = f === 'ALL' ? players.length : players.filter(p => p.status === f).length;
+            const active = filter === f;
+            const cfg = f === 'ALL' ? { color: '#94a3b8', bg: '#1e293b' } : statusCfg[f];
+            return (
+              <button key={f} onClick={() => setFilter(f)} style={{
+                background: active ? cfg.bg : 'transparent',
+                border: `1px solid ${active ? cfg.color : '#334155'}`,
+                color: active ? cfg.color : '#64748b',
+                borderRadius: '6px', padding: '0.3rem 0.7rem',
+                cursor: 'pointer', fontSize: '0.75rem', fontWeight: active ? 700 : 400,
+                transition: 'all 0.15s',
+              }}>
+                {f === 'ALL' ? 'All' : statusCfg[f].label} ({count})
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #1e293b' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '600px', fontSize: '0.82rem' }}>
+          <thead>
+            <tr style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 1 }}>
+              <TH first>#</TH>
+              <TH>Pool</TH>
+              <TH>Player Name</TH>
+              {extraKeys.map(k => <TH key={k}>{k}</TH>)}
+              <TH right>Base</TH>
+              <TH center>Status</TH>
+              <TH>Sold To</TH>
+              <TH right>Sold Price</TH>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((p, i) => {
+              const sc = statusCfg[p.status] || statusCfg.PENDING;
+              const pc = poolColor(p.pool);
+              const soldTeam = p.soldTo ? teams[p.soldTo] : null;
+              const rowBg = i % 2 === 0 ? '#0f172a' : '#0a111e';
+
+              return (
+                <tr key={p.id} style={{ background: rowBg, transition: 'background 0.1s' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#162032'}
+                  onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                >
+                  <TD first style={{ color: '#475569' }}>{p.sortOrder + 1}</TD>
+                  <TD>
+                    <span style={{
+                      background: pc.bg, color: pc.color,
+                      border: `1px solid ${pc.border}`,
+                      borderRadius: '4px', padding: '0.15rem 0.45rem',
+                      fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}>{p.pool}</span>
+                  </TD>
+                  <TD style={{ color: '#f1f5f9', fontWeight: 500 }}>{p.name}</TD>
+                  {extraKeys.map(k => (
+                    <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
+                  ))}
+                  <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
+                  <TD center>
+                    <span style={{
+                      background: sc.bg, color: sc.color,
+                      borderRadius: '999px', padding: '0.15rem 0.55rem',
+                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}>{sc.label}</span>
+                  </TD>
+                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
+                  <TD right style={{ color: p.soldFor ? '#22c55e' : '#334155', fontWeight: p.soldFor ? 600 : 400, whiteSpace: 'nowrap' }}>
+                    {p.soldFor ? formatPts(p.soldFor) : '—'}
+                  </TD>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TH({ children, first, right, center }) {
+  return (
+    <th style={{
+      padding: '0.55rem 0.75rem',
+      textAlign: right ? 'right' : center ? 'center' : 'left',
+      color: '#64748b',
+      fontWeight: 700,
+      fontSize: '0.68rem',
+      textTransform: 'uppercase',
+      letterSpacing: '0.06em',
+      whiteSpace: 'nowrap',
+      borderLeft: first ? 'none' : '1px solid #1e293b',
+      borderBottom: '2px solid #1e293b',
+      ...(first && { paddingLeft: '1rem' }),
+      ...(right && { paddingRight: '1rem' }),
+    }}>
+      {children}
+    </th>
+  );
+}
+
+function TD({ children, first, right, center, style = {} }) {
+  return (
+    <td style={{
+      padding: '0.5rem 0.75rem',
+      textAlign: right ? 'right' : center ? 'center' : 'left',
+      borderLeft: first ? 'none' : '1px solid #1e293b',
+      borderBottom: '1px solid #0f172a',
+      verticalAlign: 'middle',
+      ...(first && { paddingLeft: '1rem' }),
+      ...(right && { paddingRight: '1rem' }),
+      ...style,
+    }}>
+      {children}
+    </td>
   );
 }
 

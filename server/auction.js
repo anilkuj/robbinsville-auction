@@ -212,7 +212,7 @@ function resumeTimer(io) {
 }
 
 module.exports = {
-  computeMaxBid,
+  computeMaxBid, // exported for adminHandlers budget validation
   getPublicState,
   startPlayer,
   processSold,

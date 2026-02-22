@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
+import { computeMaxBid, formatPts } from '../../utils/budgetCalc.js';
 
 const btn = (color, disabled = false) => ({
   padding: '0.6rem 1.2rem',
@@ -15,12 +16,38 @@ const btn = (color, disabled = false) => ({
 });
 
 export default function AuctionControls() {
-  const { auctionState, adminAction } = useAuction();
+  const { auctionState, adminAction, adminError, clearAdminError, lastEvent } = useAuction();
   const [timer, setTimer] = useState('');
   const [increment, setIncrement] = useState('');
   const [bump, setBump] = useState('');
   const [pendingEndMode, setPendingEndMode] = useState(null); // null = no change pending
   const [pendingConfirm, setPendingConfirm] = useState(null); // null = no change pending
+
+  // Manual sale state
+  const [showManualSale, setShowManualSale] = useState(false);
+  const [msPlayer, setMsPlayer] = useState('');
+  const [msTeam, setMsTeam] = useState('');
+  const [msAmount, setMsAmount] = useState('');
+  const [msLocalError, setMsLocalError] = useState('');
+
+  // Reset manual sale form after a successful sold event
+  useEffect(() => {
+    if (lastEvent?.type === 'sold') {
+      setMsPlayer('');
+      setMsTeam('');
+      setMsAmount('');
+      setMsLocalError('');
+      clearAdminError();
+    }
+  }, [lastEvent]);
+
+  // Show server-side admin errors in the manual sale panel when it's open
+  useEffect(() => {
+    if (showManualSale && adminError) {
+      setMsLocalError(adminError);
+      clearAdminError();
+    }
+  }, [adminError, showManualSale]);
 
   if (!auctionState) return null;
 
@@ -33,6 +60,32 @@ export default function AuctionControls() {
   const displayEndMode = pendingEndMode ?? settings.endMode;
   const displayConfirm = pendingConfirm ?? settings.requireBidConfirm ?? true;
   const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingConfirm !== null;
+
+  // Manual sale derived values
+  const { squadSize, minBid } = auctionState.leagueConfig || {};
+  const availableForManualSale = (auctionState.players || [])
+    .filter(p => p.status === 'PENDING' || p.status === 'UNSOLD')
+    .sort((a, b) => {
+      if (a.status !== b.status) return a.status === 'PENDING' ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+  const teamList = Object.values(auctionState.teams || {}).sort((a, b) => a.name.localeCompare(b.name));
+  const selectedTeam = msTeam ? auctionState.teams[msTeam] : null;
+  const msMaxBid = selectedTeam
+    ? computeMaxBid(selectedTeam.budget, selectedTeam.roster.length, squadSize || 18, minBid || 1000)
+    : null;
+  const msAmountNum = parseInt(msAmount);
+  const msAmountInvalid = msAmount !== '' && (isNaN(msAmountNum) || msAmountNum <= 0 || (msMaxBid !== null && msAmountNum > msMaxBid));
+  const canSubmitManualSale = msPlayer && msTeam && msAmount !== '' && !msAmountInvalid;
+
+  function submitManualSale() {
+    if (!canSubmitManualSale) return;
+    const playerName = availableForManualSale.find(p => p.id === msPlayer)?.name || msPlayer;
+    if (confirm(`Sell ${playerName} to ${selectedTeam?.name} for ${msAmountNum.toLocaleString()} pts?`)) {
+      setMsLocalError('');
+      adminAction('admin:manualSale', { playerId: msPlayer, teamId: msTeam, saleAmount: msAmountNum });
+    }
+  }
 
   function saveSettings() {
     const updates = {};
@@ -225,6 +278,128 @@ export default function AuctionControls() {
           Apply
         </button>
       </div>
+
+      {/* Manual Sale */}
+      {(isSetup || phase === 'ENDED') && (
+        <div style={{ background: '#0f172a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #334155' }}>
+          <button
+            onClick={() => { setShowManualSale(v => !v); setMsLocalError(''); }}
+            style={{
+              width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
+              padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600,
+            }}
+          >
+            <span>💰 Manual Sale</span>
+            <span style={{ fontSize: '0.75rem' }}>{showManualSale ? '▲ Hide' : '▼ Expand'}</span>
+          </button>
+
+          {showManualSale && (
+            <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
+
+                {/* Player dropdown */}
+                <div style={{ flex: '1 1 160px' }}>
+                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>Player</div>
+                  <select
+                    value={msPlayer}
+                    onChange={e => { setMsPlayer(e.target.value); setMsLocalError(''); }}
+                    style={{
+                      width: '100%', background: '#1e293b', border: '1px solid #334155', color: msPlayer ? '#f1f5f9' : '#64748b',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
+                    }}
+                  >
+                    <option value="">— Select player —</option>
+                    {availableForManualSale.length === 0 && (
+                      <option disabled>No players available</option>
+                    )}
+                    {availableForManualSale.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}{p.status === 'UNSOLD' ? ' (unsold)' : ''}{p.pool ? ` · ${p.pool}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Team dropdown */}
+                <div style={{ flex: '1 1 140px' }}>
+                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>Team</div>
+                  <select
+                    value={msTeam}
+                    onChange={e => { setMsTeam(e.target.value); setMsAmount(''); setMsLocalError(''); }}
+                    style={{
+                      width: '100%', background: '#1e293b', border: '1px solid #334155', color: msTeam ? '#f1f5f9' : '#64748b',
+                      borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
+                    }}
+                  >
+                    <option value="">— Select team —</option>
+                    {teamList.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({formatPts(t.budget)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Amount input */}
+                <div style={{ flex: '1 1 120px' }}>
+                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
+                    Sale amount
+                    {msMaxBid !== null && (
+                      <span style={{ marginLeft: '6px', color: msMaxBid <= 0 ? '#ef4444' : '#22c55e' }}>
+                        (max: {formatPts(msMaxBid)})
+                      </span>
+                    )}
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="pts"
+                    value={msAmount}
+                    onChange={e => { setMsAmount(e.target.value); setMsLocalError(''); }}
+                    disabled={!msTeam}
+                    style={{
+                      width: '100%', background: '#1e293b',
+                      border: `1px solid ${msAmountInvalid ? '#ef4444' : '#334155'}`,
+                      color: '#f1f5f9', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+
+                {/* Submit */}
+                <button
+                  style={btn('#16a34a', !canSubmitManualSale)}
+                  disabled={!canSubmitManualSale}
+                  onClick={submitManualSale}
+                >
+                  Sell
+                </button>
+              </div>
+
+              {/* Inline budget info for selected team */}
+              {selectedTeam && (
+                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                  {selectedTeam.name}: budget {formatPts(selectedTeam.budget)}, roster {selectedTeam.roster.length}/{squadSize || 18}
+                  {msMaxBid !== null && msMaxBid <= 0 && (
+                    <span style={{ color: '#ef4444', marginLeft: '8px' }}>⚠ Cannot purchase any more players (budget fully reserved)</span>
+                  )}
+                </div>
+              )}
+
+              {/* Error message */}
+              {msLocalError && (
+                <div style={{
+                  background: '#450a0a', border: '1px solid #ef4444', borderRadius: '6px',
+                  padding: '0.5rem 0.75rem', color: '#fca5a5', fontSize: '0.8rem',
+                }}>
+                  ⚠ {msLocalError}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

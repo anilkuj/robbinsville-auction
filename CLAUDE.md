@@ -64,6 +64,9 @@ robbinsville-auction/
         └── utils/budgetCalc.js   # computeMaxBid + formatPts (mirrors server logic)
 ```
 
+**AuctionContext extras:** `adminError` (string|null) + `clearAdminError()` — set when server emits `admin:error` to this socket. Consumed by AuctionControls to display errors near the Manual Sale panel.
+```
+
 ### Key Design Decisions
 
 **State management:** The server holds a single mutable in-memory `state` object (`server/state.js`). All mutations happen server-side; clients receive immutable snapshots via Socket.io events. `getPublicState()` in `auction.js` strips team passwords before broadcasting.
@@ -101,6 +104,7 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 | `admin:markUnsold` | client→server | Admin forces unsold |
 | `admin:acceptBid` | client→server | Admin hammers sale (manual mode) |
 | `admin:reAuction` | client→server | Admin re-queues unsold/sold player |
+| `admin:manualSale` | client→server | Admin directly sells a PENDING/UNSOLD player to a team at a chosen price |
 | `admin:updateSettings` | client→server | Admin changes live settings |
 
 ### Authentication

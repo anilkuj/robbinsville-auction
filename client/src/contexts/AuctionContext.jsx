@@ -9,6 +9,7 @@ export function AuctionProvider({ children }) {
   const [auctionState, setAuctionState] = useState(null);
   const [connected, setConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState(null); // { type, data }
+  const [adminError, setAdminError] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -83,6 +84,10 @@ export function AuctionProvider({ children }) {
       setLastEvent({ type: 'phaseChange', data: { phase: state.phase } });
     });
 
+    socket.on('admin:error', ({ message }) => {
+      setAdminError(message);
+    });
+
     return () => {
       socket.disconnect();
       socketRef.current = null;
@@ -97,6 +102,8 @@ export function AuctionProvider({ children }) {
     socketRef.current?.emit(event, data);
   }, []);
 
+  const clearAdminError = useCallback(() => setAdminError(null), []);
+
   return (
     <AuctionContext.Provider value={{
       auctionState,
@@ -104,6 +111,8 @@ export function AuctionProvider({ children }) {
       lastEvent,
       placeBid,
       adminAction,
+      adminError,
+      clearAdminError,
       socket: socketRef.current,
     }}>
       {children}

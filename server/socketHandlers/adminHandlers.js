@@ -8,6 +8,7 @@ const {
   processSold,
   processUnsold,
   clearAuctionTimer,
+  computeMaxBid,
 } = require('../auction');
 
 function registerAdminHandlers(io, socket) {
@@ -112,6 +113,75 @@ function registerAdminHandlers(io, socket) {
     } else {
       processUnsold(io);
     }
+  });
+
+  socket.on('admin:manualSale', ({ playerId, teamId, saleAmount }) => {
+    const state = getState();
+
+    if (state.phase !== 'SETUP' && state.phase !== 'ENDED') {
+      socket.emit('admin:error', { message: 'Manual sale is only allowed when no player is actively being auctioned' });
+      return;
+    }
+
+    const player = state.players.find(p => p.id === playerId);
+    if (!player) {
+      socket.emit('admin:error', { message: 'Player not found' });
+      return;
+    }
+    if (player.status === 'SOLD') {
+      socket.emit('admin:error', { message: `${player.name} is already sold` });
+      return;
+    }
+
+    const team = state.teams[teamId];
+    if (!team) {
+      socket.emit('admin:error', { message: 'Team not found' });
+      return;
+    }
+
+    const amount = parseInt(saleAmount);
+    if (isNaN(amount) || amount <= 0) {
+      socket.emit('admin:error', { message: 'Sale amount must be a positive number' });
+      return;
+    }
+
+    const { squadSize, minBid } = state.leagueConfig;
+    const maxAllowed = computeMaxBid(team.budget, team.roster.length, squadSize, minBid);
+    if (amount > maxAllowed) {
+      const reserve = team.budget - maxAllowed;
+      socket.emit('admin:error', {
+        message: `${team.name} can only spend up to ${maxAllowed.toLocaleString()} pts (budget: ${team.budget.toLocaleString()}, must keep ${reserve.toLocaleString()} in reserve for remaining squad slots)`,
+      });
+      return;
+    }
+
+    // Perform the sale
+    player.status = 'SOLD';
+    player.soldTo = teamId;
+    player.soldFor = amount;
+
+    team.budget -= amount;
+    team.roster.push({
+      playerId: player.id,
+      playerName: player.name,
+      pool: player.pool,
+      price: amount,
+    });
+
+    // Remove from unsold list if present
+    const unsoldIdx = state.unsoldPlayers.indexOf(playerId);
+    if (unsoldIdx !== -1) state.unsoldPlayers.splice(unsoldIdx, 1);
+
+    state.lastSoldPlayerId = player.id;
+    saveState();
+
+    io.emit('auction:sold', {
+      player: { ...player },
+      teamId,
+      amount,
+      teamName: team.name,
+      publicState: getPublicState(),
+    });
   });
 
   socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm }) => {

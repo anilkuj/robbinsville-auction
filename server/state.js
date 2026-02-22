@@ -18,7 +18,7 @@ const state = {
     minBid: 1000,
     pools: DEFAULT_POOLS,
   },
-  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '' },
+  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '', requireBidConfirm: true },
   players: [],
   currentPlayerIndex: null,
   currentBid: { amount: 0, teamId: null, history: [] },
@@ -27,6 +27,7 @@ const state = {
   timerRemainingOnPause: 0,
   teams: {},               // { teamId: { id, name, password, budget, roster: [] } }
   unsoldPlayers: [],       // array of player IDs
+  lastSoldPlayerId: null,  // for rollback support
 };
 
 function getState() {

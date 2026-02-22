@@ -60,15 +60,15 @@ function registerBidHandlers(io, socket) {
       return;
     }
 
-    // 8. Amount validation — must be exactly the next expected bid
+    // 8. Amount validation — must be >= minimum next bid and <= maxBid
     const { bidIncrement } = state.settings;
-    const expectedAmount = state.currentBid.teamId === null
+    const minNextBid = state.currentBid.teamId === null
       ? currentPlayer.basePrice
       : state.currentBid.amount + bidIncrement;
 
     const bidAmount = parseInt(amount);
-    if (bidAmount !== expectedAmount) {
-      socket.emit('bid:rejected', { reason: `Expected bid of ${expectedAmount.toLocaleString()} pts` });
+    if (isNaN(bidAmount) || bidAmount < minNextBid) {
+      socket.emit('bid:rejected', { reason: `Minimum bid is ${minNextBid.toLocaleString()} pts` });
       return;
     }
 

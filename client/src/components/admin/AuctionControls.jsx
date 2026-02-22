@@ -20,6 +20,7 @@ export default function AuctionControls() {
   const [increment, setIncrement] = useState('');
   const [bump, setBump] = useState('');
   const [pendingEndMode, setPendingEndMode] = useState(null); // null = no change pending
+  const [pendingConfirm, setPendingConfirm] = useState(null); // null = no change pending
 
   if (!auctionState) return null;
 
@@ -30,7 +31,8 @@ export default function AuctionControls() {
   const awaitingHammer = isLive && isManual && !timerEndsAt;
 
   const displayEndMode = pendingEndMode ?? settings.endMode;
-  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null;
+  const displayConfirm = pendingConfirm ?? settings.requireBidConfirm ?? true;
+  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingConfirm !== null;
 
   function saveSettings() {
     const updates = {};
@@ -38,12 +40,14 @@ export default function AuctionControls() {
     if (increment && parseInt(increment) > 0) updates.bidIncrement = parseInt(increment);
     if (bump !== '' && parseInt(bump) >= 0) updates.timerBumpSeconds = parseInt(bump);
     if (pendingEndMode !== null) updates.endMode = pendingEndMode;
+    if (pendingConfirm !== null) updates.requireBidConfirm = pendingConfirm;
     if (Object.keys(updates).length) {
       adminAction('admin:updateSettings', updates);
       setTimer('');
       setIncrement('');
       setBump('');
       setPendingEndMode(null);
+      setPendingConfirm(null);
     }
   }
 
@@ -190,6 +194,29 @@ export default function AuctionControls() {
             ))}
           </div>
         </div>
+        <div>
+          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
+            Bid confirmation
+          </div>
+          <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #334155' }}>
+            {[true, false].map(val => (
+              <button
+                key={String(val)}
+                onClick={() => setPendingConfirm(val === displayConfirm && pendingConfirm === null ? null : val)}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  background: displayConfirm === val ? (val ? '#22c55e' : '#ef4444') : '#0f172a',
+                  color: displayConfirm === val ? '#fff' : '#64748b',
+                  border: pendingConfirm === val ? '1px dashed #94a3b8' : 'none',
+                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                }}
+              >
+                {val ? '✓ On' : '✕ Off'}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <button
           style={btn('#475569', !hasChanges)}
           disabled={!hasChanges}

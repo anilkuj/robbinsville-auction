@@ -20,12 +20,12 @@ const server = http.createServer(app);
 const isProd = process.env.NODE_ENV === 'production';
 
 const io = new Server(server, {
-  cors: isProd ? false : { origin: 'http://localhost:5173', methods: ['GET', 'POST'] },
+  cors: isProd ? false : { origin: '*', methods: ['GET', 'POST'] },
 });
 
 // Middleware
 if (!isProd) {
-  app.use(cors({ origin: 'http://localhost:5173' }));
+  app.use(cors({ origin: '*' }));
 }
 app.use(express.json({ limit: '10mb' }));
 

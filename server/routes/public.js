@@ -5,6 +5,13 @@ const { getState } = require('../state');
 
 const router = express.Router();
 
+// Returns team names (no passwords) for the login dropdown
+router.get('/teams', (req, res) => {
+  const state = getState();
+  const teams = Object.values(state.teams).map(t => ({ id: t.id, name: t.name }));
+  res.json({ teams });
+});
+
 // Returns whether the dashboard requires a PIN
 router.get('/dashboard-settings', (req, res) => {
   const state = getState();

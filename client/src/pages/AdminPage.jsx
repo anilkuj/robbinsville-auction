@@ -443,6 +443,8 @@ function AuctionControlsTab({ auctionState, adminAction }) {
 
   const [showLoadTestModal, setShowLoadTestModal] = useState(false);
   const [showFullResetModal, setShowFullResetModal] = useState(false);
+  const [importData, setImportData] = useState(null);
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
 
   const isSetup = phase === 'SETUP';
   const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
@@ -492,6 +494,18 @@ function AuctionControlsTab({ auctionState, adminAction }) {
           onClose={() => setShowFullResetModal(false)}
         />
       )}
+      {importData && (
+        <ImportStateModal
+          importedState={importData}
+          onClose={() => setImportData(null)}
+        />
+      )}
+      {showRollbackModal && (
+        <RollbackModal
+          auctionState={auctionState}
+          onClose={() => setShowRollbackModal(false)}
+        />
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
@@ -532,7 +546,32 @@ function AuctionControlsTab({ auctionState, adminAction }) {
         <SectionTitle>Exports & Reset</SectionTitle>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
           <button onClick={downloadResults} style={smallBtn('#1d4ed8')}>⬇ Results CSV</button>
-          <button onClick={downloadState} style={smallBtn('#334155')}>⬇ State JSON</button>
+          <button onClick={downloadState} style={smallBtn('#334155')}>⬇ Backup State</button>
+
+          {/* Import state */}
+          <label style={{ ...smallBtn('#0f766e'), display: 'inline-block', cursor: 'pointer' }}>
+            ⬆ Restore Backup
+            <input
+              type="file"
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = ''; // reset so same file can be re-selected
+                const reader = new FileReader();
+                reader.onload = evt => {
+                  try {
+                    const parsed = JSON.parse(evt.target.result);
+                    setImportData(parsed);
+                  } catch {
+                    alert('Invalid JSON file — could not parse the backup.');
+                  }
+                };
+                reader.readAsText(file);
+              }}
+            />
+          </label>
 
           {/* Load Test Data */}
           <button
@@ -549,6 +588,19 @@ function AuctionControlsTab({ auctionState, adminAction }) {
           </button>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
+            {/* Rollback last sale — only shown when there's a last sold player and we're in SETUP */}
+            {isSetup && auctionState.lastSoldPlayerId && (() => {
+              const lsp = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
+              return lsp ? (
+                <button
+                  onClick={() => setShowRollbackModal(true)}
+                  style={{ ...smallBtn('#7c3aed'), border: '1px solid #7c3aed' }}
+                  title={`Rollback: ${lsp.name}`}
+                >
+                  ↩ Rollback: {lsp.name}
+                </button>
+              ) : null;
+            })()}
             <button onClick={resetAuction} style={smallBtn('#7f1d1d')}>
               ⚠ Reset Auction
             </button>
@@ -669,6 +721,242 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
               style={{ ...modalBtn('#0369a1'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
             >
               {loading ? 'Loading…' : hasExistingData ? '⚠ Replace & Load' : '🧪 Load Test Data'}
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─── Rollback Modal ───────────────────────────────────────────────────────────
+
+function RollbackModal({ auctionState, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null); // success message
+
+  const player = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
+  const team = player?.soldTo ? auctionState.teams[player.soldTo] : null;
+
+  async function handleRollback() {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/admin/rollback-last-sale');
+      setDone(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Rollback failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (!player) {
+    return (
+      <Modal onClose={onClose}>
+        <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>No recent sale found to rollback.</div>
+        <button onClick={onClose} style={{ ...modalBtn('#334155'), marginTop: '1rem', width: '100%' }}>Close</button>
+      </Modal>
+    );
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>↩</div>
+      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+        Rollback Last Sale
+      </div>
+
+      {done ? (
+        <>
+          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1rem' }}>✓ {done}</div>
+          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
+        </>
+      ) : (
+        <>
+          <div style={{
+            background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem', marginBottom: '1rem',
+            display: 'flex', flexDirection: 'column', gap: '0.4rem',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>Player</span>
+              <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{player.name}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>Pool</span>
+              <span style={{ color: '#94a3b8' }}>{player.pool}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>Sold to</span>
+              <span style={{ color: '#f1f5f9' }}>{team?.name || '—'}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+              <span style={{ color: '#64748b' }}>Sold for</span>
+              <span style={{ color: '#f59e0b', fontWeight: 700 }}>{player.soldFor?.toLocaleString()} pts</span>
+            </div>
+          </div>
+
+          <div style={{
+            background: '#2e1065', border: '1px solid #7c3aed',
+            borderRadius: '8px', padding: '0.65rem 0.85rem',
+            color: '#c4b5fd', fontSize: '0.82rem', marginBottom: '1rem',
+          }}>
+            This will return <strong>{player.name}</strong> to the player pool and
+            refund <strong>{player.soldFor?.toLocaleString()} pts</strong> to <strong>{team?.name}</strong>.
+          </div>
+
+          {error && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
+            <button
+              onClick={handleRollback}
+              disabled={loading}
+              style={{ ...modalBtn('#7c3aed'), flex: 2, opacity: loading ? 0.5 : 1 }}
+            >
+              {loading ? 'Rolling back…' : '↩ Confirm Rollback'}
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─── Import State Modal ───────────────────────────────────────────────────────
+
+function ImportStateModal({ importedState: s, onClose }) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  const players = s.players || [];
+  const teams = Object.values(s.teams || {});
+  const sold = players.filter(p => p.status === 'SOLD').length;
+  const pending = players.filter(p => p.status === 'PENDING').length;
+  const unsold = players.filter(p => p.status === 'UNSOLD').length;
+  const currentPlayer = s.currentPlayerIndex != null ? players[s.currentPlayerIndex] : null;
+
+  const phaseLabel = { SETUP: 'Setup', LIVE: '● Live', PAUSED: '⏸ Paused', ENDED: 'Ended' }[s.phase] || s.phase;
+  const phaseColor = { SETUP: '#64748b', LIVE: '#22c55e', PAUSED: '#f59e0b', ENDED: '#94a3b8' }[s.phase] || '#94a3b8';
+
+  async function handleImport() {
+    setError('');
+    setLoading(true);
+    try {
+      await axios.post('/api/admin/import-state', { password, state: s });
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Import failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const rowStyle = { display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.82rem' };
+  const labelStyle = { color: '#64748b' };
+  const valueStyle = { color: '#f1f5f9', fontWeight: 600 };
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>📦</div>
+      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+        Restore Backup
+      </div>
+
+      {done ? (
+        <>
+          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1rem' }}>
+            ✓ Backup restored successfully!
+          </div>
+          {s.phase === 'LIVE' && (
+            <div style={{
+              background: '#451a03', border: '1px solid #f59e0b40',
+              borderRadius: '8px', padding: '0.65rem 0.85rem',
+              color: '#fbbf24', fontSize: '0.82rem', marginBottom: '1rem',
+            }}>
+              ⏸ The auction was mid-round — the timer has been paused. Press Resume when ready.
+            </div>
+          )}
+          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
+        </>
+      ) : (
+        <>
+          {/* Snapshot summary */}
+          <div style={{
+            background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem',
+            marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.1rem',
+          }}>
+            <div style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
+              Backup snapshot
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Phase</span>
+              <span style={{ ...valueStyle, color: phaseColor }}>{phaseLabel}</span>
+            </div>
+            <div style={rowStyle}>
+              <span style={labelStyle}>Players</span>
+              <span style={valueStyle}>
+                {sold} sold · {pending} pending · {unsold} unsold
+              </span>
+            </div>
+            {currentPlayer && (
+              <div style={rowStyle}>
+                <span style={labelStyle}>On block</span>
+                <span style={valueStyle}>{currentPlayer.name}</span>
+              </div>
+            )}
+            <div style={rowStyle}>
+              <span style={labelStyle}>Teams</span>
+              <span style={valueStyle}>{teams.length}</span>
+            </div>
+            {teams.map(t => (
+              <div key={t.id} style={{ ...rowStyle, paddingLeft: '0.75rem' }}>
+                <span style={labelStyle}>{t.name}</span>
+                <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>
+                  {(t.budget || 0).toLocaleString()} pts · {(t.roster || []).length} players
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div style={{
+            background: '#450a0a', border: '1px solid #ef4444',
+            borderRadius: '8px', padding: '0.65rem 0.85rem',
+            color: '#fca5a5', fontSize: '0.82rem', marginBottom: '1rem',
+          }}>
+            ⚠ This will overwrite all current auction data with the backup.
+          </div>
+
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Admin password to confirm:</div>
+            <input
+              type="password"
+              placeholder="Admin password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && password && handleImport()}
+              autoFocus
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
+                color: '#f1f5f9', borderRadius: '7px',
+                padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
+              }}
+            />
+            {error && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '5px' }}>{error}</div>}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
+            <button
+              onClick={handleImport}
+              disabled={!password || loading}
+              style={{ ...modalBtn('#0f766e'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
+            >
+              {loading ? 'Restoring…' : '📦 Restore Backup'}
             </button>
           </div>
         </>

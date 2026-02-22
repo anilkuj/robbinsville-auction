@@ -230,6 +230,7 @@ router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
   state.timerPaused = false;
   state.timerRemainingOnPause = 0;
   state.unsoldPlayers = [];
+  state.lastSoldPlayerId = null;
 
   clearAuctionTimer();
   saveState();
@@ -353,6 +354,98 @@ router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
     players: players.length,
     publicState: getPublicState(),
   });
+});
+
+// Rollback last sold player — returns them to PENDING, refunds team budget
+router.post('/rollback-last-sale', authenticate, requireAdmin, (req, res) => {
+  const state = getState();
+
+  if (state.phase !== 'SETUP') {
+    return res.status(400).json({ error: 'Can only rollback between players (SETUP phase). Mark current player unsold or accept bid first.' });
+  }
+
+  if (!state.lastSoldPlayerId) {
+    return res.status(400).json({ error: 'No recent sale to rollback' });
+  }
+
+  const player = state.players.find(p => p.id === state.lastSoldPlayerId);
+  if (!player || player.status !== 'SOLD') {
+    return res.status(400).json({ error: 'Last sold player not found or already rolled back' });
+  }
+
+  const team = state.teams[player.soldTo];
+  const refundAmount = player.soldFor;
+  const playerName = player.name;
+  const teamName = team?.name || 'Unknown';
+
+  // Return player to pool
+  player.status = 'PENDING';
+  player.soldTo = null;
+  player.soldFor = null;
+
+  // Remove from roster and refund budget
+  if (team) {
+    const idx = team.roster.findIndex(r => r.playerId === player.id);
+    if (idx !== -1) team.roster.splice(idx, 1);
+    team.budget += refundAmount;
+  }
+
+  // Update lastSoldPlayerId to the next most recent sold player
+  const remainingSold = state.players
+    .filter(p => p.status === 'SOLD')
+    .sort((a, b) => b.sortOrder - a.sortOrder);
+  state.lastSoldPlayerId = remainingSold.length > 0 ? remainingSold[0].id : null;
+
+  saveState();
+  io.emit('state:full', getPublicState());
+
+  res.json({ message: `Rolled back: ${playerName} returned to pool, ${refundAmount.toLocaleString()} pts refunded to ${teamName}` });
+});
+
+// Import full state from a previously exported JSON backup
+router.post('/import-state', authenticate, requireAdmin, (req, res) => {
+  const { password, state: s } = req.body;
+
+  if (!password || password !== config.admin.password) {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+
+  // Validate required fields
+  const required = ['phase', 'leagueConfig', 'settings', 'players', 'teams', 'currentBid'];
+  for (const field of required) {
+    if (s[field] === undefined) {
+      return res.status(400).json({ error: `Invalid backup file: missing field "${field}"` });
+    }
+  }
+
+  const state = getState();
+
+  state.phase = s.phase;
+  state.leagueConfig = s.leagueConfig;
+  // Merge settings so any new fields added since export are preserved with defaults
+  state.settings = { ...state.settings, ...s.settings };
+  state.players = s.players;
+  state.teams = s.teams;
+  state.currentPlayerIndex = s.currentPlayerIndex ?? null;
+  state.currentBid = s.currentBid || { amount: 0, teamId: null, history: [] };
+  state.unsoldPlayers = s.unsoldPlayers || [];
+
+  // If importing mid-auction, pause the timer so admin can review before resuming
+  if (state.phase === 'LIVE') {
+    state.timerPaused = true;
+    state.timerRemainingOnPause = s.timerRemainingOnPause || (state.settings.timerSeconds * 1000);
+    state.timerEndsAt = null;
+  } else {
+    state.timerPaused = false;
+    state.timerRemainingOnPause = 0;
+    state.timerEndsAt = null;
+  }
+
+  clearAuctionTimer();
+  saveState();
+  io.emit('state:full', getPublicState());
+
+  res.json({ message: 'State imported successfully', phase: state.phase });
 });
 
 // Full reset — wipes everything back to factory defaults (requires admin password)

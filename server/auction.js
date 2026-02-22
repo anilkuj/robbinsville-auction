@@ -150,6 +150,7 @@ function processSold(io) {
     teamName: team?.name || '',
   };
 
+  state.lastSoldPlayerId = player.id;
   state.phase = 'SETUP';
   state.currentPlayerIndex = null;
   state.currentBid = { amount: 0, teamId: null, history: [] };

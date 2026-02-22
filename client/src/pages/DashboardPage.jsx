@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
 export default function DashboardPage() {
@@ -10,6 +10,17 @@ export default function DashboardPage() {
 
   const [state, setState] = useState(null);
   const [connected, setConnected] = useState(false);
+  const [rightWidth, setRightWidth] = useState(380);
+
+  const startDragRight = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = rightWidth;
+    const onMove = (ev) => setRightWidth(Math.max(220, Math.min(700, startW + startX - ev.clientX)));
+    const onUp   = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [rightWidth]);
   const socketRef = useRef(null);
 
   // Step 1: Fetch dashboard settings to know if PIN is required
@@ -266,11 +277,21 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Right drag handle */}
+        <div
+          onMouseDown={startDragRight}
+          title="Drag to resize"
+          style={{ width: '5px', flexShrink: 0, cursor: 'col-resize', background: '#1e293b', transition: 'background 0.15s', zIndex: 10 }}
+          onMouseEnter={e => e.currentTarget.style.background = '#334155'}
+          onMouseLeave={e => e.currentTarget.style.background = '#1e293b'}
+        />
+
         {/* Remaining players pane */}
         <RemainingPlayersPane
           players={players}
           pools={leagueConfig?.pools ?? []}
           currentPlayerId={currentPlayer?.id ?? null}
+          width={rightWidth}
         />
       </div>
     </div>
@@ -279,10 +300,9 @@ export default function DashboardPage() {
 
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
-function RemainingPlayersPane({ players, pools, currentPlayerId }) {
+function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
   const pending = players.filter(p => p.status === 'PENDING');
 
-  // Group by pool, preserving pool order from leagueConfig
   const poolOrder = pools.map(p => p.id);
   const byPool = {};
   for (const p of pending) {
@@ -293,7 +313,7 @@ function RemainingPlayersPane({ players, pools, currentPlayerId }) {
 
   return (
     <div style={{
-      width: '240px',
+      width,
       flexShrink: 0,
       borderLeft: '1px solid #1e293b',
       background: '#0a111e',
@@ -309,107 +329,84 @@ function RemainingPlayersPane({ players, pools, currentPlayerId }) {
         justifyContent: 'space-between',
         alignItems: 'center',
         flexShrink: 0,
+        background: '#0f172a',
       }}>
         <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
           Remaining Players
         </span>
-        <span style={{
-          background: '#1e293b', color: '#f59e0b',
-          borderRadius: '999px', padding: '0.1rem 0.5rem',
-          fontSize: '0.68rem', fontWeight: 700,
-        }}>
+        <span style={{ background: '#1e293b', color: '#f59e0b', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
           {pending.length}
         </span>
       </div>
 
-      {/* Scrollable list */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {pending.length === 0 ? (
           <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#334155', fontSize: '0.8rem' }}>
             No players remaining
           </div>
         ) : (
-          orderedPools.map(poolId => (
-            <div key={poolId}>
-              {/* Pool header */}
-              <div style={{
-                padding: '0.4rem 1rem',
-                background: '#0f172a',
-                borderBottom: '1px solid #1e293b',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                position: 'sticky',
-                top: 0,
-                zIndex: 1,
-              }}>
-                <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
-                  Pool {poolId}
-                </span>
-                <span style={{ color: '#475569', fontSize: '0.65rem' }}>{byPool[poolId].length}</span>
-              </div>
+          orderedPools.map(poolId => {
+            const poolPlayers = byPool[poolId];
+            const clr = poolColor(poolId);
+            const GRID = 'minmax(0,1fr) auto auto';
 
-              {/* Players in pool */}
-              {byPool[poolId].map((player, i) => {
-                const isOnBlock = player.id === currentPlayerId;
-                const hasExtra = player.extra && Object.keys(player.extra).length > 0;
-                return (
-                  <div key={player.id} style={{
-                    borderBottom: '1px solid #0f172a',
-                    background: isOnBlock ? '#0c1a10' : 'transparent',
-                  }}>
-                    <div style={{
-                      padding: '0.35rem 1rem',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '0.4rem',
-                    }}>
-                      <span style={{
-                        fontSize: '0.78rem',
-                        color: isOnBlock ? '#22c55e' : '#cbd5e1',
-                        fontWeight: isOnBlock ? 700 : 400,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1,
-                      }}>
+            return (
+              <div key={poolId}>
+                {/* Pool header */}
+                <div style={{
+                  padding: '0.45rem 1rem',
+                  background: clr.bg,
+                  borderTop: `2px solid ${clr.border}`,
+                  borderBottom: `1px solid ${clr.border}50`,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  position: 'sticky',
+                  top: 0,
+                  zIndex: 1,
+                }}>
+                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
+                    Pool {poolId}
+                  </span>
+                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>
+                    {poolPlayers.length}
+                  </span>
+                </div>
+
+                {/* Column headers */}
+                <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
+                  <DColHead label="Player" first />
+                  <DColHead label="Pool" />
+                  <DColHead label="Base" right />
+                </div>
+
+                {/* Player rows */}
+                {poolPlayers.map((player, rowIdx) => {
+                  const isOnBlock = player.id === currentPlayerId;
+                  const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
+                  return (
+                    <div key={player.id} style={{ display: 'grid', gridTemplateColumns: GRID, background: rowBg, borderBottom: '1px solid #0f172a' }}>
+                      <DCell first style={{ color: isOnBlock ? '#22c55e' : '#cbd5e1', fontWeight: isOnBlock ? 700 : 400 }}>
                         {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
                         {player.name}
-                      </span>
-                      <span style={{
-                        fontSize: '0.72rem',
-                        color: isOnBlock ? '#22c55e' : '#475569',
-                        fontWeight: isOnBlock ? 700 : 400,
-                        whiteSpace: 'nowrap',
-                        flexShrink: 0,
-                      }}>
+                      </DCell>
+                      <DCell center>
+                        <span style={{
+                          background: clr.bg, color: clr.text,
+                          border: `1px solid ${clr.border}50`,
+                          borderRadius: '4px', padding: '0.1rem 0.35rem',
+                          fontSize: '0.65rem', fontWeight: 700,
+                        }}>{player.pool}</span>
+                      </DCell>
+                      <DCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
                         {fmtPts(player.basePrice)}
-                      </span>
+                      </DCell>
                     </div>
-                    {hasExtra && (
-                      <div style={{
-                        padding: '0 1rem 0.3rem',
-                        display: 'flex', flexWrap: 'wrap', gap: '0.25rem',
-                      }}>
-                        {Object.entries(player.extra).map(([k, v]) => v && (
-                          <span key={k} style={{
-                            fontSize: '0.6rem',
-                            color: '#475569',
-                            background: '#0f172a',
-                            borderRadius: '3px',
-                            padding: '0.08rem 0.3rem',
-                          }}>
-                            {v}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ))
+                  );
+                })}
+              </div>
+            );
+          })
         )}
       </div>
     </div>
@@ -543,7 +540,48 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Panel helpers ─────────────────────────────────────────────────────────────
+
+function poolColor(poolId) {
+  if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };
+  if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
+  if (poolId === 'C')         return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
+  return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
+}
+
+function DColHead({ label, first, right }) {
+  return (
+    <span style={{
+      padding: '0.32rem 0.6rem',
+      fontSize: '0.62rem', fontWeight: 700,
+      textTransform: 'uppercase', letterSpacing: '0.06em',
+      color: '#64748b',
+      borderLeft: first ? 'none' : '1px solid #1e293b',
+      textAlign: right ? 'right' : first ? 'left' : 'center',
+      whiteSpace: 'nowrap',
+      ...(first && { paddingLeft: '1rem' }),
+      ...(right && { paddingRight: '1rem' }),
+    }}>{label}</span>
+  );
+}
+
+function DCell({ children, first, right, center, style = {} }) {
+  return (
+    <span style={{
+      padding: '0.32rem 0.6rem',
+      fontSize: '0.74rem',
+      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+      borderLeft: first ? 'none' : '1px solid #1e293b',
+      display: 'flex', alignItems: 'center',
+      justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start',
+      ...(first && { paddingLeft: '1rem' }),
+      ...(right && { paddingRight: '1rem' }),
+      ...style,
+    }}>{children}</span>
+  );
+}
+
+// ── Other helpers ─────────────────────────────────────────────────────────────
 
 function Stat({ label, value, color }) {
   return (

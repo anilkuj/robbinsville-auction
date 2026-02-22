@@ -51,7 +51,7 @@ const S = {
   },
 };
 
-export default function Sidebar() {
+export default function Sidebar({ width }) {
   const { user, logout } = useAuth();
   const { auctionState, connected } = useAuction();
 
@@ -60,7 +60,7 @@ export default function Sidebar() {
   const roster = team?.roster ?? [];
 
   return (
-    <div style={S.sidebar}>
+    <div style={{ ...S.sidebar, ...(width ? { width: `${width}px` } : {}) }}>
       <div style={S.logo}>🏏 RPL Auction</div>
 
       {team && (

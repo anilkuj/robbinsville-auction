@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>RPL Auction — Feature Poster</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      padding: 2rem;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .poster {
+      width: 100%;
+      max-width: 960px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* ── Header ── */
+    .header {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 2rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 2rem;
+    }
+    .header-left { display: flex; align-items: center; gap: 1.25rem; }
+    .header-icon {
+      font-size: 3rem;
+      background: #f59e0b18;
+      border: 1px solid #f59e0b40;
+      border-radius: 16px;
+      width: 72px; height: 72px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .header-text h1 {
+      font-size: 1.9rem; font-weight: 900;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      line-height: 1.1;
+    }
+    .header-text p { color: #64748b; font-size: 0.9rem; margin-top: 0.3rem; }
+    .header-badges { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-end; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.25rem 0.75rem; border-radius: 999px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+    }
+    .badge-yellow { background: #f59e0b20; color: #f59e0b; border: 1px solid #f59e0b40; }
+    .badge-blue   { background: #3b82f620; color: #3b82f6; border: 1px solid #3b82f640; }
+    .badge-green  { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e40; }
+
+    /* ── Section title ── */
+    .section-title {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.12em; color: #475569; margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px; background: #1e293b;
+    }
+
+    /* ── Feature grid ── */
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; }
+    .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+
+    .feat {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1rem 1.1rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .feat::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .feat.yellow::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .feat.green::before  { background: linear-gradient(90deg, #22c55e, #4ade80); }
+    .feat.blue::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .feat.purple::before { background: linear-gradient(90deg, #a855f7, #c084fc); }
+    .feat.red::before    { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .feat.slate::before  { background: linear-gradient(90deg, #64748b, #94a3b8); }
+
+    .feat-icon { font-size: 1.4rem; margin-bottom: 0.5rem; }
+    .feat h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 0.3rem; color: #f1f5f9; }
+    .feat p  { font-size: 0.77rem; color: #64748b; line-height: 1.55; }
+    .feat p strong { color: #94a3b8; }
+
+    /* ── Highlight row ── */
+    .highlight-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    .highlight {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      border: 1px solid #334155;
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .highlight-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .highlight h3 { font-size: 1rem; font-weight: 800; margin-bottom: 0.3rem; }
+    .highlight p  { font-size: 0.8rem; color: #64748b; line-height: 1.55; }
+    .highlight p strong { color: #94a3b8; }
+
+    /* ── Stat strip ── */
+    .stat-strip {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 1rem;
+    }
+    .stat { text-align: center; }
+    .stat-val { font-size: 1.5rem; font-weight: 900; }
+    .stat-label { font-size: 0.7rem; color: #475569; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .stat-divider { width: 1px; height: 32px; background: #334155; }
+
+    /* ── Role pills ── */
+    .role-row { display: flex; gap: 0.75rem; }
+    .role-pill {
+      flex: 1;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .role-pill-icon { font-size: 1.3rem; }
+    .role-pill h4 { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+    .role-pill p  { font-size: 0.75rem; color: #64748b; }
+
+    /* ── Footer ── */
+    .footer {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 0.75rem 1rem;
+      background: #1e293b;
+      border-radius: 10px;
+      border: 1px solid #334155;
+    }
+    .footer-left { font-size: 0.75rem; color: #475569; }
+    .footer-right { display: flex; gap: 1rem; }
+    .tech-tag {
+      background: #0f172a; border: 1px solid #334155;
+      border-radius: 6px; padding: 0.2rem 0.6rem;
+      font-size: 0.7rem; color: #64748b;
+    }
+
+    @media print {
+      body { padding: 0.5rem; background: #0f172a; }
+      .poster { max-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="header-icon">🏏</div>
+      <div class="header-text">
+        <h1>Robbinsville Premier League</h1>
+        <p>Real-time IPL-style player auction platform for local leagues</p>
+      </div>
+    </div>
+    <div class="header-badges">
+      <span class="badge badge-green">● Real-time Bidding</span>
+      <span class="badge badge-blue">Multi-device</span>
+      <span class="badge badge-yellow">10 Teams · 180 Players</span>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="stat-strip">
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">10</div><div class="stat-label">Teams</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#22c55e;">180</div><div class="stat-label">Players</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#3b82f6;">8</div><div class="stat-label">Player Pools</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#a855f7;">18</div><div class="stat-label">Squad Size</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#f59e0b;">50K</div><div class="stat-label">Starting Budget</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#22c55e;">500</div><div class="stat-label">Bid Increment</div></div>
+    <div class="stat-divider"></div>
+    <div class="stat"><div class="stat-val" style="color:#ef4444;">30s</div><div class="stat-label">Timer</div></div>
+  </div>
+
+  <!-- Key highlights -->
+  <div class="section-title">⭐ Highlights</div>
+  <div class="highlight-row">
+    <div class="highlight">
+      <div class="highlight-icon">⚡</div>
+      <div>
+        <h3 style="color:#f59e0b;">Server-Authoritative Real-Time</h3>
+        <p>All bids and timers are controlled server-side via <strong>Socket.io</strong>. Every participant sees the exact same state instantly — no polling, no drift.</p>
+      </div>
+    </div>
+    <div class="highlight">
+      <div class="highlight-icon">🔨</div>
+      <div>
+        <h3 style="color:#a855f7;">Two Auction End Modes</h3>
+        <p>Switch between <strong>Auto Timer</strong> (player sells when countdown hits zero) and <strong>Manual Hammer</strong> (admin decides exactly when to close each sale).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin features -->
+  <div class="section-title">👑 Admin Features</div>
+  <div class="grid-3">
+    <div class="feat yellow">
+      <div class="feat-icon">⚙️</div>
+      <h3>League Configuration</h3>
+      <p>Set number of teams, squad size, starting budget, and minimum bid. All configurable before the auction begins.</p>
+    </div>
+    <div class="feat yellow">
+      <div class="feat-icon">🏊</div>
+      <h3>Custom Player Pools</h3>
+      <p>Define pools (A1, A2, B1 … D) with individual <strong>base prices</strong> and <strong>player counts</strong>. Add or remove pools freely.</p>
+    </div>
+    <div class="feat yellow">
+      <div class="feat-icon">👥</div>
+      <h3>Team Management</h3>
+      <p>Create teams with custom names and passwords. Credentials are shared with team owners to log in on their devices.</p>
+    </div>
+    <div class="feat blue">
+      <div class="feat-icon">📥</div>
+      <h3>CSV Player Import</h3>
+      <p>Download a pre-filled CSV template, add player names, and upload. Server validates counts per pool automatically.</p>
+    </div>
+    <div class="feat blue">
+      <div class="feat-icon">▶️</div>
+      <h3>Auction Controls</h3>
+      <p>Next Player, Pause, Resume, Mark Unsold — full control over the auction flow from a single admin panel.</p>
+    </div>
+    <div class="feat blue">
+      <div class="feat-icon">↩️</div>
+      <h3>Re-Auction Players</h3>
+      <p>Any unsold player can be sent back to the auction pool and re-bid on at any point during the event.</p>
+    </div>
+    <div class="feat purple">
+      <div class="feat-icon">⏱️</div>
+      <h3>Configurable Timer</h3>
+      <p>Set the countdown duration per player. A <strong>bid bump</strong> automatically adds seconds when a new bid comes in.</p>
+    </div>
+    <div class="feat purple">
+      <div class="feat-icon">📊</div>
+      <h3>Results Export</h3>
+      <p>Download a CSV of all players — sold price, team, pool, and status — for post-auction records and announcements.</p>
+    </div>
+    <div class="feat purple">
+      <div class="feat-icon">💾</div>
+      <h3>State Backup & Restore</h3>
+      <p>Export full auction state as JSON at any time. Auto-restored from disk on server restart — never lose progress.</p>
+    </div>
+  </div>
+
+  <!-- Team features -->
+  <div class="section-title">🏏 Team Features</div>
+  <div class="grid-4">
+    <div class="feat green">
+      <div class="feat-icon">📱</div>
+      <h3>Any Device</h3>
+      <p>Works on phones, tablets, and laptops. No app install needed — just a browser.</p>
+    </div>
+    <div class="feat green">
+      <div class="feat-icon">🔴</div>
+      <h3>Live Auction View</h3>
+      <p>See the current player, countdown timer, highest bid, and bid history update in real time.</p>
+    </div>
+    <div class="feat green">
+      <div class="feat-icon">💰</div>
+      <h3>Smart Bid Button</h3>
+      <p>One-tap bidding. Auto-disabled if you can't afford it or your squad is already full.</p>
+    </div>
+    <div class="feat green">
+      <div class="feat-icon">📋</div>
+      <h3>Squad & Budget Tracker</h3>
+      <p>Live sidebar shows your roster, remaining budget, and how many slots are left to fill.</p>
+    </div>
+  </div>
+
+  <!-- Safety features -->
+  <div class="section-title">🔒 Rules & Guardrails</div>
+  <div class="grid-3">
+    <div class="feat slate">
+      <div class="feat-icon">🚫</div>
+      <h3>Budget Enforcement</h3>
+      <p>Server blocks any bid that would leave a team unable to fill remaining squad slots at minimum bid price.</p>
+    </div>
+    <div class="feat slate">
+      <div class="feat-icon">🙅</div>
+      <h3>No Self-Outbidding</h3>
+      <p>Teams cannot bid when they are already the highest bidder. Prevents accidental double-bids.</p>
+    </div>
+    <div class="feat slate">
+      <div class="feat-icon">🔐</div>
+      <h3>JWT Authentication</h3>
+      <p>Every session is secured with a signed token. Team credentials are isolated — teams only see their own data.</p>
+    </div>
+  </div>
+
+  <!-- Roles -->
+  <div class="section-title">👤 Login Roles</div>
+  <div class="role-row">
+    <div class="role-pill" style="border-color:#f59e0b40;">
+      <div class="role-pill-icon">👑</div>
+      <div>
+        <h4 style="color:#f59e0b;">Admin</h4>
+        <p>Full access — league setup, auction controls, player import, exports, reset</p>
+      </div>
+    </div>
+    <div class="role-pill" style="border-color:#22c55e40;">
+      <div class="role-pill-icon">🏏</div>
+      <div>
+        <h4 style="color:#22c55e;">Team Owner</h4>
+        <p>Bidding view — live auction, bid button, squad tracker, bid history</p>
+      </div>
+    </div>
+    <div class="role-pill" style="border-color:#3b82f640;">
+      <div class="role-pill-icon">👁️</div>
+      <div>
+        <h4 style="color:#3b82f6;">Spectator-ready</h4>
+        <p>Any screen can show the live auction view — great for a projector display</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-left">🏏 Robbinsville Premier League Auction · github.com/anilkuj/robbinsville-auction</div>
+    <div class="footer-right">
+      <span class="tech-tag">Node.js</span>
+      <span class="tech-tag">Express</span>
+      <span class="tech-tag">Socket.io</span>
+      <span class="tech-tag">React 18</span>
+      <span class="tech-tag">Vite</span>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

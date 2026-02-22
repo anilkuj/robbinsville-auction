@@ -20,6 +20,12 @@ function registerAdminHandlers(io, socket) {
       socket.emit('admin:error', { message: 'Can only advance player in SETUP phase' });
       return;
     }
+    const teamsWithMissingOwner = Object.values(state.teams).filter(t => t.ownerIsPlayer && !t.ownerPlayerId);
+    if (teamsWithMissingOwner.length > 0) {
+      const names = teamsWithMissingOwner.map(t => t.name || t.id).join(', ');
+      socket.emit('admin:error', { message: `Owner player not selected for: ${names}` });
+      return;
+    }
     startPlayer(io);
   });
 

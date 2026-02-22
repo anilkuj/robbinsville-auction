@@ -209,6 +209,8 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
       password: teamData.password || existing?.password || 'team123',
       budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
       roster: existing?.roster || [],
+      ownerIsPlayer: teamData.ownerIsPlayer || false,
+      ownerPlayerId: teamData.ownerPlayerId || null,
     };
   }
   state.teams = newTeams;

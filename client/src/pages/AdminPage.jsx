@@ -141,6 +141,13 @@ function LeagueSetupTab({ auctionState }) {
   const { phase, leagueConfig } = auctionState;
   const isSetup = phase === 'SETUP';
 
+  // Owner players from CSV (type=owner or player_type=owner, case-insensitive)
+  const ownerPlayers = (auctionState.players || []).filter(p => {
+    if (!p.extra) return false;
+    const typeKey = Object.keys(p.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
+    return typeKey && String(p.extra[typeKey]).toLowerCase() === 'owner';
+  });
+
   const [cfg, setCfg] = useState(() => JSON.parse(JSON.stringify(leagueConfig)));
   const [teams, setTeams] = useState(() => {
     const t = JSON.parse(JSON.stringify(auctionState.teams));
@@ -170,7 +177,8 @@ function LeagueSetupTab({ auctionState }) {
   const teamCount = Object.keys(teams).length;
   const poolsValid = poolTotal === required;
   const teamsValid = teamCount === parseInt(cfg.numTeams);
-  const canSave = isSetup && poolsValid && teamsValid;
+  const ownerValid = Object.values(teams).every(t => !t.ownerIsPlayer || (t.ownerPlayerId && t.ownerPlayerId !== ''));
+  const canSave = isSetup && poolsValid && teamsValid && ownerValid;
 
   function updatePool(idx, field, val) {
     setCfg(prev => {
@@ -206,7 +214,11 @@ function LeagueSetupTab({ auctionState }) {
   }
 
   function updateTeam(id, field, val) {
-    setTeams(prev => ({ ...prev, [id]: { ...prev[id], [field]: val } }));
+    setTeams(prev => {
+      const updated = { ...prev[id], [field]: val };
+      if (field === 'ownerIsPlayer' && !val) updated.ownerPlayerId = null;
+      return { ...prev, [id]: updated };
+    });
   }
 
   async function save() {
@@ -348,21 +360,61 @@ function LeagueSetupTab({ auctionState }) {
 
           {Object.entries(teams).map(([id, team]) => (
             <div key={id} style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr 40px',
-              gap: '0.5rem', background: '#0f172a', padding: '0.5rem',
-              borderRadius: '6px', alignItems: 'center',
+              background: '#0f172a', padding: '0.5rem',
+              borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '0.4rem',
             }}>
-              <input
-                style={inputSm} placeholder="Team name" value={team.name || ''} disabled={!isSetup}
-                onChange={e => updateTeam(id, 'name', e.target.value)}
-              />
-              <input
-                style={inputSm} placeholder="Password" value={team.password || ''} disabled={!isSetup}
-                onChange={e => updateTeam(id, 'password', e.target.value)}
-              />
-              {isSetup ? (
-                <button onClick={() => removeTeam(id)} style={{ ...smallBtn('#7f1d1d'), padding: '0.3rem 0.5rem' }}>✕</button>
-              ) : <div />}
+              {/* Name / Password / Delete */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '0.5rem', alignItems: 'center' }}>
+                <input
+                  style={inputSm} placeholder="Team name" value={team.name || ''} disabled={!isSetup}
+                  onChange={e => updateTeam(id, 'name', e.target.value)}
+                />
+                <input
+                  style={inputSm} placeholder="Password" value={team.password || ''} disabled={!isSetup}
+                  onChange={e => updateTeam(id, 'password', e.target.value)}
+                />
+                {isSetup ? (
+                  <button onClick={() => removeTeam(id)} style={{ ...smallBtn('#7f1d1d'), padding: '0.3rem 0.5rem' }}>✕</button>
+                ) : <div />}
+              </div>
+
+              {/* Owner-is-player row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.25rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isSetup ? 'pointer' : 'default', userSelect: 'none', color: '#94a3b8', fontSize: '0.8rem' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!team.ownerIsPlayer}
+                    disabled={!isSetup}
+                    onChange={e => updateTeam(id, 'ownerIsPlayer', e.target.checked)}
+                    style={{ accentColor: '#6366f1', cursor: isSetup ? 'pointer' : 'default' }}
+                  />
+                  Owner is also a player
+                </label>
+
+                {team.ownerIsPlayer && (
+                  <select
+                    value={team.ownerPlayerId || ''}
+                    disabled={!isSetup}
+                    onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
+                    style={{
+                      ...inputSm,
+                      flex: 1,
+                      borderColor: (!team.ownerPlayerId) ? '#ef4444' : '#334155',
+                    }}
+                  >
+                    <option value="">— Select team owner —</option>
+                    {ownerPlayers.length === 0 && (
+                      <option value="" disabled>No owner players in CSV</option>
+                    )}
+                    {ownerPlayers.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.pool})</option>
+                    ))}
+                  </select>
+                )}
+                {team.ownerIsPlayer && !team.ownerPlayerId && (
+                  <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>Required</span>
+                )}
+              </div>
             </div>
           ))}
         </div>
@@ -372,7 +424,7 @@ function LeagueSetupTab({ auctionState }) {
       {isSetup && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
           {/* Validation errors — shown whenever any issue exists */}
-          {(!poolsValid || !teamsValid) && (
+          {(!poolsValid || !teamsValid || !ownerValid) && (
             <div style={{
               background: '#450a0a',
               border: '1px solid #ef4444',
@@ -393,6 +445,11 @@ function LeagueSetupTab({ auctionState }) {
               {!teamsValid && (
                 <div style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
                   • Team count is <strong>{teamCount}</strong> but "Number of Teams" is set to <strong>{cfg.numTeams}</strong>
+                </div>
+              )}
+              {!ownerValid && (
+                <div style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
+                  • Teams with "Owner is also a player" checked must have an owner player selected
                 </div>
               )}
             </div>

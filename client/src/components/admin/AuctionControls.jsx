@@ -55,6 +55,11 @@ export default function AuctionControls() {
   const { phase, timerPaused, timerEndsAt, settings } = auctionState;
   const isLive = phase === 'LIVE';
   const isSetup = phase === 'SETUP';
+
+  // Block Next Player if any team has ownerIsPlayer checked but no owner selected
+  const teamsWithMissingOwner = Object.values(auctionState.teams || {})
+    .filter(t => t.ownerIsPlayer && !t.ownerPlayerId);
+  const ownerBlocked = teamsWithMissingOwner.length > 0;
   const isManual = settings.endMode === 'manual';
   const awaitingHammer = isLive && isManual && !timerEndsAt;
 
@@ -141,10 +146,19 @@ export default function AuctionControls() {
       )}
 
       {/* Phase action buttons */}
+      {ownerBlocked && isSetup && (
+        <div style={{
+          background: '#450a0a', border: '1px solid #ef4444',
+          borderRadius: '7px', padding: '0.5rem 0.75rem',
+          color: '#fca5a5', fontSize: '0.8rem',
+        }}>
+          ⚠ Owner player not selected for: {teamsWithMissingOwner.map(t => t.name || t.id).join(', ')} — go to League Setup to fix.
+        </div>
+      )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
         <button
-          style={btn('#22c55e', !isSetup)}
-          disabled={!isSetup}
+          style={btn('#22c55e', !isSetup || ownerBlocked)}
+          disabled={!isSetup || ownerBlocked}
           onClick={() => adminAction('admin:nextPlayer')}
         >
           ▶ Next Player

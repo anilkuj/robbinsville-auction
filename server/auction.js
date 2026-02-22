@@ -12,11 +12,11 @@ function computeMaxBid(budget, rosterSize, squadSize, minBid) {
 
 // ── Owner helpers ─────────────────────────────────────────────────────────────
 
-// A player is an "owner" when their extra.type column (case-insensitive key)
-// equals "owner" (case-insensitive value).
+// A player is an "owner" when their extra type column (key "type" or "player_type",
+// case-insensitive) equals "owner" (case-insensitive value).
 function isOwner(player) {
   if (!player.extra) return false;
-  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type');
+  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
   return typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
 }
 
@@ -31,41 +31,61 @@ function getPoolAverage(players, poolId) {
 
 // Recalculate the pool average and push it to all owner players in that pool.
 // Owner players get status SOLD automatically (no budget deduction).
-// Their team is resolved via extra.team (case-insensitive) matched to a team name.
+// Team resolved via: (1) League Setup ownerPlayerId, (2) CSV extra.team column.
 function syncOwnerAverages(state, poolId) {
   const avg = getPoolAverage(state.players, poolId);
   const owners = state.players.filter(p => p.pool === poolId && isOwner(p));
   if (owners.length === 0) return;
 
   for (const owner of owners) {
-    if (avg === 0) continue; // no sold non-owner players yet
+    if (avg === 0) {
+      // No sold non-owner players remain (e.g. last sold player was re-auctioned).
+      // Revert owner back to PENDING and remove from roster.
+      if (owner.status === 'SOLD') {
+        if (owner.soldTo && state.teams[owner.soldTo]) {
+          const team = state.teams[owner.soldTo];
+          const idx = team.roster.findIndex(r => r.playerId === owner.id);
+          if (idx !== -1) team.roster.splice(idx, 1);
+        }
+        owner.status = 'PENDING';
+        owner.soldTo = null;
+        owner.soldFor = null;
+      }
+      continue;
+    }
 
-    const prevAmount = owner.soldFor;
     owner.soldFor = avg;
 
     if (owner.status !== 'SOLD') {
-      // First time being resolved — mark SOLD and assign to team
+      // First time being resolved — mark SOLD and assign to team.
       owner.status = 'SOLD';
-      const teamKey = Object.keys(owner.extra || {}).find(k => k.toLowerCase() === 'team');
-      if (teamKey) {
-        const teamName = String(owner.extra[teamKey]).trim().toLowerCase();
-        const team = Object.values(state.teams).find(t =>
-          t.name.trim().toLowerCase() === teamName
-        );
-        if (team && !team.roster.find(r => r.playerId === owner.id)) {
-          owner.soldTo = team.id;
-          team.roster.push({
-            playerId: owner.id,
-            playerName: owner.name,
-            pool: owner.pool,
-            price: avg,
-            isOwner: true,
-            ...(owner.extra && { extra: owner.extra }),
-          });
+
+      // Team resolution priority:
+      // 1. League Setup ownerPlayerId (admin explicitly linked this player to a team)
+      // 2. CSV extra.team column (case-insensitive key + value match)
+      let team = Object.values(state.teams).find(t => t.ownerPlayerId === owner.id);
+
+      if (!team) {
+        const teamKey = Object.keys(owner.extra || {}).find(k => k.toLowerCase() === 'team');
+        if (teamKey) {
+          const teamName = String(owner.extra[teamKey]).trim().toLowerCase();
+          team = Object.values(state.teams).find(t => t.name.trim().toLowerCase() === teamName);
         }
       }
+
+      if (team && !team.roster.find(r => r.playerId === owner.id)) {
+        owner.soldTo = team.id;
+        team.roster.push({
+          playerId: owner.id,
+          playerName: owner.name,
+          pool: owner.pool,
+          price: avg,
+          isOwner: true,
+          ...(owner.extra && { extra: owner.extra }),
+        });
+      }
     } else {
-      // Already sold — update roster entry price only (no budget adjustment for owners)
+      // Already sold — update roster entry price only (no budget adjustment for owners).
       if (owner.soldTo && state.teams[owner.soldTo]) {
         const entry = state.teams[owner.soldTo].roster.find(r => r.playerId === owner.id);
         if (entry) entry.price = avg;
@@ -85,6 +105,8 @@ function getPublicState() {
       name: team.name,
       budget: team.budget,
       roster: team.roster,
+      ownerIsPlayer: team.ownerIsPlayer || false,
+      ownerPlayerId: team.ownerPlayerId || null,
     };
   }
   return { ...state, teams };

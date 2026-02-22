@@ -103,7 +103,7 @@ function registerAdminHandlers(io, socket) {
     }
   });
 
-  socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode }) => {
+  socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin }) => {
     const state = getState();
 
     if (timerSeconds !== undefined && parseInt(timerSeconds) > 0) {
@@ -117,6 +117,9 @@ function registerAdminHandlers(io, socket) {
     }
     if (endMode === 'timer' || endMode === 'manual') {
       state.settings.endMode = endMode;
+    }
+    if (dashboardPin !== undefined) {
+      state.settings.dashboardPin = String(dashboardPin).trim();
     }
 
     saveState();

@@ -12,6 +12,7 @@ const { scheduleTimer, handleTimerExpiry, getPublicState } = require('./auction'
 const registerSocketHandlers = require('./socketHandlers');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
+const publicRoutes = require('./routes/public');
 
 const app = express();
 const server = http.createServer(app);
@@ -31,6 +32,7 @@ app.use(express.json({ limit: '10mb' }));
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes(io));
+app.use('/api/public', publicRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

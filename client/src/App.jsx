@@ -5,6 +5,7 @@ import { AuctionProvider } from './contexts/AuctionContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import AuctionPage from './pages/AuctionPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AuctionProvider>

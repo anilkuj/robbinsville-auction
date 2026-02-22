@@ -468,6 +468,15 @@ function AuctionControlsTab({ auctionState, adminAction }) {
     }
   }
 
+  async function fullReset() {
+    if (!confirm('FULL RESET — this will delete ALL teams, players, and league config. Everything returns to factory defaults. Are you sure?')) return;
+    try {
+      await axios.post('/api/admin/full-reset');
+    } catch (err) {
+      alert(err.response?.data?.error || 'Full reset failed');
+    }
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px' }}>
 
@@ -516,6 +525,12 @@ function AuctionControlsTab({ auctionState, adminAction }) {
             style={{ ...smallBtn('#7f1d1d'), marginLeft: 'auto' }}
           >
             ⚠ Reset Auction
+          </button>
+          <button
+            onClick={fullReset}
+            style={{ ...smallBtn('#450a0a'), border: '1px dashed #ef4444' }}
+          >
+            ☠ Full Reset
           </button>
         </div>
       </section>

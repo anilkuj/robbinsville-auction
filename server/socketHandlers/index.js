@@ -9,7 +9,15 @@ function registerSocketHandlers(io) {
   io.use((socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) {
-      return next(new Error('Authentication required'));
+      // If a dashboard PIN is configured, reject unauthenticated connections
+      const { getState } = require('../state');
+      const state = getState();
+      if (state.settings.dashboardPin) {
+        return next(new Error('Dashboard requires PIN authentication'));
+      }
+      // Allow unauthenticated spectator connections (read-only — receives state events only)
+      socket.user = { id: 'spectator', role: 'spectator', name: 'Spectator' };
+      return next();
     }
     try {
       const decoded = jwt.verify(token, config.jwtSecret);

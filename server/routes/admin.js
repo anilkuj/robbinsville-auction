@@ -4,7 +4,7 @@ const { parse } = require('csv-parse/sync');
 const { v4: uuidv4 } = require('uuid');
 const authenticate = require('../middleware/authenticate');
 const requireAdmin = require('../middleware/requireAdmin');
-const { getState } = require('../state');
+const { getState, DEFAULT_POOLS } = require('../state');
 const { saveState } = require('../persistence');
 const { getPublicState, clearAuctionTimer } = require('../auction');
 
@@ -234,6 +234,33 @@ router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
   saveState();
   io.emit('state:full', getPublicState());
   res.json({ message: 'Auction reset successfully', publicState: getPublicState() });
+});
+
+// Full reset — wipes everything back to factory defaults
+router.post('/full-reset', authenticate, requireAdmin, (req, res) => {
+  const state = getState();
+
+  state.phase = 'SETUP';
+  state.leagueConfig = {
+    numTeams: 10,
+    squadSize: 18,
+    startingBudget: 50000,
+    minBid: 1000,
+    pools: DEFAULT_POOLS.map(p => ({ ...p })),
+  };
+  state.players = [];
+  state.teams = {};
+  state.currentPlayerIndex = null;
+  state.currentBid = { amount: 0, teamId: null, history: [] };
+  state.timerEndsAt = null;
+  state.timerPaused = false;
+  state.timerRemainingOnPause = 0;
+  state.unsoldPlayers = [];
+
+  clearAuctionTimer();
+  saveState();
+  io.emit('state:full', getPublicState());
+  res.json({ message: 'Full reset complete — all data cleared', publicState: getPublicState() });
 });
 
 return router;

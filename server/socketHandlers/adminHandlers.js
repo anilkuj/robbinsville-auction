@@ -55,7 +55,7 @@ function registerAdminHandlers(io, socket) {
     processUnsold(io);
   });
 
-  socket.on('admin:reAuction', ({ playerId }) => {
+  socket.on('admin:reAuction', ({ playerId, basePrice }) => {
     const state = getState();
     if (state.phase !== 'SETUP') {
       socket.emit('admin:error', { message: 'Can only re-auction in SETUP phase' });
@@ -66,6 +66,17 @@ function registerAdminHandlers(io, socket) {
     if (!player) {
       socket.emit('admin:error', { message: 'Player not found' });
       return;
+    }
+
+    // Apply base price override if provided and valid
+    if (basePrice !== undefined) {
+      const parsed = parseInt(basePrice);
+      if (!isNaN(parsed) && parsed > 0) {
+        player.basePrice = parsed;
+      } else {
+        socket.emit('admin:error', { message: 'Base price must be a positive number' });
+        return;
+      }
     }
 
     player.status = 'PENDING';

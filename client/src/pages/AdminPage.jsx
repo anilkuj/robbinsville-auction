@@ -433,11 +433,17 @@ function LeagueSetupTab({ auctionState }) {
 // ─── Auction Controls Tab ─────────────────────────────────────────────────────
 
 function AuctionControlsTab({ auctionState, adminAction }) {
-  const { phase, players, unsoldPlayers } = auctionState;
+  const { phase, players, unsoldPlayers, teams } = auctionState;
 
   const pending = players.filter(p => p.status === 'PENDING').length;
   const sold = players.filter(p => p.status === 'SOLD').length;
   const unsold = players.filter(p => p.status === 'UNSOLD').length;
+
+  const [showLoadTestModal, setShowLoadTestModal] = useState(false);
+  const [showFullResetModal, setShowFullResetModal] = useState(false);
+
+  const isSetup = phase === 'SETUP';
+  const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
 
   async function downloadResults() {
     try {
@@ -460,7 +466,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   }
 
   async function resetAuction() {
-    if (!confirm('Reset entire auction? All bids and sold records will be cleared.')) return;
+    if (!confirm('Reset auction progress? All bids, sold records, and team budgets will be cleared back to starting amounts. Teams and players remain.')) return;
     try {
       await axios.post('/api/admin/reset-auction');
     } catch (err) {
@@ -468,17 +474,22 @@ function AuctionControlsTab({ auctionState, adminAction }) {
     }
   }
 
-  async function fullReset() {
-    if (!confirm('FULL RESET — this will delete ALL teams, players, and league config. Everything returns to factory defaults. Are you sure?')) return;
-    try {
-      await axios.post('/api/admin/full-reset');
-    } catch (err) {
-      alert(err.response?.data?.error || 'Full reset failed');
-    }
-  }
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px' }}>
+
+      {/* Modals */}
+      {showLoadTestModal && (
+        <LoadTestDataModal
+          hasExistingData={hasExistingData}
+          isSetup={isSetup}
+          onClose={() => setShowLoadTestModal(false)}
+        />
+      )}
+      {showFullResetModal && (
+        <FullResetModal
+          onClose={() => setShowFullResetModal(false)}
+        />
+      )}
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
@@ -501,7 +512,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       </section>
 
       {/* Player Import */}
-      {phase === 'SETUP' && (
+      {isSetup && (
         <section>
           <SectionTitle>Import Players</SectionTitle>
           <PlayerImport />
@@ -517,25 +528,242 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       {/* Export & Reset */}
       <section>
         <SectionTitle>Exports & Reset</SectionTitle>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
           <button onClick={downloadResults} style={smallBtn('#1d4ed8')}>⬇ Results CSV</button>
           <button onClick={downloadState} style={smallBtn('#334155')}>⬇ State JSON</button>
+
+          {/* Load Test Data */}
           <button
-            onClick={resetAuction}
-            style={{ ...smallBtn('#7f1d1d'), marginLeft: 'auto' }}
+            onClick={() => setShowLoadTestModal(true)}
+            disabled={!isSetup}
+            title={!isSetup ? 'Reset the auction first to load test data' : ''}
+            style={{
+              ...smallBtn('#0369a1'),
+              opacity: isSetup ? 1 : 0.4,
+              cursor: isSetup ? 'pointer' : 'not-allowed',
+            }}
           >
-            ⚠ Reset Auction
+            🧪 Load Test Data
           </button>
-          <button
-            onClick={fullReset}
-            style={{ ...smallBtn('#450a0a'), border: '1px dashed #ef4444' }}
-          >
-            ☠ Full Reset
-          </button>
+
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
+            <button onClick={resetAuction} style={smallBtn('#7f1d1d')}>
+              ⚠ Reset Auction
+            </button>
+            <button
+              onClick={() => setShowFullResetModal(true)}
+              style={{ ...smallBtn('#450a0a'), border: '1px dashed #ef4444' }}
+            >
+              ☠ Full Reset
+            </button>
+          </div>
         </div>
       </section>
     </div>
   );
+}
+
+// ─── Load Test Data Modal ─────────────────────────────────────────────────────
+
+function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  async function handleLoad() {
+    setLoading(true);
+    setError('');
+    try {
+      await axios.post('/api/admin/load-test-data');
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load test data');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>🧪</div>
+      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+        Load Test Data
+      </div>
+
+      {done ? (
+        <>
+          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+            ✓ Test data loaded successfully!
+          </div>
+          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+            <div style={{ marginBottom: '0.4rem', color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Team passwords</div>
+            {[['Team Alpha', 'alpha123'], ['Team Beta', 'beta123'], ['Team Gamma', 'gamma123']].map(([name, pw]) => (
+              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
+                <span>{name}</span>
+                <code style={{ color: '#f59e0b' }}>{pw}</code>
+              </div>
+            ))}
+          </div>
+          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
+        </>
+      ) : (
+        <>
+          <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
+            This will populate the auction with sample data for testing:
+          </div>
+
+          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', marginBottom: '1rem' }}>
+            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <span style={{ color: '#f59e0b', fontWeight: 700 }}>3 Teams</span> — Team Alpha, Beta, Gamma (budget: 30,000 pts each)
+            </div>
+            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
+              <span style={{ color: '#f59e0b', fontWeight: 700 }}>33 Players</span> across 3 pools:
+            </div>
+            <div style={{ paddingLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+              <div style={{ color: '#94a3b8' }}>Pool A — 11 players, base price <span style={{ color: '#22c55e' }}>3,000 pts</span></div>
+              <div style={{ color: '#94a3b8' }}>Pool B — 11 players, base price <span style={{ color: '#22c55e' }}>2,000 pts</span></div>
+              <div style={{ color: '#94a3b8' }}>Pool C — 11 players, base price <span style={{ color: '#22c55e' }}>1,000 pts</span></div>
+            </div>
+          </div>
+
+          {hasExistingData && (
+            <div style={{
+              background: '#451a03', border: '1px solid #f59e0b40',
+              borderRadius: '8px', padding: '0.65rem 0.85rem',
+              color: '#fbbf24', fontSize: '0.82rem', marginBottom: '1rem',
+            }}>
+              ⚠ Existing teams and players will be replaced.
+            </div>
+          )}
+
+          {error && (
+            <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
+            <button
+              onClick={handleLoad}
+              disabled={loading}
+              style={{ ...modalBtn('#0369a1'), flex: 2, opacity: loading ? 0.6 : 1 }}
+            >
+              {loading ? 'Loading…' : hasExistingData ? '⚠ Replace & Load' : '🧪 Load Test Data'}
+            </button>
+          </div>
+        </>
+      )}
+    </Modal>
+  );
+}
+
+// ─── Full Reset Modal ─────────────────────────────────────────────────────────
+
+function FullResetModal({ onClose }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleReset() {
+    setError('');
+    setLoading(true);
+    try {
+      await axios.post('/api/admin/full-reset', { password });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Reset failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Modal onClose={onClose}>
+      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>☠</div>
+      <div style={{ color: '#ef4444', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
+        Full Reset — Permanent
+      </div>
+
+      <div style={{
+        background: '#450a0a', border: '1px solid #ef4444',
+        borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem',
+      }}>
+        <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
+          This will permanently delete:
+        </div>
+        {['All teams and rosters', 'All player data', 'All bids and auction results', 'League configuration (resets to defaults)'].map(item => (
+          <div key={item} style={{ color: '#fca5a5', fontSize: '0.82rem', padding: '0.15rem 0' }}>✕ {item}</div>
+        ))}
+        <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '0.5rem', fontWeight: 600 }}>
+          This action cannot be undone.
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Enter admin password to confirm:</div>
+        <input
+          type="password"
+          placeholder="Admin password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && password && handleReset()}
+          autoFocus
+          style={{
+            width: '100%', boxSizing: 'border-box',
+            background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
+            color: '#f1f5f9', borderRadius: '7px',
+            padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
+          }}
+        />
+        {error && (
+          <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '5px' }}>{error}</div>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.75rem' }}>
+        <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
+        <button
+          onClick={handleReset}
+          disabled={!password || loading}
+          style={{ ...modalBtn('#7f1d1d'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
+        >
+          {loading ? 'Deleting…' : '☠ Permanently Delete All Data'}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ─── Modal shell ──────────────────────────────────────────────────────────────
+
+function Modal({ children, onClose }) {
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 1000,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div style={{
+        background: '#1e293b', border: '1px solid #334155',
+        borderRadius: '14px', padding: '1.75rem',
+        width: '100%', maxWidth: '420px',
+        display: 'flex', flexDirection: 'column',
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function modalBtn(bg) {
+  return {
+    background: bg, border: 'none', color: '#f1f5f9',
+    borderRadius: '7px', padding: '0.6rem 1rem',
+    fontSize: '0.88rem', cursor: 'pointer', fontWeight: 600,
+  };
 }
 
 // ─── Teams Tab ────────────────────────────────────────────────────────────────

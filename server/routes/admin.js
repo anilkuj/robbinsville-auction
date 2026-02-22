@@ -7,6 +7,7 @@ const requireAdmin = require('../middleware/requireAdmin');
 const { getState, DEFAULT_POOLS } = require('../state');
 const { saveState } = require('../persistence');
 const { getPublicState, clearAuctionTimer } = require('../auction');
+const config = require('../config');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
@@ -236,8 +237,95 @@ router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
   res.json({ message: 'Auction reset successfully', publicState: getPublicState() });
 });
 
-// Full reset — wipes everything back to factory defaults
+// Load test data — 3 teams × 33 players (pools A/B/C)
+router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
+  const state = getState();
+
+  if (state.phase !== 'SETUP') {
+    return res.status(400).json({ error: 'Can only load test data in SETUP phase. Reset the auction first.' });
+  }
+
+  const TEST_PLAYERS = {
+    A: ['AB de Villiers', 'Babar Azam', 'Ben Stokes', 'Jasprit Bumrah', 'Joe Root',
+        'MS Dhoni', 'Pat Cummins', 'Rashid Khan', 'Rohit Sharma', 'Steve Smith', 'Virat Kohli'],
+    B: ['Andre Russell', 'David Warner', 'Glenn Maxwell', 'Hardik Pandya', 'Kane Williamson',
+        'KL Rahul', 'Mitchell Starc', 'Ravindra Jadeja', 'Rishabh Pant', 'Suryakumar Yadav', 'Trent Boult'],
+    C: ['Avesh Khan', 'Bhuvneshwar Kumar', 'Deepak Chahar', 'Faf du Plessis', 'Ishan Kishan',
+        'Kuldeep Yadav', 'Quinton de Kock', 'Shardul Thakur', 'Shubman Gill', 'Washington Sundar', 'Yuzvendra Chahal'],
+  };
+  const BASE_PRICES = { A: 3000, B: 2000, C: 1000 };
+
+  // Set league config
+  state.leagueConfig = {
+    numTeams: 3,
+    squadSize: 11,
+    startingBudget: 30000,
+    minBid: 500,
+    pools: [
+      { id: 'A', label: 'A', basePrice: 3000, count: 11 },
+      { id: 'B', label: 'B', basePrice: 2000, count: 11 },
+      { id: 'C', label: 'C', basePrice: 1000, count: 11 },
+    ],
+  };
+
+  // Set teams
+  state.teams = {
+    team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 30000, roster: [] },
+    team_2: { id: 'team_2', name: 'Team Beta',  password: 'beta123',  budget: 30000, roster: [] },
+    team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 30000, roster: [] },
+  };
+
+  // Build players sorted by pool order then name
+  const players = [];
+  for (const pool of ['A', 'B', 'C']) {
+    for (const name of TEST_PLAYERS[pool]) {
+      players.push({
+        id: uuidv4(),
+        name,
+        pool,
+        basePrice: BASE_PRICES[pool],
+        status: 'PENDING',
+        soldTo: null,
+        soldFor: null,
+        sortOrder: 0,
+      });
+    }
+  }
+  players.sort((a, b) => {
+    const poolOrder = ['A', 'B', 'C'];
+    const pi = poolOrder.indexOf(a.pool) - poolOrder.indexOf(b.pool);
+    if (pi !== 0) return pi;
+    return a.name.localeCompare(b.name);
+  });
+  players.forEach((p, i) => { p.sortOrder = i; });
+
+  state.players = players;
+  state.currentPlayerIndex = null;
+  state.currentBid = { amount: 0, teamId: null, history: [] };
+  state.timerEndsAt = null;
+  state.timerPaused = false;
+  state.timerRemainingOnPause = 0;
+  state.unsoldPlayers = [];
+
+  clearAuctionTimer();
+  saveState();
+  io.emit('state:full', getPublicState());
+  res.json({
+    message: 'Test data loaded successfully',
+    teams: 3,
+    players: players.length,
+    publicState: getPublicState(),
+  });
+});
+
+// Full reset — wipes everything back to factory defaults (requires admin password)
 router.post('/full-reset', authenticate, requireAdmin, (req, res) => {
+  const { password } = req.body;
+
+  if (!password || password !== config.admin.password) {
+    return res.status(401).json({ error: 'Invalid admin password' });
+  }
+
   const state = getState();
 
   state.phase = 'SETUP';

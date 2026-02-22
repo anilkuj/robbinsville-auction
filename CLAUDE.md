@@ -64,9 +64,6 @@ robbinsville-auction/
         └── utils/budgetCalc.js   # computeMaxBid + formatPts (mirrors server logic)
 ```
 
-**AuctionContext extras:** `adminError` (string|null) + `clearAdminError()` — set when server emits `admin:error` to this socket. Consumed by AuctionControls to display errors near the Manual Sale panel.
-```
-
 ### Key Design Decisions
 
 **State management:** The server holds a single mutable in-memory `state` object (`server/state.js`). All mutations happen server-side; clients receive immutable snapshots via Socket.io events. `getPublicState()` in `auction.js` strips team passwords before broadcasting.
@@ -79,11 +76,17 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 ```
 `computeMaxBid` exists in both `server/auction.js` and `client/src/utils/budgetCalc.js`. **Keep them in sync.**
 
+**Settings object** (`state.settings`): `timerSeconds`, `bidIncrement`, `timerBumpSeconds`, `endMode` ('timer'|'manual'), `dashboardPin`, `requireBidConfirm`, `randomizePool`. All mutable via `admin:updateSettings` socket event; persisted with state.
+
 **Admin routes vs. socket events:** HTTP routes handle bulk/destructive operations (CSV import, state backup/restore, full reset). Socket events handle real-time auction flow (next player, pause, resume, bids).
 
 **Auction phases:** `SETUP → LIVE → SETUP` (per player) cycling until all players are done, then `ENDED`. Phase transitions are driven by `startPlayer`, `processSold`, `processUnsold` in `auction.js`.
 
 **Persistence:** `saveState()` debounces disk writes to `server/data/state.json` (500ms). On server start, `loadState()` restores state and reschedules the timer if an active round is in progress.
+
+**Player order (randomizePool):** `settings.randomizePool` (default `false`). When `true`, `findNextPendingIndex` in `auction.js` identifies the current pool from the first PENDING player (preserving pool sequence A1 → A2 → B1…), then picks a random player within that pool. Toggled via the **Player order** control (↕ Fixed / 🔀 Random) in AuctionControls live settings.
+
+**Manual Sale:** Admin can directly sell any PENDING or UNSOLD player to any team at a chosen price via `admin:manualSale` (SETUP or ENDED phase only). Uses the same `computeMaxBid` budget validation as live bidding. UI is the collapsible **💰 Manual Sale** panel at the bottom of Auction Controls. On success broadcasts `auction:sold` to all clients. `AuctionContext` exposes `adminError` / `clearAdminError()` (sourced from `admin:error` socket events) for in-panel error display.
 
 ### Socket Events Reference
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>RPL Auction — How It Works</title>
+  <title>RPL Admin Guide</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -210,7 +210,7 @@
 
 <!-- Nav -->
 <div class="nav">
-  <span class="nav-title">🏏 RPL Auction Guide</span>
+  <span class="nav-title">🏏 RPL Admin Guide</span>
   <div class="nav-controls">
     <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Prev</button>
     <span class="slide-counter" id="counter">1 / 9</span>
@@ -383,8 +383,8 @@
     <div class="role-badge role-admin">👑 Admin</div>
     <div class="slide-tag accent-yellow">Step 3</div>
     <h2>Auction Settings</h2>
-    <p>Before starting, tune the live auction settings in <strong>Auction Controls tab</strong>.</p>
-    <div class="cards cards-3" style="margin-bottom:0.75rem;">
+    <p>Tune settings in the <strong>Settings tab</strong> before starting. These can be adjusted mid-auction too.</p>
+    <div class="cards cards-2" style="margin-bottom:0.75rem;">
       <div class="card">
         <div class="card-icon">⏱</div>
         <h3>Timer</h3>
@@ -393,12 +393,17 @@
       <div class="card">
         <div class="card-icon">⬆️</div>
         <h3>Bid Increment</h3>
-        <p>How much each bid raises the price. Default: <strong>500 pts</strong></p>
+        <p>How much each standard bid raises the price. Default: <strong>500 pts</strong></p>
       </div>
       <div class="card">
         <div class="card-icon">🔔</div>
         <h3>Bid Bump</h3>
-        <p>Seconds added to timer when a bid comes in. Default: <strong>+10s</strong></p>
+        <p>Seconds added to the timer when a new bid comes in. Default: <strong>+10s</strong></p>
+      </div>
+      <div class="card">
+        <div class="card-icon">✅</div>
+        <h3>Bid Confirmation</h3>
+        <p>When enabled, teams see a confirm dialog before each bid registers — prevents accidental taps.</p>
       </div>
     </div>
     <div class="cards cards-2">
@@ -449,7 +454,8 @@
         <div class="mockup">
           <div class="label">Admin Controls panel</div>
           <span class="grn">▶ Next Player</span>   <span class="ylw">⏸ Pause</span><br>
-          <span class="pur">🔨 Hammer</span>   <span class="red">✕ Mark Unsold</span>
+          <span class="pur">🔨 Hammer</span>   <span class="red">✕ Mark Unsold</span><br>
+          <span class="blu">↩ Rollback Last Sale</span>
           <hr>
           <div class="label" style="margin-top:0.4rem;">On block</div>
           <span class="hi">Virat Kohli</span>  <span class="ylw">[A1]</span><br>
@@ -459,7 +465,7 @@
           Leading:     <span class="hi">Team Alpha</span><br>
           Timer:       <span class="ylw">12s</span>
         </div>
-        <div class="tip" style="margin-top:0.75rem;">💡 You can also mark a player unsold manually at any time, and re-auction them later from the Unsold Players list.</div>
+        <div class="tip" style="margin-top:0.75rem;">💡 If a sale was settled incorrectly, use <strong>Rollback Last Sale</strong> to undo it — the player returns to the pool and the team's budget is refunded.</div>
       </div>
     </div>
   </div>
@@ -481,7 +487,7 @@
         </div>
         <div class="step" style="border-color:#22c55e;">
           <div class="step-num" style="background:#22c55e;">3</div>
-          <div class="step-body"><strong>Tap the Bid button</strong><span>Each tap raises the bid by the increment amount</span></div>
+          <div class="step-body"><strong>Tap Bid or enter a custom amount</strong><span>Each tap raises by the increment. Or type any higher amount for strategic bidding.</span></div>
         </div>
         <div class="step" style="border-color:#22c55e;">
           <div class="step-num" style="background:#22c55e;">4</div>
@@ -498,7 +504,7 @@
           Leading: <span class="red">Team Blaze 🔥</span><br>
           Timer: <span class="ylw">08s</span><br>
           <hr>
-          <span class="grn">[ BID — 7,000 pts ]</span><br>
+          <span class="grn">[ BID — 7,000 pts ]</span>  <span class="blu">[ Custom: ____ ]</span><br>
           <br>
           Your budget: <span class="hi">38,500 pts</span><br>
           Your squad:  <span class="hi">3 / 18</span>
@@ -524,19 +530,19 @@
         <p>If no team bids before the timer expires, the player is automatically marked <strong>Unsold</strong> (Timer mode) or admin uses Mark Unsold (Manual mode).</p>
       </div>
       <div class="card" style="border-color:#3b82f6;">
-        <h3 class="accent-blue">↩ Re-auction a player</h3>
-        <p>In <strong>Auction Controls → Unsold Players</strong>, click <strong>Re-auction</strong> next to any unsold player to put them back in the pool.</p>
+        <h3 class="accent-blue">↩ Re-auction with price override</h3>
+        <p>In <strong>Auction Controls → Unsold Players</strong>, click <strong>Re-Auction</strong>. An inline editor appears — adjust the base price if needed, then Confirm to re-queue.</p>
       </div>
       <div class="card" style="border-color:#f59e0b;">
         <h3 class="accent-yellow">⏸ Pause for discussion</h3>
         <p>Use the Pause button to freeze the timer mid-bid — useful if there's a dispute or technical issue. Resume continues from where it left off.</p>
       </div>
-      <div class="card" style="border-color:#a855f7;">
-        <h3 class="accent-purple">💾 Save your state</h3>
-        <p>Use <strong>⬇ State JSON</strong> to download a full backup of the auction at any point. If the server restarts, state is auto-restored from disk.</p>
+      <div class="card" style="border-color:#ef4444;">
+        <h3 class="accent-red">↩ Rollback last sale</h3>
+        <p>In <strong>Auction Controls</strong>, click <strong>Rollback Last Sale</strong> to undo the most recent transaction — player returns to the pool and the team's budget is refunded.</p>
       </div>
     </div>
-    <div class="warn">⚠️ Don't redeploy or restart the server mid-auction without downloading a State JSON backup first.</div>
+    <div class="warn">⚠️ Don't redeploy or restart the server mid-auction without downloading a <strong>State JSON</strong> backup first (Settings tab → ⬇ Export State).</div>
   </div>
 
   <!-- 9. Results -->
@@ -563,7 +569,16 @@
       Rohit Sharma,A1,4000,<span class="grn">SOLD</span>,Team Blaze,7500<br>
       Player XYZ,D,1000,<span class="red">UNSOLD</span>,,<br>
     </div>
-    <div class="tip" style="margin-top:1rem;">💡 To run another auction, click <strong>⚠ Reset Auction</strong> in Auction Controls — it clears all bids and resets team budgets, but keeps your league config and player list intact.</div>
+    <div class="cards cards-2" style="margin-top:0.75rem;">
+      <div class="card" style="border-color:#f59e0b;">
+        <h3 class="accent-yellow">⚠ Reset Auction</h3>
+        <p>Clears all bids and resets team budgets, but <strong>keeps your league config and player list</strong>. Use this to re-run the same auction.</p>
+      </div>
+      <div class="card" style="border-color:#ef4444;">
+        <h3 class="accent-red">🗑 Full Reset</h3>
+        <p>Wipes <strong>everything</strong> — players, teams, config — back to factory defaults. Requires admin password. Use with caution.</p>
+      </div>
+    </div>
   </div>
 
 </div>

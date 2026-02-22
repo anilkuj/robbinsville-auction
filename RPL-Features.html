@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <title>RPL Auction — Feature Poster</title>
+  <title>RPL Features</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
 
@@ -266,7 +266,7 @@
     <div class="feat blue">
       <div class="feat-icon">↩️</div>
       <h3>Re-Auction Players</h3>
-      <p>Any unsold player can be sent back to the auction pool and re-bid on at any point during the event.</p>
+      <p>Any unsold player can be re-queued at any time. Admin can <strong>override the base price</strong> before re-auctioning — just edit the value and confirm.</p>
     </div>
     <div class="feat purple">
       <div class="feat-icon">⏱️</div>
@@ -283,11 +283,26 @@
       <h3>State Backup & Restore</h3>
       <p>Export full auction state as JSON at any time. Auto-restored from disk on server restart — never lose progress.</p>
     </div>
+    <div class="feat red">
+      <div class="feat-icon">↩️</div>
+      <h3>Rollback Last Sale</h3>
+      <p>Made a mistake? Instantly undo the most recent sale — player returns to the pool and the team's budget is fully refunded.</p>
+    </div>
+    <div class="feat purple">
+      <div class="feat-icon">✅</div>
+      <h3>Bid Confirmation</h3>
+      <p>Optional setting that shows a confirm dialog before each bid registers — reduces accidental taps in high-pressure moments.</p>
+    </div>
+    <div class="feat blue">
+      <div class="feat-icon">📺</div>
+      <h3>Live Dashboard</h3>
+      <p>PIN-protected spectator dashboard shows live standings, rosters, and budgets — great for a projector or second screen.</p>
+    </div>
   </div>
 
   <!-- Team features -->
   <div class="section-title">🏏 Team Features</div>
-  <div class="grid-4">
+  <div class="grid-3">
     <div class="feat green">
       <div class="feat-icon">📱</div>
       <h3>Any Device</h3>
@@ -301,7 +316,12 @@
     <div class="feat green">
       <div class="feat-icon">💰</div>
       <h3>Smart Bid Button</h3>
-      <p>One-tap bidding. Auto-disabled if you can't afford it or your squad is already full.</p>
+      <p>One-tap bidding at the set increment. Auto-disabled if you can't afford it or your squad is full.</p>
+    </div>
+    <div class="feat green">
+      <div class="feat-icon">🔢</div>
+      <h3>Custom Bid Amount</h3>
+      <p>Enter any amount above the current bid — not just the increment. Useful for aggressive or strategic bidding.</p>
     </div>
     <div class="feat green">
       <div class="feat-icon">📋</div>

@@ -86,6 +86,8 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 
 **Player order (randomizePool):** `settings.randomizePool` (default `false`). When `true`, `findNextPendingIndex` in `auction.js` identifies the current pool from the first PENDING player (preserving pool sequence A1 → A2 → B1…), then picks a random player within that pool. Toggled via the **Player order** control (↕ Fixed / 🔀 Random) in AuctionControls live settings.
 
+**Extra CSV columns:** Any CSV columns beyond `name` and `pool` are captured as `player.extra` (object). Extra data flows into roster entries on sale. Displayed as small badges in: AuctionPage right panel (remaining players), Sidebar roster list, Dashboard remaining players pane, and Dashboard team roster.
+
 **Manual Sale:** Admin can directly sell any PENDING or UNSOLD player to any team at a chosen price via `admin:manualSale` (SETUP or ENDED phase only). Uses the same `computeMaxBid` budget validation as live bidding. UI is the collapsible **💰 Manual Sale** panel at the bottom of Auction Controls. On success broadcasts `auction:sold` to all clients. `AuctionContext` exposes `adminError` / `clearAdminError()` (sourced from `admin:error` socket events) for in-panel error display.
 
 ### Socket Events Reference

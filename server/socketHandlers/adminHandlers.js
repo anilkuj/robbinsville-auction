@@ -166,6 +166,7 @@ function registerAdminHandlers(io, socket) {
       playerName: player.name,
       pool: player.pool,
       price: amount,
+      ...(player.extra && { extra: player.extra }),
     });
 
     // Remove from unsold list if present

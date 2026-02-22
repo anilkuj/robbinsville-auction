@@ -352,37 +352,59 @@ function RemainingPlayersPane({ players, pools, currentPlayerId }) {
               {/* Players in pool */}
               {byPool[poolId].map((player, i) => {
                 const isOnBlock = player.id === currentPlayerId;
+                const hasExtra = player.extra && Object.keys(player.extra).length > 0;
                 return (
                   <div key={player.id} style={{
-                    padding: '0.35rem 1rem',
                     borderBottom: '1px solid #0f172a',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: '0.4rem',
                     background: isOnBlock ? '#0c1a10' : 'transparent',
                   }}>
-                    <span style={{
-                      fontSize: '0.78rem',
-                      color: isOnBlock ? '#22c55e' : '#cbd5e1',
-                      fontWeight: isOnBlock ? 700 : 400,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      flex: 1,
+                    <div style={{
+                      padding: '0.35rem 1rem',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '0.4rem',
                     }}>
-                      {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
-                      {player.name}
-                    </span>
-                    <span style={{
-                      fontSize: '0.72rem',
-                      color: isOnBlock ? '#22c55e' : '#475569',
-                      fontWeight: isOnBlock ? 700 : 400,
-                      whiteSpace: 'nowrap',
-                      flexShrink: 0,
-                    }}>
-                      {fmtPts(player.basePrice)}
-                    </span>
+                      <span style={{
+                        fontSize: '0.78rem',
+                        color: isOnBlock ? '#22c55e' : '#cbd5e1',
+                        fontWeight: isOnBlock ? 700 : 400,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        flex: 1,
+                      }}>
+                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
+                        {player.name}
+                      </span>
+                      <span style={{
+                        fontSize: '0.72rem',
+                        color: isOnBlock ? '#22c55e' : '#475569',
+                        fontWeight: isOnBlock ? 700 : 400,
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                      }}>
+                        {fmtPts(player.basePrice)}
+                      </span>
+                    </div>
+                    {hasExtra && (
+                      <div style={{
+                        padding: '0 1rem 0.3rem',
+                        display: 'flex', flexWrap: 'wrap', gap: '0.25rem',
+                      }}>
+                        {Object.entries(player.extra).map(([k, v]) => v && (
+                          <span key={k} style={{
+                            fontSize: '0.6rem',
+                            color: '#475569',
+                            background: '#0f172a',
+                            borderRadius: '3px',
+                            padding: '0.08rem 0.3rem',
+                          }}>
+                            {v}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -470,25 +492,44 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
           <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
             {roster.map((r, i) => (
               <div key={i} style={{
-                padding: '0.35rem 1rem',
-                display: 'grid', gridTemplateColumns: '1fr auto auto',
-                gap: '0.5rem', alignItems: 'center',
-                background: i % 2 === 0 ? 'transparent' : '#0f172a20',
                 borderTop: '1px solid #1e293b',
+                background: i % 2 === 0 ? 'transparent' : '#0f172a20',
               }}>
-                <span style={{ fontSize: '0.82rem', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {r.playerName}
-                </span>
-                <span style={{
-                  fontSize: '0.68rem', color: '#64748b',
-                  background: '#0f172a', border: '1px solid #334155',
-                  borderRadius: '4px', padding: '0.1rem 0.3rem',
+                <div style={{
+                  padding: '0.35rem 1rem',
+                  display: 'grid', gridTemplateColumns: '1fr auto auto',
+                  gap: '0.5rem', alignItems: 'center',
                 }}>
-                  {r.pool}
-                </span>
-                <span style={{ fontSize: '0.82rem', color: '#22c55e', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                  {r.price.toLocaleString()}
-                </span>
+                  <span style={{ fontSize: '0.82rem', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {r.playerName}
+                  </span>
+                  <span style={{
+                    fontSize: '0.68rem', color: '#64748b',
+                    background: '#0f172a', border: '1px solid #334155',
+                    borderRadius: '4px', padding: '0.1rem 0.3rem',
+                  }}>
+                    {r.pool}
+                  </span>
+                  <span style={{ fontSize: '0.82rem', color: '#22c55e', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {r.price.toLocaleString()}
+                  </span>
+                </div>
+                {r.extra && Object.keys(r.extra).length > 0 && (
+                  <div style={{
+                    padding: '0 1rem 0.3rem',
+                    display: 'flex', flexWrap: 'wrap', gap: '0.25rem',
+                  }}>
+                    {Object.entries(r.extra).map(([k, v]) => v && (
+                      <span key={k} style={{
+                        fontSize: '0.62rem', color: '#475569',
+                        background: '#0f172a', borderRadius: '3px',
+                        padding: '0.08rem 0.3rem',
+                      }}>
+                        <span style={{ color: '#334155' }}>{k}: </span>{v}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             ))}
           </div>

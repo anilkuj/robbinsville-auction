@@ -60,16 +60,26 @@ router.post('/import-players', authenticate, requireAdmin, upload.single('file')
 
     // Build players array sorted by pool order then name
     const poolOrder = pools.map(p => p.id);
-    const players = records.map((row, idx) => ({
-      id: uuidv4(),
-      name: row.name.trim(),
-      pool: row.pool.trim().toUpperCase(),
-      basePrice: poolMap[row.pool.trim().toUpperCase()].basePrice,
-      status: 'PENDING',
-      soldTo: null,
-      soldFor: null,
-      sortOrder: idx,
-    }));
+    const KNOWN_COLS = new Set(['name', 'pool']);
+    const players = records.map((row, idx) => {
+      const extra = {};
+      for (const [key, val] of Object.entries(row)) {
+        if (!KNOWN_COLS.has(key.toLowerCase()) && val?.trim()) {
+          extra[key] = val.trim();
+        }
+      }
+      return {
+        id: uuidv4(),
+        name: row.name.trim(),
+        pool: row.pool.trim().toUpperCase(),
+        basePrice: poolMap[row.pool.trim().toUpperCase()].basePrice,
+        status: 'PENDING',
+        soldTo: null,
+        soldFor: null,
+        sortOrder: idx,
+        ...(Object.keys(extra).length > 0 && { extra }),
+      };
+    });
 
     players.sort((a, b) => {
       const ai = poolOrder.indexOf(a.pool);

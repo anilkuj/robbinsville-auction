@@ -149,6 +149,7 @@ function processSold(io) {
       playerName: player.name,
       pool: player.pool,
       price: amount,
+      ...(player.extra && { extra: player.extra }),
     });
   }
 

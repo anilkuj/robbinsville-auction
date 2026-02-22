@@ -13,6 +13,7 @@ const S = {
     flexDirection: 'column',
     gap: '1rem',
     flexShrink: 0,
+    overflowY: 'auto',
   },
   logo: {
     fontWeight: 700,
@@ -56,6 +57,7 @@ export default function Sidebar() {
 
   const team = auctionState?.teams?.[user?.teamId];
   const squadSize = auctionState?.leagueConfig?.squadSize ?? 18;
+  const roster = team?.roster ?? [];
 
   return (
     <div style={S.sidebar}>
@@ -71,7 +73,7 @@ export default function Sidebar() {
 
           <div style={S.rosterRow}>
             <span>Squad</span>
-            <span>{team.roster.length} / {squadSize}</span>
+            <span>{roster.length} / {squadSize}</span>
           </div>
         </div>
       )}
@@ -80,6 +82,41 @@ export default function Sidebar() {
         <div style={S.teamCard}>
           <div style={S.label}>Team</div>
           <div style={S.value}>{user.name}</div>
+        </div>
+      )}
+
+      {/* Roster list */}
+      {roster.length > 0 && (
+        <div style={{ ...S.teamCard, padding: '0.6rem 0.75rem' }}>
+          <div style={{ ...S.label, marginBottom: '0.4rem' }}>My Squad</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+            {roster.map((r, i) => (
+              <div key={r.playerId || i} style={{
+                borderTop: i > 0 ? '1px solid #1e293b' : 'none',
+                paddingTop: i > 0 ? '0.4rem' : 0,
+              }}>
+                <div style={{ color: '#f1f5f9', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {r.playerName}
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '3px' }}>
+                  <span style={{
+                    background: '#1e293b', border: '1px solid #334155',
+                    borderRadius: '3px', padding: '0.05rem 0.3rem',
+                    fontSize: '0.62rem', color: '#94a3b8',
+                  }}>{r.pool}</span>
+                  <span style={{ color: '#22c55e', fontSize: '0.78rem', fontWeight: 700 }}>
+                    {r.price.toLocaleString()} pts
+                  </span>
+                </div>
+                {r.extra && Object.entries(r.extra).map(([k, v]) => v && (
+                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                    <span style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'capitalize' }}>{k}</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.65rem', textAlign: 'right', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

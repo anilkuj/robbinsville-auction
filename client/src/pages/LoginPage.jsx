@@ -1,17 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isAdminLogin = searchParams.get('admin') === '1';
   const [teams, setTeams] = useState([]);
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(isAdminLogin ? 'admin' : '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    if (isAdminLogin) return; // don't fetch teams for admin login
     fetch('/api/public/teams')
       .then(r => r.json())
       .then(data => {
@@ -71,9 +74,27 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           <div>
             <label style={{ display: 'block', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '0.4rem' }}>
-              Team
+              {isAdminLogin ? 'Username' : 'Team'}
             </label>
-            {teams.length > 0 ? (
+            {isAdminLogin ? (
+              <input
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                required
+                autoFocus
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '1px solid #334155',
+                  borderRadius: '8px',
+                  padding: '0.75rem 1rem',
+                  color: '#f1f5f9',
+                  fontSize: '1rem',
+                  outline: 'none',
+                }}
+              />
+            ) : teams.length > 0 ? (
               <select
                 value={username}
                 onChange={e => setUsername(e.target.value)}
@@ -91,12 +112,9 @@ export default function LoginPage() {
                   cursor: 'pointer',
                 }}
               >
-                <option value="admin">Admin</option>
-                <optgroup label="Teams">
-                  {teams.map(t => (
-                    <option key={t.id} value={t.name}>{t.name}</option>
-                  ))}
-                </optgroup>
+                {teams.map(t => (
+                  <option key={t.id} value={t.name}>{t.name}</option>
+                ))}
               </select>
             ) : (
               <input

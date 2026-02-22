@@ -184,7 +184,7 @@ function registerAdminHandlers(io, socket) {
     });
   });
 
-  socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm }) => {
+  socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool }) => {
     const state = getState();
 
     if (timerSeconds !== undefined && parseInt(timerSeconds) > 0) {
@@ -204,6 +204,9 @@ function registerAdminHandlers(io, socket) {
     }
     if (requireBidConfirm !== undefined) {
       state.settings.requireBidConfirm = Boolean(requireBidConfirm);
+    }
+    if (randomizePool !== undefined) {
+      state.settings.randomizePool = Boolean(randomizePool);
     }
 
     saveState();

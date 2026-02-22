@@ -65,20 +65,29 @@ function handleTimerExpiry(io) {
   }
 }
 
-function findNextPendingIndex(fromIndex) {
+function findNextPendingIndex(fromIndex, randomize = false) {
   const state = getState();
+  // Collect all pending indices from fromIndex onward
+  const pending = [];
   for (let i = fromIndex; i < state.players.length; i++) {
-    if (state.players[i].status === 'PENDING') return i;
+    if (state.players[i].status === 'PENDING') pending.push(i);
   }
-  return -1;
+  if (pending.length === 0) return -1;
+  if (!randomize) return pending[0];
+
+  // Determine the current pool from the first pending player (preserves pool order)
+  const currentPool = state.players[pending[0]].pool;
+  const inPool = pending.filter(i => state.players[i].pool === currentPool);
+  return inPool[Math.floor(Math.random() * inPool.length)];
 }
 
 function startPlayer(io, playerIndex) {
   const state = getState();
 
+  const randomize = state.settings.randomizePool ?? false;
   const idx = (playerIndex !== undefined && playerIndex !== null)
     ? playerIndex
-    : findNextPendingIndex(0);
+    : findNextPendingIndex(0, randomize);
 
   if (idx === -1 || idx >= state.players.length) {
     // All players done
@@ -93,7 +102,7 @@ function startPlayer(io, playerIndex) {
 
   const player = state.players[idx];
   if (!player || player.status !== 'PENDING') {
-    const nextIdx = findNextPendingIndex(idx + 1);
+    const nextIdx = findNextPendingIndex(idx + 1, randomize);
     if (nextIdx === -1) {
       state.phase = 'ENDED';
       state.currentPlayerIndex = null;

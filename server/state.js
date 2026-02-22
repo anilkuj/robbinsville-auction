@@ -18,7 +18,7 @@ const state = {
     minBid: 1000,
     pools: DEFAULT_POOLS,
   },
-  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '', requireBidConfirm: true },
+  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '', requireBidConfirm: true, randomizePool: false },
   players: [],
   currentPlayerIndex: null,
   currentBid: { amount: 0, teamId: null, history: [] },

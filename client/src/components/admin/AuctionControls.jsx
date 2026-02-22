@@ -22,6 +22,7 @@ export default function AuctionControls() {
   const [bump, setBump] = useState('');
   const [pendingEndMode, setPendingEndMode] = useState(null); // null = no change pending
   const [pendingConfirm, setPendingConfirm] = useState(null); // null = no change pending
+  const [pendingRandomize, setPendingRandomize] = useState(null); // null = no change pending
 
   // Manual sale state
   const [showManualSale, setShowManualSale] = useState(false);
@@ -59,7 +60,8 @@ export default function AuctionControls() {
 
   const displayEndMode = pendingEndMode ?? settings.endMode;
   const displayConfirm = pendingConfirm ?? settings.requireBidConfirm ?? true;
-  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingConfirm !== null;
+  const displayRandomize = pendingRandomize ?? settings.randomizePool ?? false;
+  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingConfirm !== null || pendingRandomize !== null;
 
   // Manual sale derived values
   const { squadSize, minBid } = auctionState.leagueConfig || {};
@@ -94,6 +96,7 @@ export default function AuctionControls() {
     if (bump !== '' && parseInt(bump) >= 0) updates.timerBumpSeconds = parseInt(bump);
     if (pendingEndMode !== null) updates.endMode = pendingEndMode;
     if (pendingConfirm !== null) updates.requireBidConfirm = pendingConfirm;
+    if (pendingRandomize !== null) updates.randomizePool = pendingRandomize;
     if (Object.keys(updates).length) {
       adminAction('admin:updateSettings', updates);
       setTimer('');
@@ -101,6 +104,7 @@ export default function AuctionControls() {
       setBump('');
       setPendingEndMode(null);
       setPendingConfirm(null);
+      setPendingRandomize(null);
     }
   }
 
@@ -265,6 +269,29 @@ export default function AuctionControls() {
                 }}
               >
                 {val ? '✓ On' : '✕ Off'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
+            Player order
+          </div>
+          <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #334155' }}>
+            {[false, true].map(val => (
+              <button
+                key={String(val)}
+                onClick={() => setPendingRandomize(val === displayRandomize && pendingRandomize === null ? null : val)}
+                style={{
+                  padding: '0.4rem 0.75rem',
+                  background: displayRandomize === val ? (val ? '#f59e0b' : '#3b82f6') : '#0f172a',
+                  color: displayRandomize === val ? '#fff' : '#64748b',
+                  border: pendingRandomize === val ? '1px dashed #94a3b8' : 'none',
+                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+                }}
+              >
+                {val ? '🔀 Random' : '↕ Fixed'}
               </button>
             ))}
           </div>

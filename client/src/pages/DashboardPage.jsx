@@ -164,7 +164,7 @@ export default function DashboardPage() {
   const totalPending = players.filter(p => p.status === 'PENDING').length;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif' }}>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#0f172a', color: '#f1f5f9', fontFamily: 'system-ui, sans-serif', overflow: 'hidden' }}>
 
       {/* ── Header ── */}
       <div style={{
@@ -238,28 +238,156 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Teams grid ── */}
-      <div style={{ padding: '1.25rem 1.5rem' }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: '1rem',
-        }}>
-          {teamList.map(team => (
-            <TeamCard
-              key={team.id}
-              team={team}
-              startingBudget={startingBudget}
-              squadSize={squadSize}
-              isLeading={state.currentBid?.teamId === team.id}
-            />
-          ))}
+      {/* ── Main content: teams grid + remaining players pane ── */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+
+        {/* Teams grid */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+            gap: '1rem',
+          }}>
+            {teamList.map(team => (
+              <TeamCard
+                key={team.id}
+                team={team}
+                startingBudget={startingBudget}
+                squadSize={squadSize}
+                isLeading={state.currentBid?.teamId === team.id}
+              />
+            ))}
+          </div>
+
+          {teamList.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>
+              No teams configured yet. Admin needs to complete League Setup.
+            </div>
+          )}
         </div>
 
-        {teamList.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>
-            No teams configured yet. Admin needs to complete League Setup.
+        {/* Remaining players pane */}
+        <RemainingPlayersPane
+          players={players}
+          pools={leagueConfig?.pools ?? []}
+          currentPlayerId={currentPlayer?.id ?? null}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Remaining Players Pane ────────────────────────────────────────────────────
+
+function RemainingPlayersPane({ players, pools, currentPlayerId }) {
+  const pending = players.filter(p => p.status === 'PENDING');
+
+  // Group by pool, preserving pool order from leagueConfig
+  const poolOrder = pools.map(p => p.id);
+  const byPool = {};
+  for (const p of pending) {
+    if (!byPool[p.pool]) byPool[p.pool] = [];
+    byPool[p.pool].push(p);
+  }
+  const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
+
+  return (
+    <div style={{
+      width: '240px',
+      flexShrink: 0,
+      borderLeft: '1px solid #1e293b',
+      background: '#0a111e',
+      display: 'flex',
+      flexDirection: 'column',
+      overflow: 'hidden',
+    }}>
+      {/* Pane header */}
+      <div style={{
+        padding: '0.75rem 1rem',
+        borderBottom: '1px solid #1e293b',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexShrink: 0,
+      }}>
+        <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
+          Remaining Players
+        </span>
+        <span style={{
+          background: '#1e293b', color: '#f59e0b',
+          borderRadius: '999px', padding: '0.1rem 0.5rem',
+          fontSize: '0.68rem', fontWeight: 700,
+        }}>
+          {pending.length}
+        </span>
+      </div>
+
+      {/* Scrollable list */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {pending.length === 0 ? (
+          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#334155', fontSize: '0.8rem' }}>
+            No players remaining
           </div>
+        ) : (
+          orderedPools.map(poolId => (
+            <div key={poolId}>
+              {/* Pool header */}
+              <div style={{
+                padding: '0.4rem 1rem',
+                background: '#0f172a',
+                borderBottom: '1px solid #1e293b',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                position: 'sticky',
+                top: 0,
+                zIndex: 1,
+              }}>
+                <span style={{ color: '#64748b', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>
+                  Pool {poolId}
+                </span>
+                <span style={{ color: '#475569', fontSize: '0.65rem' }}>{byPool[poolId].length}</span>
+              </div>
+
+              {/* Players in pool */}
+              {byPool[poolId].map((player, i) => {
+                const isOnBlock = player.id === currentPlayerId;
+                return (
+                  <div key={player.id} style={{
+                    padding: '0.35rem 1rem',
+                    borderBottom: '1px solid #0f172a',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: isOnBlock ? '#0c1a10' : 'transparent',
+                  }}>
+                    <span style={{
+                      fontSize: '0.78rem',
+                      color: isOnBlock ? '#22c55e' : '#cbd5e1',
+                      fontWeight: isOnBlock ? 700 : 400,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1,
+                    }}>
+                      {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
+                      {player.name}
+                    </span>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      color: isOnBlock ? '#22c55e' : '#475569',
+                      fontWeight: isOnBlock ? 700 : 400,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
+                    }}>
+                      {fmtPts(player.basePrice)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          ))
         )}
       </div>
     </div>

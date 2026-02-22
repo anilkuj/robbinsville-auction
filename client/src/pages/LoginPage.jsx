@@ -91,9 +91,12 @@ export default function LoginPage() {
                   cursor: 'pointer',
                 }}
               >
-                {teams.map(t => (
-                  <option key={t.id} value={t.name}>{t.name}</option>
-                ))}
+                <option value="admin">Admin</option>
+                <optgroup label="Teams">
+                  {teams.map(t => (
+                    <option key={t.id} value={t.name}>{t.name}</option>
+                  ))}
+                </optgroup>
               </select>
             ) : (
               <input

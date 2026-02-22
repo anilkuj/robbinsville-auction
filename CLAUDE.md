@@ -57,7 +57,7 @@ robbinsville-auction/
         │   ├── LoginPage.jsx
         │   ├── AuctionPage.jsx   # Team bidding view
         │   ├── AdminPage.jsx     # Admin panel with 4 tabs (inline, large file)
-        │   └── DashboardPage.jsx # Read-only spectator view
+        │   └── DashboardPage.jsx # Read-only spectator view; flex layout: scrollable teams grid (left) + remaining players pane (right, 240px)
         ├── components/
         │   ├── admin/            # AuctionControls, PlayerImport, TeamRosterTable, UnsoldList
         │   └── auction/          # PlayerCard, BidDisplay, BidHistory, BidButton, CountdownTimer

@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>RPL Auction — How It Works</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Nav bar ── */
+    .nav {
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0.6rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .nav-title { color: #f59e0b; font-weight: 800; font-size: 1rem; }
+    .nav-controls { display: flex; align-items: center; gap: 1rem; }
+    .nav-btn {
+      background: #334155; border: none; color: #f1f5f9;
+      border-radius: 6px; padding: 0.35rem 0.9rem;
+      cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    }
+    .nav-btn:hover { background: #475569; }
+    .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .slide-counter { color: #64748b; font-size: 0.85rem; min-width: 60px; text-align: center; }
+
+    /* ── Slide area ── */
+    .slides { flex: 1; overflow: hidden; position: relative; }
+    .slide {
+      position: absolute; inset: 0;
+      display: none;
+      padding: 2.5rem 3rem;
+      overflow-y: auto;
+    }
+    .slide.active { display: flex; flex-direction: column; }
+
+    /* ── Progress bar ── */
+    .progress-bar {
+      height: 3px;
+      background: #1e293b;
+      flex-shrink: 0;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #f59e0b;
+      transition: width 0.3s ease;
+    }
+
+    /* ── Dot nav ── */
+    .dot-nav {
+      display: flex; justify-content: center; gap: 6px;
+      padding: 0.6rem;
+      flex-shrink: 0;
+    }
+    .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #334155; cursor: pointer; transition: background 0.2s;
+    }
+    .dot.active { background: #f59e0b; }
+
+    /* ── Slide typography ── */
+    .slide-tag {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 0.5rem;
+    }
+    .slide h1 {
+      font-size: 2.2rem; font-weight: 800; line-height: 1.15;
+      margin-bottom: 0.5rem;
+    }
+    .slide h2 {
+      font-size: 1.5rem; font-weight: 700; margin-bottom: 1.25rem;
+    }
+    .slide p { color: #94a3b8; line-height: 1.7; margin-bottom: 0.75rem; font-size: 0.95rem; }
+    .slide p strong { color: #f1f5f9; }
+
+    /* ── Accent colours ── */
+    .accent-yellow { color: #f59e0b; }
+    .accent-green  { color: #22c55e; }
+    .accent-blue   { color: #3b82f6; }
+    .accent-purple { color: #a855f7; }
+    .accent-red    { color: #ef4444; }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem; }
+    .step {
+      display: flex; gap: 1rem; align-items: flex-start;
+      background: #1e293b; border-radius: 10px; padding: 0.9rem 1rem;
+      border-left: 3px solid #f59e0b;
+    }
+    .step-num {
+      background: #f59e0b; color: #0f172a;
+      font-weight: 800; font-size: 0.8rem;
+      border-radius: 50%; width: 24px; height: 24px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-body { flex: 1; }
+    .step-body strong { color: #f1f5f9; font-size: 0.95rem; display: block; margin-bottom: 2px; }
+    .step-body span { color: #64748b; font-size: 0.85rem; }
+
+    /* ── Cards grid ── */
+    .cards { display: grid; gap: 0.75rem; margin-top: 0.5rem; }
+    .cards-2 { grid-template-columns: 1fr 1fr; }
+    .cards-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .card {
+      background: #1e293b; border-radius: 10px; padding: 1rem;
+      border: 1px solid #334155;
+    }
+    .card-icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+    .card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 0.3rem; }
+    .card p  { font-size: 0.8rem; color: #64748b; margin: 0; }
+
+    /* ── Role badge ── */
+    .role-badge {
+      display: inline-block;
+      padding: 0.2rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 1rem;
+    }
+    .role-admin  { background: #451a03; color: #f59e0b; }
+    .role-team   { background: #052e16; color: #22c55e; }
+
+    /* ── Timeline ── */
+    .timeline { display: flex; flex-direction: column; gap: 0; margin-top: 0.5rem; }
+    .tl-item { display: flex; gap: 1rem; }
+    .tl-left { display: flex; flex-direction: column; align-items: center; width: 32px; flex-shrink: 0; }
+    .tl-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+    .tl-line { width: 2px; flex: 1; background: #334155; margin: 4px 0; min-height: 20px; }
+    .tl-content { padding-bottom: 1rem; flex: 1; }
+    .tl-content strong { display: block; font-size: 0.9rem; margin-bottom: 2px; }
+    .tl-content span { color: #64748b; font-size: 0.82rem; }
+
+    /* ── Pill list ── */
+    .pill-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.75rem; }
+    .pill {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 999px; padding: 0.3rem 0.8rem;
+      font-size: 0.8rem; color: #94a3b8;
+    }
+
+    /* ── Screen mockup ── */
+    .mockup {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 10px; padding: 1rem;
+      font-family: monospace; font-size: 0.8rem;
+      color: #94a3b8; margin-top: 0.75rem;
+      line-height: 1.8;
+    }
+    .mockup .label { color: #475569; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .mockup .hi { color: #f1f5f9; }
+    .mockup .grn { color: #22c55e; }
+    .mockup .ylw { color: #f59e0b; }
+    .mockup .red { color: #ef4444; }
+    .mockup .pur { color: #a855f7; }
+    .mockup .blu { color: #3b82f6; }
+    .mockup hr { border: none; border-top: 1px solid #334155; margin: 0.4rem 0; }
+
+    /* ── Title slide special ── */
+    .title-slide { justify-content: center; text-align: center; }
+    .title-slide h1 { font-size: 2.8rem; }
+    .title-slide .sub { color: #64748b; font-size: 1rem; margin-top: 0.5rem; }
+    .title-slide .divider { width: 60px; height: 3px; background: #f59e0b; margin: 1.5rem auto; border-radius: 2px; }
+
+    /* ── Tip box ── */
+    .tip {
+      background: #0c1a2e; border: 1px solid #1d4ed8;
+      border-radius: 8px; padding: 0.7rem 1rem;
+      color: #93c5fd; font-size: 0.82rem;
+      margin-top: 0.75rem;
+      display: flex; gap: 0.5rem;
+    }
+
+    /* ── Warning box ── */
+    .warn {
+      background: #1c0a00; border: 1px solid #92400e;
+      border-radius: 8px; padding: 0.7rem 1rem;
+      color: #fcd34d; font-size: 0.82rem;
+      margin-top: 0.75rem;
+      display: flex; gap: 0.5rem;
+    }
+
+    /* ── Two-col layout ── */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; flex: 1; }
+
+    /* Scrollbar */
+    .slide::-webkit-scrollbar { width: 4px; }
+    .slide::-webkit-scrollbar-track { background: transparent; }
+    .slide::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<div class="nav">
+  <span class="nav-title">🏏 RPL Auction Guide</span>
+  <div class="nav-controls">
+    <button class="nav-btn" id="prevBtn" onclick="changeSlide(-1)">← Prev</button>
+    <span class="slide-counter" id="counter">1 / 9</span>
+    <button class="nav-btn" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+  </div>
+</div>
+
+<!-- Progress -->
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<!-- Slides -->
+<div class="slides">
+
+  <!-- 1. Title -->
+  <div class="slide title-slide active" id="slide-1">
+    <div style="font-size:3rem; margin-bottom:1rem;">🏏</div>
+    <div class="slide-tag accent-yellow">Robbinsville Premier League</div>
+    <h1>Auction Guide</h1>
+    <p class="sub">How to set up the league, run the auction,<br>and manage bids in real time</p>
+    <div class="divider"></div>
+    <div class="cards cards-3" style="max-width:480px; margin:0 auto;">
+      <div class="card" style="text-align:center;">
+        <div class="card-icon">⚙️</div>
+        <h3>Setup</h3>
+        <p>Admin configures league</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-icon">🔨</div>
+        <h3>Auction</h3>
+        <p>Teams bid live</p>
+      </div>
+      <div class="card" style="text-align:center;">
+        <div class="card-icon">🏆</div>
+        <h3>Results</h3>
+        <p>Export & wrap up</p>
+      </div>
+    </div>
+    <p style="margin-top:1.5rem; font-size:0.8rem; color:#475569;">Use ← → arrow keys or buttons to navigate</p>
+  </div>
+
+  <!-- 2. Overview -->
+  <div class="slide" id="slide-2">
+    <div class="slide-tag accent-yellow">Overview</div>
+    <h2>Who Does What?</h2>
+    <div class="two-col">
+      <div>
+        <div class="role-badge role-admin">👑 Admin</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div class="step-body"><strong>Configures the league</strong><span>Teams, budgets, player pools</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div class="step-body"><strong>Imports players</strong><span>Uploads a CSV with player names & pools</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div class="step-body"><strong>Runs the auction</strong><span>Puts players up one by one</span></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div class="step-body"><strong>Manages live bidding</strong><span>Pause, hammer, mark unsold</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="role-badge role-team">🏏 Team Owner</div>
+        <div class="steps">
+          <div class="step" style="border-color:#22c55e;">
+            <div class="step-num" style="background:#22c55e;">1</div>
+            <div class="step-body"><strong>Logs in with team credentials</strong><span>Name & password given by admin</span></div>
+          </div>
+          <div class="step" style="border-color:#22c55e;">
+            <div class="step-num" style="background:#22c55e;">2</div>
+            <div class="step-body"><strong>Watches the live auction</strong><span>Sees current player, timer & bids</span></div>
+          </div>
+          <div class="step" style="border-color:#22c55e;">
+            <div class="step-num" style="background:#22c55e;">3</div>
+            <div class="step-body"><strong>Places bids</strong><span>Tap the Bid button to raise the price</span></div>
+          </div>
+          <div class="step" style="border-color:#22c55e;">
+            <div class="step-num" style="background:#22c55e;">4</div>
+            <div class="step-body"><strong>Tracks their squad & budget</strong><span>See roster in the sidebar</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. League Setup -->
+  <div class="slide" id="slide-3">
+    <div class="role-badge role-admin">👑 Admin</div>
+    <div class="slide-tag accent-yellow">Step 1</div>
+    <h2>League Setup</h2>
+    <p>Go to <strong>Admin Panel → League Setup tab</strong>. Configure everything before importing players.</p>
+    <div class="cards cards-2">
+      <div>
+        <div class="card" style="margin-bottom:0.75rem;">
+          <h3 class="accent-yellow">Global Settings</h3>
+          <div class="pill-list">
+            <span class="pill">Number of Teams</span>
+            <span class="pill">Squad Size</span>
+            <span class="pill">Starting Budget</span>
+            <span class="pill">Min Bid</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="accent-yellow">Teams</h3>
+          <p>Add one row per team. Set a <strong>team name</strong> and <strong>password</strong> — share these with each team owner so they can log in.</p>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3 class="accent-yellow">Player Pools</h3>
+          <p>Players are grouped into pools by skill tier (A1, A2 … D). Each pool has a <strong>base price</strong> and a <strong>count</strong>.</p>
+          <p style="margin-top:0.5rem;">⚠️ The total player count across all pools must equal <strong>Teams × Squad Size</strong>.</p>
+          <div class="mockup" style="margin-top:0.75rem;">
+            <div class="label">Example validation</div>
+            <span class="grn">✓</span> Pool total is <span class="hi">180</span> = 10 × 18 ✓
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tip">💡 The Save button only enables when pool total and team count both match your global settings.</div>
+  </div>
+
+  <!-- 4. Import Players -->
+  <div class="slide" id="slide-4">
+    <div class="role-badge role-admin">👑 Admin</div>
+    <div class="slide-tag accent-yellow">Step 2</div>
+    <h2>Import Players</h2>
+    <p>Go to <strong>Auction Controls tab → Import Players</strong>. Players are uploaded via a CSV file.</p>
+    <div class="two-col">
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <div class="step-body"><strong>Download the CSV template</strong><span>Click "⬇ CSV Template" — it pre-fills the pool column for you</span></div>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <div class="step-body"><strong>Fill in player names</strong><span>Open in Excel or Google Sheets, add a name to each row</span></div>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <div class="step-body"><strong>Upload the CSV</strong><span>Drag & drop or browse to the file</span></div>
+        </div>
+        <div class="step">
+          <div class="step-num">4</div>
+          <div class="step-body"><strong>Players are imported</strong><span>Server validates counts and assigns base prices automatically</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="mockup">
+          <div class="label">CSV format</div>
+          <span class="hi">name</span>,<span class="ylw">pool</span><br>
+          Virat Kohli,<span class="ylw">A1</span><br>
+          Rohit Sharma,<span class="ylw">A1</span><br>
+          MS Dhoni,<span class="ylw">A2</span><br>
+          Hardik Pandya,<span class="ylw">A2</span><br>
+          <span class="accent-red">…</span>
+        </div>
+        <div class="warn" style="margin-top:0.75rem;">⚠️ Player count per pool must exactly match the pool config — the server will reject the file if they don't match.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Auction Settings -->
+  <div class="slide" id="slide-5">
+    <div class="role-badge role-admin">👑 Admin</div>
+    <div class="slide-tag accent-yellow">Step 3</div>
+    <h2>Auction Settings</h2>
+    <p>Before starting, tune the live auction settings in <strong>Auction Controls tab</strong>.</p>
+    <div class="cards cards-3" style="margin-bottom:0.75rem;">
+      <div class="card">
+        <div class="card-icon">⏱</div>
+        <h3>Timer</h3>
+        <p>How many seconds each player gets. Default: <strong>30s</strong></p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⬆️</div>
+        <h3>Bid Increment</h3>
+        <p>How much each bid raises the price. Default: <strong>500 pts</strong></p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔔</div>
+        <h3>Bid Bump</h3>
+        <p>Seconds added to timer when a bid comes in. Default: <strong>+10s</strong></p>
+      </div>
+    </div>
+    <div class="cards cards-2">
+      <div class="card" style="border-color:#3b82f6;">
+        <h3 class="accent-blue">⏱ Timer Mode</h3>
+        <p>When the countdown hits zero, the player is <strong>automatically sold</strong> to the highest bidder (or marked unsold if no bids).</p>
+        <p style="margin-top:0.4rem; color:#475569; font-size:0.8rem;">Best for fast-paced auctions.</p>
+      </div>
+      <div class="card" style="border-color:#a855f7;">
+        <h3 class="accent-purple">🔨 Manual Mode</h3>
+        <p>Timer is advisory only. When it hits zero, <strong>admin clicks Hammer</strong> to close the sale. Admin can also hammer early.</p>
+        <p style="margin-top:0.4rem; color:#475569; font-size:0.8rem;">Best for controlled auctions.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Running the auction -->
+  <div class="slide" id="slide-6">
+    <div class="role-badge role-admin">👑 Admin</div>
+    <div class="slide-tag accent-yellow">Step 4</div>
+    <h2>Running the Auction</h2>
+    <div class="two-col">
+      <div>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:#22c55e;"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><strong>Click ▶ Next Player</strong><span>Puts the next pending player up for auction. Timer starts immediately.</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:#f59e0b;"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><strong>Teams bid in real time</strong><span>All participants see the player, timer, and current bid update live.</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:#3b82f6;"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><strong>Pause if needed</strong><span>Use ⏸ Pause to freeze the timer (e.g. for discussion). ▶ Resume to continue.</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:#a855f7;"></div><div class="tl-line"></div></div>
+            <div class="tl-content"><strong>Player is sold or unsold</strong><span>Auto on timer expiry (Timer mode) or via 🔨 Hammer (Manual mode).</span></div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-left"><div class="tl-dot" style="background:#22c55e;"></div></div>
+            <div class="tl-content"><strong>Repeat for next player</strong><span>Click ▶ Next Player again. Continue until all players are done.</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="mockup">
+          <div class="label">Admin Controls panel</div>
+          <span class="grn">▶ Next Player</span>   <span class="ylw">⏸ Pause</span><br>
+          <span class="pur">🔨 Hammer</span>   <span class="red">✕ Mark Unsold</span>
+          <hr>
+          <div class="label" style="margin-top:0.4rem;">On block</div>
+          <span class="hi">Virat Kohli</span>  <span class="ylw">[A1]</span><br>
+          Base price: <span class="grn">4,500 pts</span><br>
+          <br>
+          Current bid: <span class="grn">7,000 pts</span><br>
+          Leading:     <span class="hi">Team Alpha</span><br>
+          Timer:       <span class="ylw">12s</span>
+        </div>
+        <div class="tip" style="margin-top:0.75rem;">💡 You can also mark a player unsold manually at any time, and re-auction them later from the Unsold Players list.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Team bidding -->
+  <div class="slide" id="slide-7">
+    <div class="role-badge role-team">🏏 Team Owner</div>
+    <div class="slide-tag accent-green">Bidding</div>
+    <h2>How Teams Bid</h2>
+    <div class="two-col">
+      <div class="steps">
+        <div class="step" style="border-color:#22c55e;">
+          <div class="step-num" style="background:#22c55e;">1</div>
+          <div class="step-body"><strong>Log in</strong><span>Use the team name and password the admin gave you</span></div>
+        </div>
+        <div class="step" style="border-color:#22c55e;">
+          <div class="step-num" style="background:#22c55e;">2</div>
+          <div class="step-body"><strong>Wait for a player to go up</strong><span>You'll see the player card, timer, and current bid appear automatically</span></div>
+        </div>
+        <div class="step" style="border-color:#22c55e;">
+          <div class="step-num" style="background:#22c55e;">3</div>
+          <div class="step-body"><strong>Tap the Bid button</strong><span>Each tap raises the bid by the increment amount</span></div>
+        </div>
+        <div class="step" style="border-color:#22c55e;">
+          <div class="step-num" style="background:#22c55e;">4</div>
+          <div class="step-body"><strong>Win or lose</strong><span>Highest bidder when timer ends (or admin hammers) wins the player</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="mockup">
+          <div class="label">Team view</div>
+          <span class="hi">Rohit Sharma</span>  <span class="ylw">[A1]</span><br>
+          Base: <span class="grn">4,000 pts</span><br>
+          <hr>
+          Current bid: <span class="grn">6,500 pts</span><br>
+          Leading: <span class="red">Team Blaze 🔥</span><br>
+          Timer: <span class="ylw">08s</span><br>
+          <hr>
+          <span class="grn">[ BID — 7,000 pts ]</span><br>
+          <br>
+          Your budget: <span class="hi">38,500 pts</span><br>
+          Your squad:  <span class="hi">3 / 18</span>
+        </div>
+        <div class="cards" style="margin-top:0.75rem;">
+          <div class="card">
+            <h3>Budget constraint</h3>
+            <p>The Bid button auto-disables if bidding would leave you unable to fill your remaining squad slots at minimum bid. You can never overbid.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. Edge cases -->
+  <div class="slide" id="slide-8">
+    <div class="role-badge role-admin">👑 Admin</div>
+    <div class="slide-tag accent-yellow">Managing Edge Cases</div>
+    <h2>Handling Special Situations</h2>
+    <div class="cards cards-2">
+      <div class="card" style="border-color:#ef4444;">
+        <h3 class="accent-red">✕ No bids received</h3>
+        <p>If no team bids before the timer expires, the player is automatically marked <strong>Unsold</strong> (Timer mode) or admin uses Mark Unsold (Manual mode).</p>
+      </div>
+      <div class="card" style="border-color:#3b82f6;">
+        <h3 class="accent-blue">↩ Re-auction a player</h3>
+        <p>In <strong>Auction Controls → Unsold Players</strong>, click <strong>Re-auction</strong> next to any unsold player to put them back in the pool.</p>
+      </div>
+      <div class="card" style="border-color:#f59e0b;">
+        <h3 class="accent-yellow">⏸ Pause for discussion</h3>
+        <p>Use the Pause button to freeze the timer mid-bid — useful if there's a dispute or technical issue. Resume continues from where it left off.</p>
+      </div>
+      <div class="card" style="border-color:#a855f7;">
+        <h3 class="accent-purple">💾 Save your state</h3>
+        <p>Use <strong>⬇ State JSON</strong> to download a full backup of the auction at any point. If the server restarts, state is auto-restored from disk.</p>
+      </div>
+    </div>
+    <div class="warn">⚠️ Don't redeploy or restart the server mid-auction without downloading a State JSON backup first.</div>
+  </div>
+
+  <!-- 9. Results -->
+  <div class="slide" id="slide-9">
+    <div class="slide-tag accent-yellow">Wrap Up</div>
+    <h2>End of Auction</h2>
+    <p>Once all players are sold or unsold, the auction enters <strong>Ended</strong> state.</p>
+    <div class="cards cards-2" style="margin-bottom:0.75rem;">
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>⬇ Results CSV</h3>
+        <p>Downloads a spreadsheet with every player — their pool, base price, status (Sold/Unsold), which team bought them, and for how much.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h3>Teams & Rosters tab</h3>
+        <p>View each team's full squad and remaining budget at a glance. Good for a final review with all participants.</p>
+      </div>
+    </div>
+    <div class="mockup">
+      <div class="label">Results CSV preview</div>
+      <span class="hi">Player Name,Pool,Base Price,Status,Sold To,Price</span><br>
+      Virat Kohli,A1,4500,<span class="grn">SOLD</span>,Team Alpha,9000<br>
+      Rohit Sharma,A1,4000,<span class="grn">SOLD</span>,Team Blaze,7500<br>
+      Player XYZ,D,1000,<span class="red">UNSOLD</span>,,<br>
+    </div>
+    <div class="tip" style="margin-top:1rem;">💡 To run another auction, click <strong>⚠ Reset Auction</strong> in Auction Controls — it clears all bids and resets team budgets, but keeps your league config and player list intact.</div>
+  </div>
+
+</div>
+
+<!-- Dot nav -->
+<div class="dot-nav" id="dotNav"></div>
+
+<script>
+  const TOTAL = 9;
+  let current = 1;
+
+  // Build dots
+  const dotNav = document.getElementById('dotNav');
+  for (let i = 1; i <= TOTAL; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 1 ? ' active' : '');
+    d.onclick = () => goTo(i);
+    dotNav.appendChild(d);
+  }
+
+  function goTo(n) {
+    document.getElementById('slide-' + current).classList.remove('active');
+    dotNav.children[current - 1].classList.remove('active');
+    current = Math.max(1, Math.min(TOTAL, n));
+    document.getElementById('slide-' + current).classList.add('active');
+    dotNav.children[current - 1].classList.add('active');
+    document.getElementById('counter').textContent = current + ' / ' + TOTAL;
+    document.getElementById('progressFill').style.width = (current / TOTAL * 100) + '%';
+    document.getElementById('prevBtn').disabled = current === 1;
+    document.getElementById('nextBtn').disabled = current === TOTAL;
+  }
+
+  function changeSlide(dir) { goTo(current + dir); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+    if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   changeSlide(-1);
+  });
+
+  // Init
+  goTo(1);
+</script>
+</body>
+</html>

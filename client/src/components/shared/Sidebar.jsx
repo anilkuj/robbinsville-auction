@@ -108,12 +108,6 @@ export default function Sidebar({ width }) {
                     {r.price.toLocaleString()} pts
                   </span>
                 </div>
-                {r.extra && Object.entries(r.extra).map(([k, v]) => v && (
-                  <div key={k} style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
-                    <span style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'capitalize' }}>{k}</span>
-                    <span style={{ color: '#94a3b8', fontSize: '0.65rem', textAlign: 'right', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{v}</span>
-                  </div>
-                ))}
               </div>
             ))}
           </div>

@@ -1347,12 +1347,12 @@ function PlayerDataTab({ auctionState, adminAction }) {
           <thead>
             <tr style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 1 }}>
               {thSort('#', '#', { first: true })}
-              {thSort('pool', 'Pool')}
               {thSort('name', 'Player Name')}
-              {extraKeys.map(k => thSort(k, k))}
-              {thSort('soldFor', 'Sold Price', { right: true })}
+              {thSort('pool', 'Pool')}
               {thSort('status', 'Status', { center: true })}
               {thSort('soldTo', 'Sold To')}
+              {thSort('soldFor', 'Sold Price', { right: true })}
+              {extraKeys.map(k => thSort(k, k))}
               {thSort('base', 'Base', { right: true })}
               <TH center></TH>
             </tr>
@@ -1371,14 +1371,6 @@ function PlayerDataTab({ auctionState, adminAction }) {
                   onMouseLeave={e => e.currentTarget.style.background = rowBg}
                 >
                   <TD first style={{ color: '#475569' }}>{p.sortOrder + 1}</TD>
-                  <TD>
-                    <span style={{
-                      background: pc.bg, color: pc.color,
-                      border: `1px solid ${pc.border}`,
-                      borderRadius: '4px', padding: '0.15rem 0.45rem',
-                      fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{p.pool}</span>
-                  </TD>
                   <TD style={{ color: '#f1f5f9', fontWeight: 500 }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {p.name}
@@ -1392,9 +1384,22 @@ function PlayerDataTab({ auctionState, adminAction }) {
                       )}
                     </span>
                   </TD>
-                  {extraKeys.map(k => (
-                    <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
-                  ))}
+                  <TD>
+                    <span style={{
+                      background: pc.bg, color: pc.color,
+                      border: `1px solid ${pc.border}`,
+                      borderRadius: '4px', padding: '0.15rem 0.45rem',
+                      fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}>{p.pool}</span>
+                  </TD>
+                  <TD center>
+                    <span style={{
+                      background: sc.bg, color: sc.color,
+                      borderRadius: '999px', padding: '0.15rem 0.55rem',
+                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}>{sc.label}</span>
+                  </TD>
+                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
                   <TD right style={{ whiteSpace: 'nowrap' }}>
                     {owner && p.soldFor ? (
                       <span style={{ color: '#a78bfa', fontWeight: 600 }}>
@@ -1406,14 +1411,9 @@ function PlayerDataTab({ auctionState, adminAction }) {
                       <span style={{ color: '#334155' }}>—</span>
                     )}
                   </TD>
-                  <TD center>
-                    <span style={{
-                      background: sc.bg, color: sc.color,
-                      borderRadius: '999px', padding: '0.15rem 0.55rem',
-                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{sc.label}</span>
-                  </TD>
-                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
+                  {extraKeys.map(k => (
+                    <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
+                  ))}
                   <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
                   <TD center>
                     {p.status === 'SOLD' && !owner && (

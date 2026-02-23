@@ -511,22 +511,6 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
                     {r.price.toLocaleString()}
                   </span>
                 </div>
-                {r.extra && Object.keys(r.extra).length > 0 && (
-                  <div style={{
-                    padding: '0 1rem 0.3rem',
-                    display: 'flex', flexWrap: 'wrap', gap: '0.25rem',
-                  }}>
-                    {Object.entries(r.extra).map(([k, v]) => v && (
-                      <span key={k} style={{
-                        fontSize: '0.62rem', color: '#475569',
-                        background: '#0f172a', borderRadius: '3px',
-                        padding: '0.08rem 0.3rem',
-                      }}>
-                        <span style={{ color: '#334155' }}>{k}: </span>{v}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
           </div>

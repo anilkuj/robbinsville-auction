@@ -190,7 +190,7 @@ export default function DashboardPage() {
             <div style={{ fontWeight: 800, color: '#f59e0b', fontSize: '1.05rem' }}>RPL Auction</div>
             <div style={{ color: '#64748b', fontSize: '0.72rem' }}>Live Team Dashboard</div>
           </div>
-          <PhaseChip phase={phase} awaitingHammer={phase === 'LIVE' && !state.timerEndsAt && state.settings?.endMode === 'manual'} />
+          {phase !== 'SETUP' && <PhaseChip phase={phase} awaitingHammer={phase === 'LIVE' && !state.timerEndsAt && state.settings?.endMode === 'manual'} />}
         </div>
 
         <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>

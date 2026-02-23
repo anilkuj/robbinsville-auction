@@ -448,6 +448,18 @@ function MobileHeader({ user, auctionState, connected }) {
             <div style={{ color: '#22c55e', fontSize: '0.75rem' }}>{team.budget.toLocaleString()} pts</div>
           </div>
         )}
+        <button
+          onClick={() => window.open('/dashboard', 'rpl-dashboard', 'width=1280,height=800,resizable=yes')}
+          title="Open Dashboard"
+          style={{
+            background: 'none', border: '1px solid #334155', borderRadius: '6px',
+            color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+            padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          📊 Dashboard
+        </button>
         <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444' }} />
       </div>
     </div>

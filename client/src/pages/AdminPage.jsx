@@ -391,26 +391,40 @@ function LeagueSetupTab({ auctionState }) {
                   Owner is also a player
                 </label>
 
-                {team.ownerIsPlayer && (
-                  <select
-                    value={team.ownerPlayerId || ''}
-                    disabled={!isSetup}
-                    onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
-                    style={{
-                      ...inputSm,
-                      flex: 1,
-                      borderColor: (!team.ownerPlayerId) ? '#ef4444' : '#334155',
-                    }}
-                  >
-                    <option value="">— Select team owner —</option>
-                    {ownerPlayers.length === 0 && (
-                      <option value="" disabled>No owner players in CSV</option>
-                    )}
-                    {ownerPlayers.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} ({p.pool})</option>
-                    ))}
-                  </select>
-                )}
+                {team.ownerIsPlayer && (() => {
+                  const takenIds = new Set(
+                    Object.entries(teams)
+                      .filter(([tid]) => tid !== id)
+                      .map(([, t]) => t.ownerPlayerId)
+                      .filter(Boolean)
+                  );
+                  const available = ownerPlayers.filter(p => !takenIds.has(p.id));
+                  return (
+                    <select
+                      value={team.ownerPlayerId || ''}
+                      disabled={!isSetup}
+                      onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
+                      style={{
+                        ...inputSm,
+                        flex: 1,
+                        borderColor: (!team.ownerPlayerId) ? '#ef4444' : '#334155',
+                      }}
+                    >
+                      <option value="">— Select team owner —</option>
+                      {available.length === 0 && !team.ownerPlayerId && (
+                        <option value="" disabled>No owner players available</option>
+                      )}
+                      {/* Always show currently selected player even if in available list */}
+                      {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
+                        const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
+                        return p ? <option key={p.id} value={p.id}>{p.name} ({p.pool})</option> : null;
+                      })()}
+                      {available.map(p => (
+                        <option key={p.id} value={p.id}>{p.name} ({p.pool})</option>
+                      ))}
+                    </select>
+                  );
+                })()}
                 {team.ownerIsPlayer && !team.ownerPlayerId && (
                   <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>Required</span>
                 )}
@@ -1153,13 +1167,16 @@ function TeamsTab({ auctionState }) {
 
 function playerIsOwner(player) {
   if (!player.extra) return false;
-  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type');
+  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
   return typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
 }
 
 function PlayerDataTab({ auctionState, adminAction }) {
   const { players = [], teams = {} } = auctionState;
-  const [filter, setFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [search, setSearch] = useState('');
+  const [sortCol, setSortCol] = useState(null);
+  const [sortDir, setSortDir] = useState('asc');
   const [editPlayer, setEditPlayer] = useState(null);
 
   if (players.length === 0) {
@@ -1170,17 +1187,18 @@ function PlayerDataTab({ auctionState, adminAction }) {
     );
   }
 
-  // Collect all extra keys across all players (preserve insertion order)
+  // Columns from extra that should never be shown in the table
+  const HIDDEN_EXTRA_COLS = new Set(['player_type', 'other_s25']);
+
+  // Collect all extra keys across all players (preserve insertion order), minus hidden ones
   const extraKeys = [];
   for (const p of players) {
     if (p.extra) {
       for (const k of Object.keys(p.extra)) {
-        if (!extraKeys.includes(k)) extraKeys.push(k);
+        if (!extraKeys.includes(k) && !HIDDEN_EXTRA_COLS.has(k.toLowerCase())) extraKeys.push(k);
       }
     }
   }
-
-  const filtered = filter === 'ALL' ? players : players.filter(p => p.status === filter);
 
   const statusCfg = {
     PENDING: { color: '#f59e0b', bg: '#451a03', label: 'Pending' },
@@ -1195,6 +1213,82 @@ function PlayerDataTab({ auctionState, adminAction }) {
     return { color: '#94a3b8', bg: '#0f1a2e', border: '#64748b40' };
   };
 
+  function handleSort(col) {
+    if (sortCol === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortCol(col); setSortDir('asc'); }
+  }
+
+  // Apply status + text filters
+  let filtered = players.filter(p => {
+    if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+    if (search) {
+      const s = search.toLowerCase();
+      const inName = p.name.toLowerCase().includes(s);
+      const inPool = p.pool.toLowerCase().includes(s);
+      const inExtra = Object.values(p.extra || {}).some(v => String(v).toLowerCase().includes(s));
+      const soldTeamName = p.soldTo ? teams[p.soldTo]?.name || '' : '';
+      const inTeam = soldTeamName.toLowerCase().includes(s);
+      if (!inName && !inPool && !inExtra && !inTeam) return false;
+    }
+    return true;
+  });
+
+  // Apply sort
+  if (sortCol) {
+    filtered = [...filtered].sort((a, b) => {
+      let av, bv;
+      if (sortCol === '#')            { av = Number(a.sortOrder); bv = Number(b.sortOrder); }
+      else if (sortCol === 'pool')    { av = a.pool; bv = b.pool; }
+      else if (sortCol === 'name')    { av = a.name; bv = b.name; }
+      else if (sortCol === 'base')    { av = Number(a.basePrice); bv = Number(b.basePrice); }
+      else if (sortCol === 'status')  { av = a.status; bv = b.status; }
+      else if (sortCol === 'soldFor') { av = Number(a.soldFor ?? -1); bv = Number(b.soldFor ?? -1); }
+      else if (sortCol === 'soldTo')  {
+        av = a.soldTo ? (teams[a.soldTo]?.name ?? '') : '';
+        bv = b.soldTo ? (teams[b.soldTo]?.name ?? '') : '';
+      }
+      else {
+        // Extra columns: try numeric parse, fall back to string
+        const ra = a.extra?.[sortCol] ?? '';
+        const rb = b.extra?.[sortCol] ?? '';
+        const na = parseFloat(ra);
+        const nb = parseFloat(rb);
+        if (!isNaN(na) && !isNaN(nb)) { av = na; bv = nb; }
+        else { av = String(ra).toLowerCase(); bv = String(rb).toLowerCase(); }
+      }
+
+      if (typeof av === 'string') av = av.toLowerCase();
+      if (typeof bv === 'string') bv = bv.toLowerCase();
+      if (av < bv) return sortDir === 'asc' ? -1 : 1;
+      if (av > bv) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  const sortIndicator = (col) => {
+    if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: '3px', fontSize: '0.6rem' }}>⇅</span>;
+    return <span style={{ color: '#94a3b8', marginLeft: '3px', fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
+  };
+
+  const thSort = (col, label, opts = {}) => (
+    <th
+      onClick={() => handleSort(col)}
+      style={{
+        padding: '0.55rem 0.75rem',
+        textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
+        color: sortCol === col ? '#cbd5e1' : '#64748b',
+        fontWeight: 700, fontSize: '0.68rem', textTransform: 'uppercase',
+        letterSpacing: '0.05em', whiteSpace: 'nowrap',
+        borderBottom: '1px solid #1e293b',
+        cursor: 'pointer', userSelect: 'none',
+        ...(opts.first && { paddingLeft: '1rem' }),
+        ...(opts.right && { paddingRight: '1rem' }),
+      }}
+    >
+      {label}{sortIndicator(col)}
+    </th>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       {editPlayer && (
@@ -1206,7 +1300,7 @@ function PlayerDataTab({ auctionState, adminAction }) {
         />
       )}
 
-      {/* Header row: title + filter chips */}
+      {/* Header row: title + search + filter chips */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>Player Data</div>
@@ -1214,24 +1308,36 @@ function PlayerDataTab({ auctionState, adminAction }) {
             {filtered.length} of {players.length} players
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.4rem' }}>
-          {['ALL', 'PENDING', 'SOLD', 'UNSOLD'].map(f => {
-            const count = f === 'ALL' ? players.length : players.filter(p => p.status === f).length;
-            const active = filter === f;
-            const cfg = f === 'ALL' ? { color: '#94a3b8', bg: '#1e293b' } : statusCfg[f];
-            return (
-              <button key={f} onClick={() => setFilter(f)} style={{
-                background: active ? cfg.bg : 'transparent',
-                border: `1px solid ${active ? cfg.color : '#334155'}`,
-                color: active ? cfg.color : '#64748b',
-                borderRadius: '6px', padding: '0.3rem 0.7rem',
-                cursor: 'pointer', fontSize: '0.75rem', fontWeight: active ? 700 : 400,
-                transition: 'all 0.15s',
-              }}>
-                {f === 'ALL' ? 'All' : statusCfg[f].label} ({count})
-              </button>
-            );
-          })}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            placeholder="Search…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
+              borderRadius: '6px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', width: '140px',
+            }}
+          />
+          <div style={{ display: 'flex', gap: '0.4rem' }}>
+            {['ALL', 'PENDING', 'SOLD', 'UNSOLD'].map(f => {
+              const count = f === 'ALL' ? players.length : players.filter(p => p.status === f).length;
+              const active = statusFilter === f;
+              const cfg = f === 'ALL' ? { color: '#94a3b8', bg: '#1e293b' } : statusCfg[f];
+              return (
+                <button key={f} onClick={() => setStatusFilter(f)} style={{
+                  background: active ? cfg.bg : 'transparent',
+                  border: `1px solid ${active ? cfg.color : '#334155'}`,
+                  color: active ? cfg.color : '#64748b',
+                  borderRadius: '6px', padding: '0.3rem 0.7rem',
+                  cursor: 'pointer', fontSize: '0.75rem', fontWeight: active ? 700 : 400,
+                  transition: 'all 0.15s',
+                }}>
+                  {f === 'ALL' ? 'All' : statusCfg[f].label} ({count})
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -1240,14 +1346,14 @@ function PlayerDataTab({ auctionState, adminAction }) {
         <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '600px', fontSize: '0.82rem' }}>
           <thead>
             <tr style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 1 }}>
-              <TH first>#</TH>
-              <TH>Pool</TH>
-              <TH>Player Name</TH>
-              {extraKeys.map(k => <TH key={k}>{k}</TH>)}
-              <TH right>Base</TH>
-              <TH center>Status</TH>
-              <TH>Sold To</TH>
-              <TH right>Sold Price</TH>
+              {thSort('#', '#', { first: true })}
+              {thSort('pool', 'Pool')}
+              {thSort('name', 'Player Name')}
+              {extraKeys.map(k => thSort(k, k))}
+              {thSort('soldFor', 'Sold Price', { right: true })}
+              {thSort('status', 'Status', { center: true })}
+              {thSort('soldTo', 'Sold To')}
+              {thSort('base', 'Base', { right: true })}
               <TH center></TH>
             </tr>
           </thead>
@@ -1289,15 +1395,6 @@ function PlayerDataTab({ auctionState, adminAction }) {
                   {extraKeys.map(k => (
                     <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
                   ))}
-                  <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
-                  <TD center>
-                    <span style={{
-                      background: sc.bg, color: sc.color,
-                      borderRadius: '999px', padding: '0.15rem 0.55rem',
-                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{sc.label}</span>
-                  </TD>
-                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
                   <TD right style={{ whiteSpace: 'nowrap' }}>
                     {owner && p.soldFor ? (
                       <span style={{ color: '#a78bfa', fontWeight: 600 }}>
@@ -1309,6 +1406,15 @@ function PlayerDataTab({ auctionState, adminAction }) {
                       <span style={{ color: '#334155' }}>—</span>
                     )}
                   </TD>
+                  <TD center>
+                    <span style={{
+                      background: sc.bg, color: sc.color,
+                      borderRadius: '999px', padding: '0.15rem 0.55rem',
+                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
+                    }}>{sc.label}</span>
+                  </TD>
+                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
+                  <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
                   <TD center>
                     {p.status === 'SOLD' && !owner && (
                       <button

@@ -11,8 +11,9 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
+import DashboardView from '../components/admin/DashboardView.jsx';
 
-const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Player Data', 'Settings'];
+const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Player Data', 'Settings', 'Dashboard'];
 
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
@@ -112,23 +113,27 @@ export default function AdminPage() {
           </div>
 
           {/* Tab content */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-            {tab === 'League Setup' && (
-              <LeagueSetupTab auctionState={auctionState} />
-            )}
-            {tab === 'Auction Controls' && (
-              <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />
-            )}
-            {tab === 'Teams & Rosters' && (
-              <TeamsTab auctionState={auctionState} />
-            )}
-            {tab === 'Player Data' && (
-              <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />
-            )}
-            {tab === 'Settings' && (
-              <SettingsTab auctionState={auctionState} />
-            )}
-          </div>
+          {tab === 'Dashboard' ? (
+            <DashboardView state={auctionState} />
+          ) : (
+            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+              {tab === 'League Setup' && (
+                <LeagueSetupTab auctionState={auctionState} />
+              )}
+              {tab === 'Auction Controls' && (
+                <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />
+              )}
+              {tab === 'Teams & Rosters' && (
+                <TeamsTab auctionState={auctionState} />
+              )}
+              {tab === 'Player Data' && (
+                <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />
+              )}
+              {tab === 'Settings' && (
+                <SettingsTab auctionState={auctionState} />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

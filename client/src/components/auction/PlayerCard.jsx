@@ -1,61 +1,48 @@
 import React from 'react';
 import { formatPts } from '../../utils/budgetCalc.js';
-
-const POOL_COLORS = {
-  A1: '#f59e0b', A2: '#f59e0b', A3: '#f59e0b',
-  B1: '#3b82f6', B2: '#3b82f6', B3: '#3b82f6',
-  C: '#8b5cf6',
-  D: '#64748b',
-};
-
-function poolColor(pool) {
-  return POOL_COLORS[pool] || '#64748b';
-}
+import { poolColor } from '../../theme.js';
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+import Box from '@mui/material/Box';
 
 export default function PlayerCard({ player }) {
   if (!player) {
     return (
-      <div style={{
-        background: '#1e293b', borderRadius: '12px', padding: '2rem',
-        textAlign: 'center', color: '#475569', fontSize: '1rem',
-        border: '2px dashed #334155',
-      }}>
-        Waiting for next player…
-      </div>
+      <Card variant="outlined" sx={{ borderStyle: 'dashed', textAlign: 'center', p: 3 }}>
+        <Typography color="text.disabled">Waiting for next player…</Typography>
+      </Card>
     );
   }
 
   const color = poolColor(player.pool);
 
   return (
-    <div style={{
-      background: '#1e293b',
-      borderRadius: '12px',
-      padding: '1.5rem',
-      border: `2px solid ${color}40`,
+    <Card sx={{
+      border: '1px solid',
+      borderColor: `${color}40`,
       boxShadow: `0 0 24px ${color}20`,
+      borderTop: `3px solid ${color}`,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-        <span style={{
-          background: color,
-          color: '#fff',
-          fontWeight: 700,
-          fontSize: '0.75rem',
-          padding: '0.2rem 0.6rem',
-          borderRadius: '999px',
-          letterSpacing: '0.05em',
-        }}>
-          POOL {player.pool}
-        </span>
-      </div>
-
-      <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#f1f5f9', lineHeight: 1.2, marginBottom: '0.5rem' }}>
-        {player.name}
-      </div>
-
-      <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
-        Base Price: <span style={{ color: '#94a3b8', fontWeight: 600 }}>{formatPts(player.basePrice)}</span>
-      </div>
-    </div>
+      <CardContent>
+        <Box sx={{ mb: 1 }}>
+          <Chip
+            label={`POOL ${player.pool}`}
+            size="small"
+            sx={{ bgcolor: color, color: '#fff', fontWeight: 700, fontSize: '0.7rem' }}
+          />
+        </Box>
+        <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1.2, mb: 0.5 }}>
+          {player.name}
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          Base Price:{' '}
+          <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+            {formatPts(player.basePrice)}
+          </Box>
+        </Typography>
+      </CardContent>
+    </Card>
   );
 }

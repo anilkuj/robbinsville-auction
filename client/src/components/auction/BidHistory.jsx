@@ -1,5 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { formatPts } from '../../utils/budgetCalc.js';
+import Box from '@mui/material/Box';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import Typography from '@mui/material/Typography';
 
 export default function BidHistory({ history = [] }) {
   const bottomRef = useRef(null);
@@ -10,33 +14,45 @@ export default function BidHistory({ history = [] }) {
 
   if (history.length === 0) {
     return (
-      <div style={{ color: '#475569', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>
+      <Typography variant="body2" color="text.disabled" sx={{ textAlign: 'center', py: 1.5 }}>
         No bids yet
-      </div>
+      </Typography>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '220px', overflowY: 'auto' }}>
+    <List dense disablePadding sx={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       {[...history].reverse().map((entry, i) => (
-        <div key={i} style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          padding: '0.4rem 0.75rem',
-          background: i === 0 ? '#14532d30' : '#1e293b',
-          borderRadius: '6px',
-          border: i === 0 ? '1px solid #22c55e40' : '1px solid #334155',
-        }}>
-          <span style={{ color: i === 0 ? '#22c55e' : '#94a3b8', fontWeight: i === 0 ? 700 : 400, fontSize: '0.9rem' }}>
+        <ListItem
+          key={i}
+          sx={{
+            borderRadius: 1,
+            px: 1.5,
+            py: 0.5,
+            bgcolor: i === 0 ? '#14532d30' : 'background.paper',
+            border: '1px solid',
+            borderColor: i === 0 ? '#22c55e40' : 'divider',
+            display: 'flex',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Typography
+            variant="body2"
+            fontWeight={i === 0 ? 700 : 400}
+            sx={{ color: i === 0 ? 'success.main' : 'text.secondary' }}
+          >
             {entry.teamName}
-          </span>
-          <span style={{ color: i === 0 ? '#22c55e' : '#64748b', fontWeight: 600, fontSize: '0.9rem', fontVariantNumeric: 'tabular-nums' }}>
+          </Typography>
+          <Typography
+            variant="body2"
+            fontWeight={600}
+            sx={{ color: i === 0 ? 'success.main' : 'text.disabled', fontVariantNumeric: 'tabular-nums' }}
+          >
             {formatPts(entry.amount)}
-          </span>
-        </div>
+          </Typography>
+        </ListItem>
       ))}
       <div ref={bottomRef} />
-    </div>
+    </List>
   );
 }

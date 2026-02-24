@@ -63,7 +63,7 @@ robbinsville-auction/
         ├── pages/
         │   ├── LoginPage.jsx
         │   ├── AuctionPage.jsx   # Team bidding view
-        │   ├── AdminPage.jsx     # Admin panel with 4 tabs (inline, large file)
+        │   ├── AdminPage.jsx     # Admin panel with 4 tabs; Auction Controls now mirrors the right-hand Remaining Players pane
         │   └── DashboardPage.jsx # Read-only spectator view; flex layout: scrollable teams grid (left) + remaining players pane (right, 240px)
         ├── components/
         │   ├── admin/            # AuctionControls, PlayerImport, TeamRosterTable, UnsoldList
@@ -94,6 +94,7 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 **Persistence:** The `server/persistence.js` module saves state via debounced writes (500ms).
 - **Primary (Upstash Redis):** If `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are present, state is written to/read from a Serverless Redis instance instead of disk.
 - **Fallback (Local Disk):** If Redis credentials are not found, state is written to `server/data/state.json`. 
+- **Storage Preference Bypass:** The Admin Panel allows bypassing Upstash through a `StoragePreferenceSelector` on destructive routes (Reset, Full Reset, Restore Backup). A `state.settings.storagePreference === 'local'` flag instructs the `saveState()` and `loadState()` loops to ignore Upstash env variables and force writes locally.
 - On server start (`index.js`), `loadState()` is awaited to pull state either remotely or locally before Socket connections begin accepting traffic.
 
 **Player order (randomizePool):** `settings.randomizePool` (default `false`). When `true`, `findNextPendingIndex` in `auction.js` identifies the current pool from the first PENDING player (preserving pool sequence A1 → A2 → B1…), then picks a random player within that pool. Toggled via the **Player order** control (↕ Fixed / 🔀 Random) in AuctionControls live settings.
@@ -154,3 +155,4 @@ UPSTASH_REDIS_REST_TOKEN=
 - In production, Express serves the built client from `client/dist/` as static files.
 - If not using Upstash Redis, `server/data/state.json` is ephemeral on free-tier PaaS (Railway/Render) — use Export State JSON to back up.
 - Using Upstash Redis entirely decouples the state from the ephemeral filesystem, meaning container spin-downs will not cause data loss.
+- **Deployment Build Note**: When running `npm install` on Railway, always append the `--legacy-peer-deps` flag to ESLint dependency chains or Railway hooks will break. Example: `npm install --legacy-peer-deps && npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps`.

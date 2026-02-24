@@ -11,7 +11,7 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
-import DashboardView from '../components/admin/DashboardView.jsx';
+import DashboardView, { RemainingPlayersPane } from '../components/admin/DashboardView.jsx';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -104,12 +104,23 @@ export default function AdminPage() {
           {tab === 'Dashboard' ? (
             <DashboardView state={auctionState} />
           ) : (
-            <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
-              {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
-              {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
-              {tab === 'Teams & Rosters' && <TeamsTab auctionState={auctionState} />}
-              {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
-              {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
+            <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
+                {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
+                {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
+                {tab === 'Teams & Rosters' && <TeamsTab auctionState={auctionState} />}
+                {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
+                {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
+              </Box>
+
+              {tab === 'Auction Controls' && (
+                <RemainingPlayersPane
+                  players={auctionState.players || []}
+                  pools={auctionState.leagueConfig?.pools || []}
+                  currentPlayerId={player?.id || null}
+                  width={340}
+                />
+              )}
             </Box>
           )}
         </Box>

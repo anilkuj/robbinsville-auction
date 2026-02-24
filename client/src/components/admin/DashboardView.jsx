@@ -22,8 +22,8 @@ export default function DashboardView({ state }) {
 
   const { phase, teams, leagueConfig, players, currentPlayerIndex } = state;
   const startingBudget = leagueConfig?.startingBudget ?? 0;
-  const squadSize      = leagueConfig?.squadSize ?? 0;
-  const currentPlayer  = (phase === 'LIVE' || phase === 'PAUSED') ? players?.[currentPlayerIndex] : null;
+  const squadSize = leagueConfig?.squadSize ?? 0;
+  const currentPlayer = (phase === 'LIVE' || phase === 'PAUSED') ? players?.[currentPlayerIndex] : null;
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -104,7 +104,7 @@ export default function DashboardView({ state }) {
 
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
-function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
+export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
   const byPool = {};
@@ -176,9 +176,9 @@ function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) 
 // ── Team Card ─────────────────────────────────────────────────────────────────
 
 function TeamCard({ team, startingBudget, squadSize, isLeading }) {
-  const spent    = startingBudget - team.budget;
+  const spent = startingBudget - team.budget;
   const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
-  const roster   = team.roster ?? [];
+  const roster = team.roster ?? [];
 
   const progressColor = spentPct > 80 ? 'error' : spentPct > 60 ? 'warning' : 'success';
 
@@ -199,8 +199,8 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
 
       <Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Stat label="Initial Budget" value={fmtPts(startingBudget)} color="text.secondary" />
-        <Stat label="Spent"          value={fmtPts(spent)}          color="error.main" />
-        <Stat label="Remaining"      value={fmtPts(team.budget)}    color="success.main" />
+        <Stat label="Spent" value={fmtPts(spent)} color="error.main" />
+        <Stat label="Remaining" value={fmtPts(team.budget)} color="success.main" />
       </Box>
 
       <Box sx={{ px: 2, pb: 1.5, pt: 1 }}>
@@ -220,7 +220,7 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
       {roster.length > 0 ? (
         <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
           <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
-            {['Player','Pool','Price'].map((h, i) => (
+            {['Player', 'Pool', 'Price'].map((h, i) => (
               <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i === 2 ? 'right' : 'left' }}>{h}</Typography>
             ))}
           </Box>
@@ -252,7 +252,7 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
 function poolColor(poolId) {
   if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };
   if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
-  if (poolId === 'C')         return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
+  if (poolId === 'C') return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
   return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
 }
 

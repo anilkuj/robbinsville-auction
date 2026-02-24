@@ -1,89 +1,72 @@
 import React, { useState } from 'react';
 import { formatPts } from '../../utils/budgetCalc.js';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import LinearProgress from '@mui/material/LinearProgress';
+import Collapse from '@mui/material/Collapse';
 
 export default function TeamRosterTable({ teams, leagueConfig }) {
   const [expanded, setExpanded] = useState(null);
 
   if (!teams || Object.keys(teams).length === 0) {
-    return <div style={{ color: '#475569', fontSize: '0.85rem' }}>No teams configured yet.</div>;
+    return <Typography color="text.disabled" fontSize="0.85rem">No teams configured yet.</Typography>;
   }
 
   const { squadSize, startingBudget } = leagueConfig;
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
       {teamList.map(team => {
-        const pctBudget = team.budget / startingBudget;
+        const pctBudget = startingBudget > 0 ? team.budget / startingBudget : 0;
         const isExpanded = expanded === team.id;
+        const progressColor = pctBudget < 0.1 ? 'error' : pctBudget < 0.3 ? 'warning' : 'success';
 
         return (
-          <div key={team.id} style={{
-            background: '#0f172a',
-            borderRadius: '8px',
-            border: '1px solid #1e293b',
-            overflow: 'hidden',
-          }}>
-            {/* Header row */}
-            <div
+          <Paper
+            key={team.id}
+            variant="outlined"
+            sx={{ overflow: 'hidden', cursor: 'pointer' }}
+          >
+            <Box
               onClick={() => setExpanded(isExpanded ? null : team.id)}
-              style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr auto auto auto',
-                gap: '1rem',
-                padding: '0.75rem 1rem',
-                cursor: 'pointer',
-                alignItems: 'center',
-              }}
+              sx={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 2, px: 2, py: 1.25, alignItems: 'center', '&:hover': { bgcolor: 'action.hover' } }}
             >
-              <div style={{ fontWeight: 600, color: '#f1f5f9' }}>{team.name}</div>
+              <Typography fontWeight={600}>{team.name}</Typography>
 
-              {/* Budget bar */}
-              <div style={{ width: '80px' }}>
-                <div style={{ height: '6px', background: '#1e293b', borderRadius: '3px', overflow: 'hidden' }}>
-                  <div style={{
-                    height: '100%',
-                    width: `${Math.max(0, Math.min(100, pctBudget * 100))}%`,
-                    background: pctBudget > 0.3 ? '#22c55e' : pctBudget > 0.1 ? '#f59e0b' : '#ef4444',
-                    borderRadius: '3px',
-                    transition: 'width 0.3s',
-                  }} />
-                </div>
-              </div>
+              <Box sx={{ width: 80 }}>
+                <LinearProgress variant="determinate" value={Math.max(0, Math.min(100, pctBudget * 100))} color={progressColor} sx={{ height: 6, borderRadius: 1 }} />
+              </Box>
 
-              <div style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+              <Typography color="success.main" fontWeight={700} fontSize="0.85rem" whiteSpace="nowrap">
                 {formatPts(team.budget)}
-              </div>
+              </Typography>
 
-              <div style={{ color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+              <Typography color="text.disabled" fontSize="0.85rem" whiteSpace="nowrap">
                 {team.roster.length}/{squadSize} {isExpanded ? '▲' : '▼'}
-              </div>
-            </div>
+              </Typography>
+            </Box>
 
-            {/* Expanded roster */}
-            {isExpanded && (
-              <div style={{ borderTop: '1px solid #1e293b', padding: '0.5rem 1rem 0.75rem' }}>
+            <Collapse in={isExpanded}>
+              <Box sx={{ borderTop: '1px solid', borderColor: 'divider', px: 2, py: 1 }}>
                 {team.roster.length === 0 ? (
-                  <div style={{ color: '#475569', fontSize: '0.8rem', padding: '0.25rem 0' }}>No players yet</div>
+                  <Typography color="text.disabled" fontSize="0.8rem">No players yet</Typography>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25 }}>
                     {team.roster.map((p, i) => (
-                      <div key={i} style={{
-                        display: 'flex', justifyContent: 'space-between',
-                        fontSize: '0.8rem', color: '#94a3b8',
-                        padding: '0.2rem 0',
-                      }}>
-                        <span>{p.playerName}</span>
-                        <span style={{ color: '#64748b' }}>{p.pool} — {formatPts(p.price)}</span>
-                      </div>
+                      <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', py: 0.25 }}>
+                        <Typography fontSize="0.8rem" color="text.secondary">{p.playerName}</Typography>
+                        <Typography fontSize="0.8rem" color="text.disabled">{p.pool} — {formatPts(p.price)}</Typography>
+                      </Box>
                     ))}
-                  </div>
+                  </Box>
                 )}
-              </div>
-            )}
-          </div>
+              </Box>
+            </Collapse>
+          </Paper>
         );
       })}
-    </div>
+    </Box>
   );
 }

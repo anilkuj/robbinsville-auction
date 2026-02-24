@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { formatPts } from '../../utils/budgetCalc.js';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Collapse from '@mui/material/Collapse';
 
 export default function UnsoldList() {
   const { auctionState, adminAction } = useAuction();
-  const [editing, setEditing] = useState(null); // { playerId, basePrice }
+  const [editing, setEditing] = useState(null);
 
   if (!auctionState) return null;
 
@@ -12,7 +18,7 @@ export default function UnsoldList() {
   const unsold = players.filter(p => p.status === 'UNSOLD');
 
   if (unsold.length === 0) {
-    return <div style={{ color: '#475569', fontSize: '0.85rem' }}>No unsold players.</div>;
+    return <Typography color="text.disabled" fontSize="0.85rem">No unsold players.</Typography>;
   }
 
   function startEdit(player) {
@@ -27,84 +33,59 @@ export default function UnsoldList() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
       {unsold.map(player => {
         const isEditing = editing?.playerId === player.id;
         return (
-          <div key={player.id} style={{
-            background: '#0f172a', borderRadius: '7px', padding: '0.6rem 0.75rem',
-            border: '1px solid #334155',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <span style={{ color: '#f1f5f9', fontWeight: 600, fontSize: '0.9rem' }}>{player.name}</span>
-                <span style={{ color: '#64748b', fontSize: '0.8rem', marginLeft: '0.5rem' }}>
+          <Paper key={player.id} variant="outlined" sx={{ p: 1.25 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Box>
+                <Typography component="span" fontWeight={600} fontSize="0.9rem">{player.name}</Typography>
+                <Typography component="span" color="text.disabled" fontSize="0.8rem" ml={1}>
                   Pool {player.pool} · {formatPts(player.basePrice)}
-                </span>
-              </div>
+                </Typography>
+              </Box>
 
               {phase === 'SETUP' && !isEditing && (
-                <button
-                  onClick={() => startEdit(player)}
-                  style={{
-                    background: '#1d4ed8', border: 'none', color: '#fff',
-                    borderRadius: '5px', padding: '0.3rem 0.6rem',
-                    fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
-                  }}
-                >
+                <Button size="small" variant="contained" color="info" onClick={() => startEdit(player)}>
                   Re-Auction
-                </button>
+                </Button>
               )}
-            </div>
+            </Box>
 
-            {isEditing && (
-              <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <label style={{ color: '#94a3b8', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                  Base price:
-                </label>
-                <input
+            <Collapse in={isEditing}>
+              <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">Base price:</Typography>
+                <TextField
+                  size="small"
                   type="number"
-                  min="1"
-                  value={editing.basePrice}
+                  inputProps={{ min: 1 }}
+                  value={editing?.basePrice ?? ''}
                   onChange={e => setEditing(prev => ({ ...prev, basePrice: e.target.value }))}
-                  style={{
-                    width: '90px', background: '#1e293b', border: '1px solid #475569',
-                    borderRadius: '4px', color: '#f1f5f9', padding: '0.2rem 0.4rem',
-                    fontSize: '0.8rem',
-                  }}
                   autoFocus
+                  sx={{ width: 100 }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') confirmReAuction();
                     if (e.key === 'Escape') setEditing(null);
                   }}
                 />
-                <button
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  disabled={!editing?.basePrice || parseInt(editing.basePrice) <= 0}
                   onClick={confirmReAuction}
-                  disabled={!editing.basePrice || parseInt(editing.basePrice) <= 0}
-                  style={{
-                    background: '#16a34a', border: 'none', color: '#fff',
-                    borderRadius: '5px', padding: '0.25rem 0.55rem',
-                    fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
-                    opacity: (!editing.basePrice || parseInt(editing.basePrice) <= 0) ? 0.5 : 1,
-                  }}
                 >
                   Confirm
-                </button>
-                <button
-                  onClick={() => setEditing(null)}
-                  style={{
-                    background: '#334155', border: 'none', color: '#cbd5e1',
-                    borderRadius: '5px', padding: '0.25rem 0.55rem',
-                    fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600,
-                  }}
-                >
+                </Button>
+                <Button size="small" variant="outlined" color="inherit" onClick={() => setEditing(null)}>
                   Cancel
-                </button>
-              </div>
-            )}
-          </div>
+                </Button>
+              </Box>
+            </Collapse>
+          </Paper>
         );
       })}
-    </div>
+    </Box>
   );
 }

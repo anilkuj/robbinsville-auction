@@ -7,6 +7,16 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidButton from '../components/auction/BidButton.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Button from '@mui/material/Button';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import { formatPts } from '../utils/budgetCalc.js';
 
 export default function AuctionPage() {
   const { auctionState, connected, lastEvent } = useAuction();
@@ -15,7 +25,6 @@ export default function AuctionPage() {
   const [leftWidth, setLeftWidth]   = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
 
-  // Show toasts for sold/unsold events
   useEffect(() => {
     if (!lastEvent) return;
     if (lastEvent.type === 'sold') {
@@ -34,7 +43,6 @@ export default function AuctionPage() {
     }
   }, [toast]);
 
-  // Drag-to-resize helpers
   const startDragLeft = useCallback((e) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -64,12 +72,12 @@ export default function AuctionPage() {
   const roster = myTeam?.roster ?? [];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', userSelect: 'none' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', userSelect: 'none' }}>
 
       {/* Left sidebar */}
-      <div style={{ display: 'none', width: leftWidth, flexShrink: 0 }} className="desktop-sidebar">
+      <Box style={{ display: 'none' }} className="desktop-sidebar">
         <Sidebar width={leftWidth} />
-      </div>
+      </Box>
 
       {/* Left drag handle */}
       <div
@@ -80,43 +88,44 @@ export default function AuctionPage() {
       />
 
       {/* Main content + right panel wrapper */}
-      <div style={{ flex: 1, display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
 
         {/* Center content */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
           <MobileHeader user={user} auctionState={auctionState} connected={connected} />
 
           {toast && (
-            <div style={{
-              position: 'fixed', top: '1rem', left: '50%', transform: 'translateX(-50%)',
-              background: toast.type === 'sold' ? '#14532d' : '#1e293b',
-              border: `1px solid ${toast.type === 'sold' ? '#22c55e' : '#ef4444'}`,
-              color: toast.type === 'sold' ? '#22c55e' : '#ef4444',
-              borderRadius: '10px', padding: '0.75rem 1.5rem',
+            <Paper sx={{
+              position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+              bgcolor: toast.type === 'sold' ? '#14532d' : '#1e293b',
+              border: '1px solid',
+              borderColor: toast.type === 'sold' ? 'success.main' : 'error.main',
+              color: toast.type === 'sold' ? 'success.main' : 'error.main',
+              borderRadius: 2.5, px: 3, py: 1.5,
               fontSize: '0.9rem', fontWeight: 600, zIndex: 1000,
               boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
               maxWidth: '90vw', textAlign: 'center',
             }}>
               {toast.msg}
-            </div>
+            </Paper>
           )}
 
-          <div style={{ flex: 1, padding: '1rem', maxWidth: '600px', margin: '0 auto', width: '100%' }}>
+          <Box sx={{ flex: 1, p: 2, maxWidth: 600, mx: 'auto', width: '100%' }}>
             <PhaseBar phase={phase} playerCount={auctionState?.players?.length} />
 
             {phase === 'ENDED' && (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#1e293b', borderRadius: '12px', marginTop: '1rem' }}>
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🏆</div>
-                <h2 style={{ color: '#f59e0b', marginBottom: '0.5rem' }}>Auction Complete!</h2>
-                <p style={{ color: '#64748b' }}>All players have been auctioned.</p>
-              </div>
+              <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
+                <Typography sx={{ fontSize: '3rem', mb: 1 }}>🏆</Typography>
+                <Typography variant="h5" fontWeight={800} color="primary" sx={{ mb: 0.5 }}>Auction Complete!</Typography>
+                <Typography color="text.secondary">All players have been auctioned.</Typography>
+              </Paper>
             )}
 
             {(phase === 'LIVE' || phase === 'PAUSED') && player && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '0.5rem' }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                 <PlayerCard player={player} />
                 <PlayerExtraData player={player} />
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
                   <CountdownTimer
                     timerEndsAt={auctionState.timerEndsAt}
                     timerPaused={auctionState.timerPaused}
@@ -124,61 +133,61 @@ export default function AuctionPage() {
                     timerSeconds={settings?.timerSeconds ?? 30}
                     endMode={settings?.endMode ?? 'timer'}
                   />
-                  <div style={{ flex: 1 }}>
+                  <Box sx={{ flex: 1 }}>
                     <BidDisplay currentBid={currentBid} teams={teams} player={player} />
-                  </div>
-                </div>
+                  </Box>
+                </Box>
                 {user.role === 'team' && <BidButton />}
-                <div style={{ background: '#1e293b', borderRadius: '10px', padding: '1rem' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.75rem', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.05em' }}>
+                <Paper sx={{ p: 2 }}>
+                  <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
                     Bid History
-                  </div>
+                  </Typography>
                   <BidHistory history={currentBid?.history} />
-                </div>
-              </div>
+                </Paper>
+              </Box>
             )}
 
             {phase === 'SETUP' && (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', background: '#1e293b', borderRadius: '12px', marginTop: '1rem' }}>
-                <div style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>⏳</div>
-                <p style={{ color: '#94a3b8', fontSize: '1.1rem' }}>Waiting for next player…</p>
+              <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
+                <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>⏳</Typography>
+                <Typography color="text.secondary" fontSize="1.1rem">Waiting for next player…</Typography>
                 {auctionState?.players?.length === 0 && (
-                  <p style={{ color: '#475569', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                  <Typography color="text.disabled" fontSize="0.85rem" sx={{ mt: 0.5 }}>
                     Admin hasn't imported players yet.
-                  </p>
+                  </Typography>
                 )}
-              </div>
+              </Paper>
             )}
 
             {!auctionState && (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#475569' }}>Connecting…</div>
+              <Typography color="text.disabled" sx={{ textAlign: 'center', p: 4 }}>Connecting…</Typography>
             )}
 
             {/* Mobile roster */}
             {roster.length > 0 && (
-              <div className="mobile-roster" style={{ marginTop: '1.5rem', background: '#1e293b', borderRadius: '10px', overflow: 'hidden' }}>
-                <div style={{ padding: '0.6rem 1rem', borderBottom: '1px solid #334155', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>My Squad</span>
-                  <span style={{ color: '#64748b', fontSize: '0.72rem' }}>{roster.length} player{roster.length !== 1 ? 's' : ''}</span>
-                </div>
-                <div style={{ padding: '0.25rem 0' }}>
-                  <div style={{ padding: '0.3rem 1rem', display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.5rem' }}>
-                    <span style={{ color: '#475569', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Player</span>
-                    <span style={{ color: '#475569', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pool</span>
-                    <span style={{ color: '#475569', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Price</span>
-                  </div>
+              <Paper className="mobile-roster" sx={{ mt: 2, overflow: 'hidden' }}>
+                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Typography variant="overline" color="text.secondary" fontWeight={600}>My Squad</Typography>
+                  <Typography variant="caption" color="text.disabled">{roster.length} player{roster.length !== 1 ? 's' : ''}</Typography>
+                </Box>
+                <Box sx={{ py: 0.5 }}>
+                  <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
+                    {['Player','Pool','Price'].map(h => (
+                      <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
+                    ))}
+                  </Box>
                   {roster.map((r, i) => (
-                    <div key={r.playerId || i} style={{ padding: '0.35rem 1rem', display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.5rem', alignItems: 'center', background: i % 2 === 0 ? 'transparent' : '#0f172a30', borderTop: '1px solid #0f172a' }}>
-                      <span style={{ fontSize: '0.82rem', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.playerName}</span>
-                      <span style={{ fontSize: '0.68rem', color: '#64748b', background: '#0f172a', border: '1px solid #334155', borderRadius: '4px', padding: '0.1rem 0.3rem' }}>{r.pool}</span>
-                      <span style={{ fontSize: '0.82rem', color: '#22c55e', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>{r.price.toLocaleString()}</span>
-                    </div>
+                    <Box key={r.playerId || i} sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1, alignItems: 'center', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
+                      <Typography variant="body2" noWrap>{r.playerName}</Typography>
+                      <Typography variant="caption" color="text.disabled" sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 0.5, px: 0.5 }}>{r.pool}</Typography>
+                      <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right' }}>{r.price.toLocaleString()}</Typography>
+                    </Box>
                   ))}
-                </div>
-              </div>
+                </Box>
+              </Paper>
             )}
-          </div>
-        </div>
+          </Box>
+        </Box>
 
         {/* Right drag handle */}
         <div
@@ -197,7 +206,7 @@ export default function AuctionPage() {
             width={rightWidth}
           />
         </div>
-      </div>
+      </Box>
 
       <style>{`
         @media (min-width: 768px) {
@@ -217,7 +226,7 @@ export default function AuctionPage() {
         }
         .drag-handle:hover { background: #334155; }
       `}</style>
-    </div>
+    </Box>
   );
 }
 
@@ -230,7 +239,7 @@ function poolColor(poolId) {
   return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
 }
 
-// ── Player extra data card (shown on bid screen) ───────────────────────────────
+// ── Player extra data card ─────────────────────────────────────────────────────
 
 function PlayerExtraData({ player }) {
   if (!player?.extra) return null;
@@ -238,31 +247,20 @@ function PlayerExtraData({ player }) {
   if (entries.length === 0) return null;
 
   return (
-    <div style={{
-      background: '#1e293b',
-      borderRadius: '10px',
-      overflow: 'hidden',
-      display: 'grid',
-      gridTemplateColumns: `repeat(${Math.min(entries.length, 4)}, 1fr)`,
-    }}>
+    <Paper sx={{ overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${Math.min(entries.length, 4)}, 1fr)` }}>
       {entries.map(([k, v], i) => (
-        <div key={k} style={{
-          padding: '0.65rem 1rem',
-          borderLeft: i > 0 ? '1px solid #334155' : 'none',
-        }}>
-          <div style={{ color: '#64748b', fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, marginBottom: '4px' }}>
+        <Box key={k} sx={{ p: '0.65rem 1rem', borderLeft: i > 0 ? '1px solid' : 'none', borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.disabled" display="block" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, mb: 0.5 }}>
             {k}
-          </div>
-          <div style={{ color: '#f1f5f9', fontSize: '0.92rem', fontWeight: 600 }}>
-            {v}
-          </div>
-        </div>
+          </Typography>
+          <Typography variant="body2" fontWeight={600}>{v}</Typography>
+        </Box>
       ))}
-    </div>
+    </Paper>
   );
 }
 
-// ── Right panel (simplified: Name · Pool · Base only) ─────────────────────────
+// ── Right panel ────────────────────────────────────────────────────────────────
 
 function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 }) {
   if (!players || !pools) return null;
@@ -275,15 +273,15 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
     byPool[p.pool].push(p);
   }
   const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
-
   const GRID = 'minmax(0,1fr) auto auto';
 
   return (
-    <div style={{
+    <Box sx={{
       width,
       flexShrink: 0,
-      borderLeft: '1px solid #1e293b',
-      background: '#0a111e',
+      borderLeft: '1px solid',
+      borderColor: 'divider',
+      bgcolor: 'background.default',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
@@ -291,64 +289,36 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
       position: 'sticky',
       top: 0,
     }}>
-      {/* Pane header */}
-      <div style={{
-        padding: '0.75rem 1rem',
-        borderBottom: '1px solid #1e293b',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexShrink: 0,
-        background: '#0f172a',
-      }}>
-        <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-          Remaining Players
-        </span>
-        <span style={{ background: '#1e293b', color: '#f59e0b', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
-          {pending.length}
-        </span>
-      </div>
+      <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
+        <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining Players</Typography>
+        <Chip label={pending.length} size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
+      </Box>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {pending.length === 0 ? (
-          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#334155', fontSize: '0.8rem' }}>
-            No players remaining
-          </div>
+          <Typography color="text.disabled" fontSize="0.8rem" sx={{ p: 2, textAlign: 'center' }}>No players remaining</Typography>
         ) : (
           orderedPools.map(poolId => {
             const poolPlayers = byPool[poolId];
             const clr = poolColor(poolId);
             return (
               <div key={poolId}>
-                {/* Pool header */}
                 <div style={{
                   padding: '0.45rem 1rem',
                   background: clr.bg,
                   borderTop: `2px solid ${clr.border}`,
                   borderBottom: `1px solid ${clr.border}50`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  position: 'sticky', top: 0, zIndex: 1,
                 }}>
-                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
-                    Pool {poolId}
-                  </span>
-                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>
-                    {poolPlayers.length}
-                  </span>
+                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</span>
+                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
                 </div>
-
-                {/* Column headers */}
                 <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
                   <PColHead label="Player" first />
                   <PColHead label="Pool" />
                   <PColHead label="Base" right />
                 </div>
-
-                {/* Player rows */}
                 {poolPlayers.map((p, rowIdx) => {
                   const isOnBlock = p.id === currentPlayerId;
                   const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
@@ -358,12 +328,7 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
                         {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}{p.name}
                       </PCell>
                       <PCell center>
-                        <span style={{
-                          background: clr.bg, color: clr.text,
-                          border: `1px solid ${clr.border}50`,
-                          borderRadius: '4px', padding: '0.1rem 0.35rem',
-                          fontSize: '0.65rem', fontWeight: 700,
-                        }}>{p.pool}</span>
+                        <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{p.pool}</span>
                       </PCell>
                       <PCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
                         {fmtPts(p.basePrice)}
@@ -375,8 +340,8 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
             );
           })
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
@@ -414,21 +379,19 @@ function PCell({ children, first, right, center, style = {} }) {
   );
 }
 
-// ── Other components ───────────────────────────────────────────────────────────
-
 function PhaseBar({ phase, playerCount }) {
   const labels = {
-    SETUP: { text: 'Setup', color: '#64748b' },
-    LIVE: { text: '● LIVE', color: '#22c55e' },
-    PAUSED: { text: '⏸ Paused', color: '#f59e0b' },
-    ENDED: { text: 'Ended', color: '#94a3b8' },
+    SETUP:  { text: 'Setup',     color: 'default' },
+    LIVE:   { text: '● LIVE',    color: 'success' },
+    PAUSED: { text: '⏸ Paused', color: 'warning' },
+    ENDED:  { text: 'Ended',     color: 'default' },
   };
   const cfg = labels[phase] || labels.SETUP;
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', marginBottom: '0.25rem' }}>
-      <span style={{ color: cfg.color, fontWeight: 700, fontSize: '0.9rem' }}>{cfg.text}</span>
-      {playerCount > 0 && <span style={{ color: '#475569', fontSize: '0.8rem' }}>{playerCount} players total</span>}
-    </div>
+    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, mb: 0.5 }}>
+      <Chip label={cfg.text} color={cfg.color} size="small" sx={{ fontWeight: 700 }} />
+      {playerCount > 0 && <Typography variant="caption" color="text.disabled">{playerCount} players total</Typography>}
+    </Box>
   );
 }
 
@@ -436,33 +399,30 @@ function MobileHeader({ user, auctionState, connected }) {
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
-    <div style={{ background: '#1e293b', borderBottom: '1px solid #334155', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <span style={{ fontSize: '1.2rem' }}>🏏</span>
-        <span style={{ fontWeight: 700, color: '#f59e0b', fontSize: '0.95rem' }}>RPL</span>
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        {team && (
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ color: '#f1f5f9', fontSize: '0.8rem', fontWeight: 600 }}>{team.name}</div>
-            <div style={{ color: '#22c55e', fontSize: '0.75rem' }}>{team.budget.toLocaleString()} pts</div>
-          </div>
-        )}
-        <button
-          onClick={() => window.open('/dashboard', 'rpl-dashboard', 'width=1280,height=800,resizable=yes')}
-          title="Open Dashboard"
-          style={{
-            background: 'none', border: '1px solid #334155', borderRadius: '6px',
-            color: '#94a3b8', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
-            padding: '0.25rem 0.5rem', display: 'flex', alignItems: 'center', gap: '0.3rem',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          📊 Dashboard
-        </button>
-        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: connected ? '#22c55e' : '#ef4444' }} />
-      </div>
-    </div>
+    <AppBar position="sticky" sx={{ display: { md: 'none' } }}>
+      <Toolbar sx={{ justifyContent: 'space-between', minHeight: '52px !important', px: 2 }}>
+        <Typography fontWeight={800} color="primary">🏏 RPL</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          {team && (
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="caption" color="text.primary" fontWeight={600} display="block">{team.name}</Typography>
+              <Typography variant="caption" color="success.main">{formatPts(team.budget)}</Typography>
+            </Box>
+          )}
+          <Button
+            size="small"
+            variant="outlined"
+            color="inherit"
+            startIcon={<DashboardIcon sx={{ fontSize: '0.85rem !important' }} />}
+            onClick={() => window.open('/dashboard', 'rpl-dashboard', 'width=1280,height=800,resizable=yes')}
+            sx={{ borderColor: 'divider', color: 'text.secondary', fontSize: '0.7rem', py: 0.25, px: 0.75, minWidth: 0 }}
+          >
+            Dashboard
+          </Button>
+          <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+        </Box>
+      </Toolbar>
+    </AppBar>
   );
 }
 

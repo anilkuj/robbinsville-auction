@@ -1,28 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { computeMaxBid, formatPts } from '../../utils/budgetCalc.js';
-
-const btn = (color, disabled = false) => ({
-  padding: '0.6rem 1.2rem',
-  borderRadius: '7px',
-  border: 'none',
-  cursor: disabled ? 'not-allowed' : 'pointer',
-  fontWeight: 600,
-  fontSize: '0.9rem',
-  opacity: disabled ? 0.4 : 1,
-  background: color,
-  color: '#fff',
-  transition: 'opacity 0.15s',
-});
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
+import Collapse from '@mui/material/Collapse';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
 export default function AuctionControls() {
   const { auctionState, adminAction, adminError, clearAdminError, lastEvent } = useAuction();
   const [timer, setTimer] = useState('');
   const [increment, setIncrement] = useState('');
   const [bump, setBump] = useState('');
-  const [pendingEndMode, setPendingEndMode] = useState(null); // null = no change pending
-  const [pendingConfirm, setPendingConfirm] = useState(null); // null = no change pending
-  const [pendingRandomize, setPendingRandomize] = useState(null); // null = no change pending
+  const [pendingEndMode, setPendingEndMode] = useState(null);
+  const [pendingConfirm, setPendingConfirm] = useState(null);
+  const [pendingRandomize, setPendingRandomize] = useState(null);
 
   // Manual sale state
   const [showManualSale, setShowManualSale] = useState(false);
@@ -31,18 +31,13 @@ export default function AuctionControls() {
   const [msAmount, setMsAmount] = useState('');
   const [msLocalError, setMsLocalError] = useState('');
 
-  // Reset manual sale form after a successful sold event
   useEffect(() => {
     if (lastEvent?.type === 'sold') {
-      setMsPlayer('');
-      setMsTeam('');
-      setMsAmount('');
-      setMsLocalError('');
+      setMsPlayer(''); setMsTeam(''); setMsAmount(''); setMsLocalError('');
       clearAdminError();
     }
   }, [lastEvent]);
 
-  // Show server-side admin errors in the manual sale panel when it's open
   useEffect(() => {
     if (showManualSale && adminError) {
       setMsLocalError(adminError);
@@ -56,7 +51,6 @@ export default function AuctionControls() {
   const isLive = phase === 'LIVE';
   const isSetup = phase === 'SETUP';
 
-  // Block Next Player if any team has ownerIsPlayer checked but no owner selected
   const teamsWithMissingOwner = Object.values(auctionState.teams || {})
     .filter(t => t.ownerIsPlayer && !t.ownerPlayerId);
   const ownerBlocked = teamsWithMissingOwner.length > 0;
@@ -104,343 +98,193 @@ export default function AuctionControls() {
     if (pendingRandomize !== null) updates.randomizePool = pendingRandomize;
     if (Object.keys(updates).length) {
       adminAction('admin:updateSettings', updates);
-      setTimer('');
-      setIncrement('');
-      setBump('');
-      setPendingEndMode(null);
-      setPendingConfirm(null);
-      setPendingRandomize(null);
+      setTimer(''); setIncrement(''); setBump('');
+      setPendingEndMode(null); setPendingConfirm(null); setPendingRandomize(null);
     }
   }
 
-  const inputStyle = {
-    background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
-    borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.9rem', width: '90px',
-  };
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
 
       {/* Awaiting hammer banner */}
       {awaitingHammer && (
-        <div style={{
-          background: '#2e1065', border: '1px solid #a855f7',
-          borderRadius: '8px', padding: '0.75rem 1rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-        }}>
-          <div>
-            <div style={{ color: '#d8b4fe', fontWeight: 700, fontSize: '0.85rem' }}>🔨 Awaiting hammer</div>
-            <div style={{ color: '#a855f7', fontSize: '0.75rem', marginTop: '2px' }}>
+        <Paper sx={{ bgcolor: '#2e1065', border: '1px solid #a855f7', borderRadius: 2, p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Box>
+            <Typography fontWeight={700} fontSize="0.85rem" color="#d8b4fe">🔨 Awaiting hammer</Typography>
+            <Typography fontSize="0.75rem" color="#a855f7" mt={0.25}>
               {auctionState.currentBid?.teamId
                 ? `Highest bid: ${auctionState.currentBid.amount.toLocaleString()} pts`
                 : 'No bids — mark unsold or accept to pass'}
-            </div>
-          </div>
-          <button
-            style={{ ...btn('#a855f7'), fontSize: '1rem', padding: '0.5rem 1.2rem' }}
-            onClick={() => adminAction('admin:acceptBid')}
-          >
+            </Typography>
+          </Box>
+          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => adminAction('admin:acceptBid')}>
             🔨 Hammer
-          </button>
-        </div>
+          </Button>
+        </Paper>
+      )}
+
+      {/* Owner blocked warning */}
+      {ownerBlocked && isSetup && (
+        <Alert severity="error" sx={{ fontSize: '0.8rem' }}>
+          ⚠ Owner player not selected for: {teamsWithMissingOwner.map(t => t.name || t.id).join(', ')} — go to League Setup to fix.
+        </Alert>
       )}
 
       {/* Phase action buttons */}
-      {ownerBlocked && isSetup && (
-        <div style={{
-          background: '#450a0a', border: '1px solid #ef4444',
-          borderRadius: '7px', padding: '0.5rem 0.75rem',
-          color: '#fca5a5', fontSize: '0.8rem',
-        }}>
-          ⚠ Owner player not selected for: {teamsWithMissingOwner.map(t => t.name || t.id).join(', ')} — go to League Setup to fix.
-        </div>
-      )}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.6rem' }}>
-        <button
-          style={btn('#22c55e', !isSetup || ownerBlocked)}
-          disabled={!isSetup || ownerBlocked}
-          onClick={() => adminAction('admin:nextPlayer')}
-        >
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+        <Button variant="contained" color="success" disabled={!isSetup || ownerBlocked} onClick={() => adminAction('admin:nextPlayer')}>
           ▶ Next Player
-        </button>
+        </Button>
 
         {isLive && !timerPaused && (
-          <button
-            style={btn('#f59e0b')}
-            onClick={() => adminAction('admin:pauseTimer')}
-          >
+          <Button variant="contained" color="warning" onClick={() => adminAction('admin:pauseTimer')}>
             ⏸ Pause
-          </button>
+          </Button>
         )}
 
         {isLive && timerPaused && (
-          <button
-            style={btn('#3b82f6')}
-            onClick={() => adminAction('admin:resumeTimer')}
-          >
+          <Button variant="contained" color="info" onClick={() => adminAction('admin:resumeTimer')}>
             ▶ Resume
-          </button>
+          </Button>
         )}
 
-        {/* Accept Bid always visible in manual mode while live */}
         {isLive && isManual && !awaitingHammer && (
-          <button
-            style={btn('#a855f7')}
-            onClick={() => adminAction('admin:acceptBid')}
-          >
+          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => adminAction('admin:acceptBid')}>
             🔨 Hammer
-          </button>
+          </Button>
         )}
 
-        <button
-          style={btn('#ef4444', !isLive)}
-          disabled={!isLive}
-          onClick={() => {
-            if (confirm('Mark current player as unsold?')) {
-              adminAction('admin:markUnsold');
-            }
-          }}
-        >
+        <Button variant="contained" color="error" disabled={!isLive} onClick={() => {
+          if (confirm('Mark current player as unsold?')) adminAction('admin:markUnsold');
+        }}>
           ✕ Mark Unsold
-        </button>
-      </div>
+        </Button>
+      </Box>
 
       {/* Live settings */}
-      <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Timer (s) — current: {settings.timerSeconds}
-          </div>
-          <input
-            style={inputStyle}
-            type="number" min="5" max="120"
-            placeholder={settings.timerSeconds}
-            value={timer}
-            onChange={e => setTimer(e.target.value)}
-          />
-        </div>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Bid bump (s) — current: {settings.timerBumpSeconds ?? 10}
-          </div>
-          <input
-            style={inputStyle}
-            type="number" min="0" max="60"
-            placeholder={settings.timerBumpSeconds ?? 10}
-            value={bump}
-            onChange={e => setBump(e.target.value)}
-          />
-        </div>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Increment — current: {settings.bidIncrement.toLocaleString()}
-          </div>
-          <input
-            style={inputStyle}
-            type="number" min="100"
-            placeholder={settings.bidIncrement}
-            value={increment}
-            onChange={e => setIncrement(e.target.value)}
-          />
-        </div>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            End mode
-          </div>
-          <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #334155' }}>
-            {['timer', 'manual'].map(mode => (
-              <button
-                key={mode}
-                onClick={() => setPendingEndMode(mode === settings.endMode && pendingEndMode === null ? null : mode)}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  background: displayEndMode === mode ? (mode === 'manual' ? '#a855f7' : '#3b82f6') : '#0f172a',
-                  color: displayEndMode === mode ? '#fff' : '#64748b',
-                  border: pendingEndMode === mode ? '1px dashed #94a3b8' : 'none',
-                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-                }}
-              >
-                {mode === 'timer' ? '⏱ Timer' : '🔨 Manual'}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Bid confirmation
-          </div>
-          <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #334155' }}>
-            {[true, false].map(val => (
-              <button
-                key={String(val)}
-                onClick={() => setPendingConfirm(val === displayConfirm && pendingConfirm === null ? null : val)}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  background: displayConfirm === val ? (val ? '#22c55e' : '#ef4444') : '#0f172a',
-                  color: displayConfirm === val ? '#fff' : '#64748b',
-                  border: pendingConfirm === val ? '1px dashed #94a3b8' : 'none',
-                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-                }}
-              >
-                {val ? '✓ On' : '✕ Off'}
-              </button>
-            ))}
-          </div>
-        </div>
+      <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexWrap: 'wrap', gap: 2, alignItems: 'flex-end' }}>
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Timer (s) — current: {settings.timerSeconds}</Typography>
+          <TextField size="small" type="number" inputProps={{ min: 5, max: 120 }} placeholder={String(settings.timerSeconds)} value={timer} onChange={e => setTimer(e.target.value)} sx={{ width: 90 }} />
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Bid bump (s) — current: {settings.timerBumpSeconds ?? 10}</Typography>
+          <TextField size="small" type="number" inputProps={{ min: 0, max: 60 }} placeholder={String(settings.timerBumpSeconds ?? 10)} value={bump} onChange={e => setBump(e.target.value)} sx={{ width: 90 }} />
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Increment — current: {settings.bidIncrement?.toLocaleString()}</Typography>
+          <TextField size="small" type="number" inputProps={{ min: 100 }} placeholder={String(settings.bidIncrement)} value={increment} onChange={e => setIncrement(e.target.value)} sx={{ width: 90 }} />
+        </Box>
 
-        <div>
-          <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
-            Player order
-          </div>
-          <div style={{ display: 'flex', borderRadius: '6px', overflow: 'hidden', border: '1px solid #334155' }}>
-            {[false, true].map(val => (
-              <button
-                key={String(val)}
-                onClick={() => setPendingRandomize(val === displayRandomize && pendingRandomize === null ? null : val)}
-                style={{
-                  padding: '0.4rem 0.75rem',
-                  background: displayRandomize === val ? (val ? '#f59e0b' : '#3b82f6') : '#0f172a',
-                  color: displayRandomize === val ? '#fff' : '#64748b',
-                  border: pendingRandomize === val ? '1px dashed #94a3b8' : 'none',
-                  cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
-                }}
-              >
-                {val ? '🔀 Random' : '↕ Fixed'}
-              </button>
-            ))}
-          </div>
-        </div>
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>End mode</Typography>
+          <ToggleButtonGroup exclusive size="small" value={displayEndMode} onChange={(_, val) => val && setPendingEndMode(val === settings.endMode ? null : val)}>
+            <ToggleButton value="timer" sx={{ px: 1.5, fontSize: '0.78rem' }}>⏱ Timer</ToggleButton>
+            <ToggleButton value="manual" sx={{ px: 1.5, fontSize: '0.78rem' }}>🔨 Manual</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
 
-        <button
-          style={btn('#475569', !hasChanges)}
-          disabled={!hasChanges}
-          onClick={saveSettings}
-        >
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Bid confirmation</Typography>
+          <ToggleButtonGroup exclusive size="small" value={String(displayConfirm)} onChange={(_, val) => val !== null && setPendingConfirm(val === 'true')}>
+            <ToggleButton value="true" sx={{ px: 1.5, fontSize: '0.78rem', '&.Mui-selected': { color: 'success.main' } }}>✓ On</ToggleButton>
+            <ToggleButton value="false" sx={{ px: 1.5, fontSize: '0.78rem', '&.Mui-selected': { color: 'error.main' } }}>✕ Off</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Player order</Typography>
+          <ToggleButtonGroup exclusive size="small" value={String(displayRandomize)} onChange={(_, val) => val !== null && setPendingRandomize(val === 'true')}>
+            <ToggleButton value="false" sx={{ px: 1.5, fontSize: '0.78rem' }}>↕ Fixed</ToggleButton>
+            <ToggleButton value="true" sx={{ px: 1.5, fontSize: '0.78rem' }}>🔀 Random</ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        <Button variant="contained" color="inherit" disabled={!hasChanges} onClick={saveSettings} sx={{ alignSelf: 'flex-end' }}>
           Apply
-        </button>
-      </div>
+        </Button>
+      </Paper>
 
       {/* Manual Sale */}
       {(isSetup || phase === 'ENDED') && (
-        <div style={{ background: '#0f172a', borderRadius: '8px', overflow: 'hidden', border: '1px solid #334155' }}>
-          <button
+        <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+          <Box
             onClick={() => { setShowManualSale(v => !v); setMsLocalError(''); }}
-            style={{
-              width: '100%', background: 'transparent', border: 'none', cursor: 'pointer',
-              padding: '0.65rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              color: '#94a3b8', fontSize: '0.85rem', fontWeight: 600,
-            }}
+            sx={{ px: 2, py: 1.25, display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
           >
-            <span>💰 Manual Sale</span>
-            <span style={{ fontSize: '0.75rem' }}>{showManualSale ? '▲ Hide' : '▼ Expand'}</span>
-          </button>
+            <Typography fontWeight={600} fontSize="0.85rem">💰 Manual Sale</Typography>
+            <Typography variant="caption" color="text.disabled">{showManualSale ? '▲ Hide' : '▼ Expand'}</Typography>
+          </Box>
 
-          {showManualSale && (
-            <div style={{ padding: '0.75rem 1rem 1rem', borderTop: '1px solid #1e293b', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'flex-end' }}>
-
-                {/* Player dropdown */}
-                <div style={{ flex: '1 1 160px' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>Player</div>
-                  <select
-                    value={msPlayer}
-                    onChange={e => { setMsPlayer(e.target.value); setMsLocalError(''); }}
-                    style={{
-                      width: '100%', background: '#1e293b', border: '1px solid #334155', color: msPlayer ? '#f1f5f9' : '#64748b',
-                      borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
-                    }}
-                  >
-                    <option value="">— Select player —</option>
-                    {availableForManualSale.length === 0 && (
-                      <option disabled>No players available</option>
-                    )}
+          <Collapse in={showManualSale}>
+            <Box sx={{ px: 2, pb: 2, pt: 1, borderTop: '1px solid', borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5, alignItems: 'flex-end' }}>
+                <FormControl size="small" sx={{ flex: '1 1 160px' }}>
+                  <InputLabel>Player</InputLabel>
+                  <Select label="Player" value={msPlayer} onChange={e => { setMsPlayer(e.target.value); setMsLocalError(''); }}>
+                    <MenuItem value=""><em>— Select player —</em></MenuItem>
+                    {availableForManualSale.length === 0 && <MenuItem value="" disabled>No players available</MenuItem>}
                     {availableForManualSale.map(p => (
-                      <option key={p.id} value={p.id}>
+                      <MenuItem key={p.id} value={p.id}>
                         {p.name}{p.status === 'UNSOLD' ? ' (unsold)' : ''}{p.pool ? ` · ${p.pool}` : ''}
-                      </option>
+                      </MenuItem>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </FormControl>
 
-                {/* Team dropdown */}
-                <div style={{ flex: '1 1 140px' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>Team</div>
-                  <select
-                    value={msTeam}
-                    onChange={e => { setMsTeam(e.target.value); setMsAmount(''); setMsLocalError(''); }}
-                    style={{
-                      width: '100%', background: '#1e293b', border: '1px solid #334155', color: msTeam ? '#f1f5f9' : '#64748b',
-                      borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
-                    }}
-                  >
-                    <option value="">— Select team —</option>
+                <FormControl size="small" sx={{ flex: '1 1 140px' }}>
+                  <InputLabel>Team</InputLabel>
+                  <Select label="Team" value={msTeam} onChange={e => { setMsTeam(e.target.value); setMsAmount(''); setMsLocalError(''); }}>
+                    <MenuItem value=""><em>— Select team —</em></MenuItem>
                     {teamList.map(t => (
-                      <option key={t.id} value={t.id}>
-                        {t.name} ({formatPts(t.budget)})
-                      </option>
+                      <MenuItem key={t.id} value={t.id}>{t.name} ({formatPts(t.budget)})</MenuItem>
                     ))}
-                  </select>
-                </div>
+                  </Select>
+                </FormControl>
 
-                {/* Amount input */}
-                <div style={{ flex: '1 1 120px' }}>
-                  <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>
+                <Box sx={{ flex: '1 1 120px' }}>
+                  <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>
                     Sale amount
                     {msMaxBid !== null && (
-                      <span style={{ marginLeft: '6px', color: msMaxBid <= 0 ? '#ef4444' : '#22c55e' }}>
+                      <Box component="span" sx={{ ml: 0.75, color: msMaxBid <= 0 ? 'error.main' : 'success.main' }}>
                         (max: {formatPts(msMaxBid)})
-                      </span>
+                      </Box>
                     )}
-                  </div>
-                  <input
+                  </Typography>
+                  <TextField
+                    size="small"
                     type="number"
-                    min="1"
+                    inputProps={{ min: 1 }}
                     placeholder="pts"
                     value={msAmount}
                     onChange={e => { setMsAmount(e.target.value); setMsLocalError(''); }}
                     disabled={!msTeam}
-                    style={{
-                      width: '100%', background: '#1e293b',
-                      border: `1px solid ${msAmountInvalid ? '#ef4444' : '#334155'}`,
-                      color: '#f1f5f9', borderRadius: '6px', padding: '0.4rem 0.6rem', fontSize: '0.85rem',
-                      boxSizing: 'border-box',
-                    }}
+                    error={msAmountInvalid}
+                    fullWidth
                   />
-                </div>
+                </Box>
 
-                {/* Submit */}
-                <button
-                  style={btn('#16a34a', !canSubmitManualSale)}
-                  disabled={!canSubmitManualSale}
-                  onClick={submitManualSale}
-                >
+                <Button variant="contained" color="success" disabled={!canSubmitManualSale} onClick={submitManualSale} sx={{ alignSelf: 'flex-end' }}>
                   Sell
-                </button>
-              </div>
+                </Button>
+              </Box>
 
-              {/* Inline budget info for selected team */}
               {selectedTeam && (
-                <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                <Typography variant="caption" color="text.disabled">
                   {selectedTeam.name}: budget {formatPts(selectedTeam.budget)}, roster {selectedTeam.roster.length}/{squadSize || 18}
                   {msMaxBid !== null && msMaxBid <= 0 && (
-                    <span style={{ color: '#ef4444', marginLeft: '8px' }}>⚠ Cannot purchase any more players (budget fully reserved)</span>
+                    <Box component="span" color="error.main" ml={1}>⚠ Cannot purchase any more players</Box>
                   )}
-                </div>
+                </Typography>
               )}
 
-              {/* Error message */}
               {msLocalError && (
-                <div style={{
-                  background: '#450a0a', border: '1px solid #ef4444', borderRadius: '6px',
-                  padding: '0.5rem 0.75rem', color: '#fca5a5', fontSize: '0.8rem',
-                }}>
-                  ⚠ {msLocalError}
-                </div>
+                <Alert severity="error" sx={{ py: 0.5, fontSize: '0.8rem' }}>⚠ {msLocalError}</Alert>
               )}
-            </div>
-          )}
-        </div>
+            </Box>
+          </Collapse>
+        </Paper>
       )}
-    </div>
+    </Box>
   );
 }

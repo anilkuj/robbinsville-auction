@@ -12,6 +12,30 @@ import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
 import DashboardView from '../components/admin/DashboardView.jsx';
+import Box from '@mui/material/Box';
+import AppBar from '@mui/material/AppBar';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import Paper from '@mui/material/Paper';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import CircularProgress from '@mui/material/CircularProgress';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Player Data', 'Settings', 'Dashboard'];
 
@@ -21,55 +45,38 @@ export default function AdminPage() {
   const [tab, setTab] = useState('Auction Controls');
 
   if (!auctionState) {
-    return <Loading />;
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <Typography color="text.disabled">Connecting to auction…</Typography>
+      </Box>
+    );
   }
 
   const { phase } = auctionState;
   const player = auctionState.players?.[auctionState.currentPlayerIndex] ?? null;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top bar */}
-      <div style={{
-        background: '#1e293b', borderBottom: '1px solid #334155',
-        padding: '0.75rem 1.5rem',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '1.3rem' }}>🏏</span>
-          <span style={{ fontWeight: 800, color: '#f59e0b' }}>RPL Admin</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{
-            width: '8px', height: '8px', borderRadius: '50%',
-            background: connected ? '#22c55e' : '#ef4444',
-          }} title={connected ? 'Connected' : 'Disconnected'} />
-          <button
-            onClick={logout}
-            style={{
-              background: 'none', border: '1px solid #334155', color: '#94a3b8',
-              borderRadius: '6px', padding: '0.4rem 0.75rem', cursor: 'pointer', fontSize: '0.8rem',
-            }}
-          >
-            Sign Out
-          </button>
-        </div>
-      </div>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <AppBar position="static">
+        <Toolbar sx={{ justifyContent: 'space-between', minHeight: 52 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography sx={{ fontSize: '1.3rem' }}>🏏</Typography>
+            <Typography fontWeight={800} color="primary">RPL Admin</Typography>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+            <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+            <Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ borderColor: 'divider', color: 'text.secondary', fontSize: '0.8rem' }}>
+              Sign Out
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-        {/* Live auction preview — visible when phase is LIVE/PAUSED */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Live auction preview */}
         {(phase === 'LIVE' || phase === 'PAUSED') && player && (
-          <div style={{
-            width: '280px', flexShrink: 0,
-            background: '#0f172a',
-            borderRight: '1px solid #1e293b',
-            padding: '1rem',
-            display: 'flex', flexDirection: 'column', gap: '0.75rem',
-            overflowY: 'auto',
-          }}>
-            <div style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-              On Block
-            </div>
+          <Paper square sx={{ width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
+            <Typography variant="overline" color="text.disabled">On Block</Typography>
             <PlayerCard player={player} />
             <CountdownTimer
               timerEndsAt={auctionState.timerEndsAt}
@@ -79,74 +86,42 @@ export default function AdminPage() {
               endMode={auctionState.settings?.endMode ?? 'timer'}
             />
             <BidDisplay currentBid={auctionState.currentBid} teams={auctionState.teams} player={player} />
-            <div style={{ color: '#64748b', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '0.25rem' }}>
-              Bids
-            </div>
+            <Typography variant="overline" color="text.disabled">Bids</Typography>
             <BidHistory history={auctionState.currentBid?.history} />
-          </div>
+          </Paper>
         )}
 
         {/* Main panel */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* Tabs */}
-          <div style={{
-            display: 'flex',
-            borderBottom: '1px solid #334155',
-            background: '#1e293b',
-            padding: '0 1rem',
-          }}>
-            {TABS.map(t => (
-              <button key={t} onClick={() => setTab(t)} style={{
-                background: 'none',
-                border: 'none',
-                borderBottom: t === tab ? '2px solid #f59e0b' : '2px solid transparent',
-                color: t === tab ? '#f59e0b' : '#64748b',
-                padding: '0.75rem 1rem',
-                cursor: 'pointer',
-                fontWeight: t === tab ? 600 : 400,
-                fontSize: '0.9rem',
-                transition: 'color 0.15s',
-              }}>
-                {t}
-              </button>
-            ))}
-          </div>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
+              {TABS.map(t => <Tab key={t} label={t} value={t} sx={{ fontSize: '0.85rem', minHeight: 48 }} />)}
+            </Tabs>
+          </Paper>
 
-          {/* Tab content */}
           {tab === 'Dashboard' ? (
             <DashboardView state={auctionState} />
           ) : (
-            <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
-              {tab === 'League Setup' && (
-                <LeagueSetupTab auctionState={auctionState} />
-              )}
-              {tab === 'Auction Controls' && (
-                <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />
-              )}
-              {tab === 'Teams & Rosters' && (
-                <TeamsTab auctionState={auctionState} />
-              )}
-              {tab === 'Player Data' && (
-                <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />
-              )}
-              {tab === 'Settings' && (
-                <SettingsTab auctionState={auctionState} />
-              )}
-            </div>
+            <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
+              {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
+              {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
+              {tab === 'Teams & Rosters' && <TeamsTab auctionState={auctionState} />}
+              {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
+              {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
+            </Box>
           )}
-        </div>
-      </div>
-    </div>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 
-// ─── League Setup Tab ────────────────────────────────────────────────────────
+// ─── League Setup Tab ─────────────────────────────────────────────────────────
 
 function LeagueSetupTab({ auctionState }) {
   const { phase, leagueConfig } = auctionState;
   const isSetup = phase === 'SETUP';
 
-  // Owner players from CSV (type=owner or player_type=owner, case-insensitive)
   const ownerPlayers = (auctionState.players || []).filter(p => {
     if (!p.extra) return false;
     const typeKey = Object.keys(p.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
@@ -157,7 +132,6 @@ function LeagueSetupTab({ auctionState }) {
   const [teams, setTeams] = useState(() => {
     const t = JSON.parse(JSON.stringify(auctionState.teams));
     if (Object.keys(t).length === 0) {
-      // Pre-populate 10 empty team slots
       const init = {};
       for (let i = 1; i <= 10; i++) {
         init[`team_${i}`] = { id: `team_${i}`, name: `Team ${i}`, password: 'team123' };
@@ -169,7 +143,6 @@ function LeagueSetupTab({ auctionState }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
-  // Sync from server when auctionState changes (e.g. on save success)
   useEffect(() => {
     setCfg(JSON.parse(JSON.stringify(leagueConfig)));
     if (Object.keys(auctionState.teams).length > 0) {
@@ -195,10 +168,7 @@ function LeagueSetupTab({ auctionState }) {
 
   function addPool() {
     const id = `P${cfg.pools.length + 1}`;
-    setCfg(prev => ({
-      ...prev,
-      pools: [...prev.pools, { id, label: id, basePrice: 1000, count: 0 }],
-    }));
+    setCfg(prev => ({ ...prev, pools: [...prev.pools, { id, label: id, basePrice: 1000, count: 0 }] }));
   }
 
   function removePool(idx) {
@@ -211,11 +181,7 @@ function LeagueSetupTab({ auctionState }) {
   }
 
   function removeTeam(id) {
-    setTeams(prev => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
-    });
+    setTeams(prev => { const copy = { ...prev }; delete copy[id]; return copy; });
   }
 
   function updateTeam(id, field, val) {
@@ -250,151 +216,108 @@ function LeagueSetupTab({ auctionState }) {
     }
   }
 
-  const inputSm = {
-    background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
-    borderRadius: '6px', padding: '0.4rem 0.5rem', fontSize: '0.85rem',
-  };
+  const inputSm = { background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9', borderRadius: '6px', padding: '0.4rem 0.5rem', fontSize: '0.85rem', outline: 'none' };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800 }}>
       {!isSetup && (
-        <div style={{
-          background: '#78350f40', border: '1px solid #f59e0b40',
-          borderRadius: '8px', padding: '0.75rem 1rem', color: '#f59e0b', fontSize: '0.85rem',
-        }}>
-          ⚠ League Setup is locked while auction is in progress. Reset the auction to make changes.
-        </div>
+        <Alert severity="warning">
+          League Setup is locked while auction is in progress. Reset the auction to make changes.
+        </Alert>
       )}
 
       {/* Global Settings */}
-      <section>
+      <Box>
         <SectionTitle>Global Settings</SectionTitle>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '1rem' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 2 }}>
           {[
             { label: 'Number of Teams', key: 'numTeams', min: 2 },
             { label: 'Squad Size', key: 'squadSize', min: 1 },
             { label: 'Starting Budget', key: 'startingBudget', min: 1000 },
             { label: 'Min Bid', key: 'minBid', min: 100 },
           ].map(({ label, key, min }) => (
-            <div key={key}>
-              <div style={{ color: '#64748b', fontSize: '0.7rem', marginBottom: '4px' }}>{label}</div>
-              <input
-                type="number" min={min}
-                style={{ ...inputSm, width: '100%' }}
-                value={cfg[key]}
-                disabled={!isSetup}
-                onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
-              />
-            </div>
+            <TextField
+              key={key}
+              label={label}
+              type="number"
+              inputProps={{ min }}
+              size="small"
+              value={cfg[key]}
+              disabled={!isSetup}
+              onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
+              fullWidth
+            />
           ))}
-        </div>
-      </section>
+        </Box>
+      </Box>
 
       {/* Pool Configuration */}
-      <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <SectionTitle style={{ margin: 0 }}>Player Pools</SectionTitle>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.8rem', color: poolsValid ? '#22c55e' : '#ef4444' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="caption" color={poolsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {poolTotal} / {required} players
-            </span>
-            {isSetup && (
-              <button onClick={addPool} style={smallBtn('#334155')}>+ Add Pool</button>
-            )}
-          </div>
-        </div>
+            </Typography>
+            {isSetup && <Button size="small" variant="outlined" color="inherit" onClick={addPool} sx={{ fontSize: '0.75rem' }}>+ Add Pool</Button>}
+          </Box>
+        </Box>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px', gap: '0.5rem', padding: '0 0.5rem' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px', gap: 1, px: 1 }}>
             {['ID', 'Label', 'Base Price', 'Count', ''].map(h => (
-              <div key={h} style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>{h}</div>
+              <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>{h}</Typography>
             ))}
-          </div>
-
+          </Box>
           {cfg.pools.map((pool, idx) => (
-            <div key={idx} style={{
-              display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px',
-              gap: '0.5rem', background: '#0f172a', padding: '0.5rem',
-              borderRadius: '6px', alignItems: 'center',
-            }}>
-              <input
-                style={inputSm} value={pool.id} disabled={!isSetup}
-                onChange={e => updatePool(idx, 'id', e.target.value.toUpperCase())}
-              />
-              <input
-                style={inputSm} value={pool.label} disabled={!isSetup}
-                onChange={e => updatePool(idx, 'label', e.target.value)}
-              />
-              <input
-                style={inputSm} type="number" min="100" value={pool.basePrice} disabled={!isSetup}
-                onChange={e => updatePool(idx, 'basePrice', e.target.value)}
-              />
-              <input
-                style={inputSm} type="number" min="0" value={pool.count} disabled={!isSetup}
-                onChange={e => updatePool(idx, 'count', e.target.value)}
-              />
-              {isSetup ? (
-                <button onClick={() => removePool(idx)} style={{ ...smallBtn('#7f1d1d'), padding: '0.3rem 0.5rem' }}>✕</button>
-              ) : <div />}
-            </div>
+            <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px', gap: 1, bgcolor: 'background.default', p: 0.75, borderRadius: 1, alignItems: 'center' }}>
+              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.id} disabled={!isSetup} onChange={e => updatePool(idx, 'id', e.target.value.toUpperCase())} />
+              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.label} disabled={!isSetup} onChange={e => updatePool(idx, 'label', e.target.value)} />
+              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="100" value={pool.basePrice} disabled={!isSetup} onChange={e => updatePool(idx, 'basePrice', e.target.value)} />
+              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="0" value={pool.count} disabled={!isSetup} onChange={e => updatePool(idx, 'count', e.target.value)} />
+              {isSetup
+                ? <Button size="small" color="error" variant="outlined" onClick={() => removePool(idx)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
+                : <Box />}
+            </Box>
           ))}
-        </div>
-      </section>
+        </Box>
+      </Box>
 
       {/* Teams */}
-      <section>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <SectionTitle style={{ margin: 0 }}>Teams</SectionTitle>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.8rem', color: teamsValid ? '#22c55e' : '#ef4444' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="caption" color={teamsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {teamCount} / {cfg.numTeams} teams
-            </span>
-            {isSetup && (
-              <button onClick={addTeam} style={smallBtn('#334155')}>+ Add Team</button>
-            )}
-          </div>
-        </div>
+            </Typography>
+            {isSetup && <Button size="small" variant="outlined" color="inherit" onClick={addTeam} sx={{ fontSize: '0.75rem' }}>+ Add Team</Button>}
+          </Box>
+        </Box>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '0.5rem', padding: '0 0.5rem' }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: 1, px: 1 }}>
             {['Team Name', 'Password', ''].map(h => (
-              <div key={h} style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>{h}</div>
+              <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>{h}</Typography>
             ))}
-          </div>
+          </Box>
 
           {Object.entries(teams).map(([id, team]) => (
-            <div key={id} style={{
-              background: '#0f172a', padding: '0.5rem',
-              borderRadius: '6px', display: 'flex', flexDirection: 'column', gap: '0.4rem',
-            }}>
-              {/* Name / Password / Delete */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: '0.5rem', alignItems: 'center' }}>
-                <input
-                  style={inputSm} placeholder="Team name" value={team.name || ''} disabled={!isSetup}
-                  onChange={e => updateTeam(id, 'name', e.target.value)}
-                />
-                <input
-                  style={inputSm} placeholder="Password" value={team.password || ''} disabled={!isSetup}
-                  onChange={e => updateTeam(id, 'password', e.target.value)}
-                />
-                {isSetup ? (
-                  <button onClick={() => removeTeam(id)} style={{ ...smallBtn('#7f1d1d'), padding: '0.3rem 0.5rem' }}>✕</button>
-                ) : <div />}
-              </div>
+            <Box key={id} sx={{ bgcolor: 'background.default', p: 1, borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+                <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Team name" value={team.name || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'name', e.target.value)} />
+                <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Password" value={team.password || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'password', e.target.value)} />
+                {isSetup
+                  ? <Button size="small" color="error" variant="outlined" onClick={() => removeTeam(id)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
+                  : <Box />}
+              </Box>
 
-              {/* Owner-is-player row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.25rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: isSetup ? 'pointer' : 'default', userSelect: 'none', color: '#94a3b8', fontSize: '0.8rem' }}>
-                  <input
-                    type="checkbox"
-                    checked={!!team.ownerIsPlayer}
-                    disabled={!isSetup}
-                    onChange={e => updateTeam(id, 'ownerIsPlayer', e.target.checked)}
-                    style={{ accentColor: '#6366f1', cursor: isSetup ? 'pointer' : 'default' }}
-                  />
-                  Owner is also a player
-                </label>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pl: 0.5 }}>
+                <FormControlLabel
+                  control={<Checkbox size="small" checked={!!team.ownerIsPlayer} disabled={!isSetup} onChange={e => updateTeam(id, 'ownerIsPlayer', e.target.checked)} sx={{ py: 0 }} />}
+                  label={<Typography variant="caption" color="text.secondary">Owner is also a player</Typography>}
+                  sx={{ m: 0 }}
+                />
 
                 {team.ownerIsPlayer && (() => {
                   const takenIds = new Set(
@@ -405,120 +328,78 @@ function LeagueSetupTab({ auctionState }) {
                   );
                   const available = ownerPlayers.filter(p => !takenIds.has(p.id));
                   return (
-                    <select
-                      value={team.ownerPlayerId || ''}
-                      disabled={!isSetup}
-                      onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
-                      style={{
-                        ...inputSm,
-                        flex: 1,
-                        borderColor: (!team.ownerPlayerId) ? '#ef4444' : '#334155',
-                      }}
-                    >
-                      <option value="">— Select team owner —</option>
-                      {available.length === 0 && !team.ownerPlayerId && (
-                        <option value="" disabled>No owner players available</option>
-                      )}
-                      {/* Always show currently selected player even if in available list */}
-                      {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
-                        const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
-                        return p ? <option key={p.id} value={p.id}>{p.name} ({p.pool})</option> : null;
-                      })()}
-                      {available.map(p => (
-                        <option key={p.id} value={p.id}>{p.name} ({p.pool})</option>
-                      ))}
-                    </select>
+                    <FormControl size="small" sx={{ flex: 1, maxWidth: 260 }} error={!team.ownerPlayerId}>
+                      <InputLabel>Select owner player</InputLabel>
+                      <Select
+                        label="Select owner player"
+                        value={team.ownerPlayerId || ''}
+                        disabled={!isSetup}
+                        onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
+                      >
+                        <MenuItem value=""><em>— Select team owner —</em></MenuItem>
+                        {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
+                          const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
+                          return p ? <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem> : null;
+                        })()}
+                        {available.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>)}
+                      </Select>
+                    </FormControl>
                   );
                 })()}
                 {team.ownerIsPlayer && !team.ownerPlayerId && (
-                  <span style={{ color: '#ef4444', fontSize: '0.75rem' }}>Required</span>
+                  <Typography variant="caption" color="error">Required</Typography>
                 )}
-              </div>
-            </div>
+              </Box>
+            </Box>
           ))}
-        </div>
-      </section>
+        </Box>
+      </Box>
 
-      {/* Save button */}
+      {/* Save */}
       {isSetup && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          {/* Validation errors — shown whenever any issue exists */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {(!poolsValid || !teamsValid || !ownerValid) && (
-            <div style={{
-              background: '#450a0a',
-              border: '1px solid #ef4444',
-              borderRadius: '8px',
-              padding: '0.75rem 1rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '0.4rem',
-            }}>
-              <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                Cannot save — fix the following:
-              </div>
-              {!poolsValid && (
-                <div style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
-                  • Pool total is <strong>{poolTotal}</strong> but must equal {cfg.numTeams} teams × {cfg.squadSize} squad size = <strong>{required}</strong>
-                </div>
-              )}
-              {!teamsValid && (
-                <div style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
-                  • Team count is <strong>{teamCount}</strong> but "Number of Teams" is set to <strong>{cfg.numTeams}</strong>
-                </div>
-              )}
-              {!ownerValid && (
-                <div style={{ color: '#fca5a5', fontSize: '0.85rem' }}>
-                  • Teams with "Owner is also a player" checked must have an owner player selected
-                </div>
-              )}
-            </div>
+            <Alert severity="error">
+              <Typography fontWeight={700} fontSize="0.8rem" mb={0.5}>Cannot save — fix the following:</Typography>
+              {!poolsValid && <div>• Pool total is <strong>{poolTotal}</strong> but must equal {cfg.numTeams} × {cfg.squadSize} = <strong>{required}</strong></div>}
+              {!teamsValid && <div>• Team count is <strong>{teamCount}</strong> but "Number of Teams" is set to <strong>{cfg.numTeams}</strong></div>}
+              {!ownerValid && <div>• Teams with "Owner is also a player" must have an owner player selected</div>}
+            </Alert>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Button
+              variant="contained"
+              color="success"
+              size="large"
               onClick={save}
               disabled={!canSave || saving}
-              title={!canSave ? 'Fix the errors above before saving' : ''}
-              style={{
-                padding: '0.7rem 2rem',
-                background: canSave ? '#22c55e' : '#334155',
-                color: canSave ? '#fff' : '#64748b',
-                border: canSave ? 'none' : '1px dashed #475569',
-                borderRadius: '8px',
-                cursor: canSave ? 'pointer' : 'not-allowed',
-                fontWeight: 700, fontSize: '0.95rem',
-              }}
+              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
             >
               {saving ? 'Saving…' : 'Save League Config'}
-            </button>
-            {canSave && (
-              <span style={{ color: '#22c55e', fontSize: '0.8rem' }}>✓ Ready to save</span>
-            )}
-          </div>
-        </div>
+            </Button>
+            {canSave && <Typography variant="caption" color="success.main">✓ Ready to save</Typography>}
+          </Box>
+        </Box>
       )}
 
       {msg && (
-        <div style={{
-          padding: '0.6rem 1rem', borderRadius: '7px', fontSize: '0.85rem',
-          background: msg.type === 'ok' ? '#14532d40' : '#7f1d1d40',
-          color: msg.type === 'ok' ? '#22c55e' : '#ef4444',
-        }}>
+        <Alert severity={msg.type === 'ok' ? 'success' : 'error'} sx={{ py: 0.5 }}>
           {msg.msg}
-        </div>
+        </Alert>
       )}
-    </div>
+    </Box>
   );
 }
 
 // ─── Auction Controls Tab ─────────────────────────────────────────────────────
 
 function AuctionControlsTab({ auctionState, adminAction }) {
-  const { phase, players, unsoldPlayers, teams } = auctionState;
+  const { phase, players, teams } = auctionState;
 
   const pending = players.filter(p => p.status === 'PENDING').length;
-  const sold = players.filter(p => p.status === 'SOLD').length;
-  const unsold = players.filter(p => p.status === 'UNSOLD').length;
+  const sold    = players.filter(p => p.status === 'SOLD').length;
+  const unsold  = players.filter(p => p.status === 'UNSOLD').length;
 
   const [showLoadTestModal, setShowLoadTestModal] = useState(false);
   const [showFullResetModal, setShowFullResetModal] = useState(false);
@@ -558,600 +439,99 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', maxWidth: '800px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800 }}>
 
       {/* Modals */}
-      {showLoadTestModal && (
-        <LoadTestDataModal
-          hasExistingData={hasExistingData}
-          isSetup={isSetup}
-          onClose={() => setShowLoadTestModal(false)}
-        />
-      )}
-      {showFullResetModal && (
-        <FullResetModal
-          onClose={() => setShowFullResetModal(false)}
-        />
-      )}
-      {importData && (
-        <ImportStateModal
-          importedState={importData}
-          onClose={() => setImportData(null)}
-        />
-      )}
-      {showRollbackModal && (
-        <RollbackModal
-          auctionState={auctionState}
-          onClose={() => setShowRollbackModal(false)}
-        />
-      )}
+      {showLoadTestModal && <LoadTestDataModal hasExistingData={hasExistingData} isSetup={isSetup} onClose={() => setShowLoadTestModal(false)} />}
+      {showFullResetModal && <FullResetModal onClose={() => setShowFullResetModal(false)} />}
+      {importData && <ImportStateModal importedState={importData} onClose={() => setImportData(null)} />}
+      {showRollbackModal && <RollbackModal auctionState={auctionState} onClose={() => setShowRollbackModal(false)} />}
 
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
         {[
-          { label: 'Pending', val: pending, color: '#f59e0b' },
-          { label: 'Sold', val: sold, color: '#22c55e' },
-          { label: 'Unsold', val: unsold, color: '#ef4444' },
+          { label: 'Pending', val: pending, color: 'warning.main' },
+          { label: 'Sold',    val: sold,    color: 'success.main' },
+          { label: 'Unsold',  val: unsold,  color: 'error.main'   },
         ].map(s => (
-          <div key={s.label} style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem', textAlign: 'center' }}>
-            <div style={{ color: s.color, fontWeight: 800, fontSize: '1.8rem' }}>{s.val}</div>
-            <div style={{ color: '#64748b', fontSize: '0.75rem' }}>{s.label}</div>
-          </div>
+          <Paper key={s.label} variant="outlined" sx={{ p: 1.5, textAlign: 'center' }}>
+            <Typography color={s.color} fontWeight={800} fontSize="1.8rem" lineHeight={1}>{s.val}</Typography>
+            <Typography variant="caption" color="text.disabled">{s.label}</Typography>
+          </Paper>
         ))}
-      </div>
+      </Box>
 
       {/* Auction Controls component */}
-      <section>
+      <Box>
         <SectionTitle>Auction Controls</SectionTitle>
         <AuctionControls />
-      </section>
+      </Box>
 
       {/* Player Import */}
       {isSetup && (
-        <section>
+        <Box>
           <SectionTitle>Import Players</SectionTitle>
           <PlayerImport />
-        </section>
+        </Box>
       )}
 
       {/* Unsold players */}
-      <section>
+      <Box>
         <SectionTitle>Unsold Players ({unsold})</SectionTitle>
         <UnsoldList />
-      </section>
+      </Box>
 
-      {/* Export & Reset */}
-      <section>
-        <SectionTitle>Exports & Reset</SectionTitle>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', alignItems: 'center' }}>
-          <button onClick={downloadResults} style={smallBtn('#1d4ed8')}>⬇ Results CSV</button>
-          <button onClick={downloadState} style={smallBtn('#334155')}>⬇ Backup State</button>
+      {/* Exports & Reset */}
+      <Box>
+        <SectionTitle>Exports &amp; Reset</SectionTitle>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+          <Button variant="contained" color="info" size="small" onClick={downloadResults}>⬇ Results CSV</Button>
+          <Button variant="outlined" color="inherit" size="small" onClick={downloadState}>⬇ Backup State</Button>
 
-          {/* Import state */}
-          <label style={{ ...smallBtn('#0f766e'), display: 'inline-block', cursor: 'pointer' }}>
+          <Button variant="contained" color="secondary" size="small" component="label">
             ⬆ Restore Backup
-            <input
-              type="file"
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={e => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                e.target.value = ''; // reset so same file can be re-selected
-                const reader = new FileReader();
-                reader.onload = evt => {
-                  try {
-                    const parsed = JSON.parse(evt.target.result);
-                    setImportData(parsed);
-                  } catch {
-                    alert('Invalid JSON file — could not parse the backup.');
-                  }
-                };
-                reader.readAsText(file);
-              }}
-            />
-          </label>
+            <input type="file" accept=".json" hidden onChange={e => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              e.target.value = '';
+              const reader = new FileReader();
+              reader.onload = evt => {
+                try { setImportData(JSON.parse(evt.target.result)); }
+                catch { alert('Invalid JSON file — could not parse the backup.'); }
+              };
+              reader.readAsText(file);
+            }} />
+          </Button>
 
-          {/* Load Test Data */}
-          <button
-            onClick={() => setShowLoadTestModal(true)}
+          <Button
+            variant="contained"
+            color="info"
+            size="small"
             disabled={!isSetup}
+            onClick={() => setShowLoadTestModal(true)}
             title={!isSetup ? 'Reset the auction first to load test data' : ''}
-            style={{
-              ...smallBtn('#0369a1'),
-              opacity: isSetup ? 1 : 0.4,
-              cursor: isSetup ? 'pointer' : 'not-allowed',
-            }}
           >
             🧪 Load Test Data
-          </button>
+          </Button>
 
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.75rem' }}>
-            {/* Rollback last sale — only shown when there's a last sold player and we're in SETUP */}
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
             {isSetup && auctionState.lastSoldPlayerId && (() => {
               const lsp = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
               return lsp ? (
-                <button
-                  onClick={() => setShowRollbackModal(true)}
-                  style={{ ...smallBtn('#7c3aed'), border: '1px solid #7c3aed' }}
-                  title={`Rollback: ${lsp.name}`}
-                >
+                <Button variant="outlined" size="small" sx={{ borderColor: 'secondary.main', color: 'secondary.main' }} onClick={() => setShowRollbackModal(true)} title={`Rollback: ${lsp.name}`}>
                   ↩ Rollback: {lsp.name}
-                </button>
+                </Button>
               ) : null;
             })()}
-            <button onClick={resetAuction} style={smallBtn('#7f1d1d')}>
-              ⚠ Reset Auction
-            </button>
-            <button
-              onClick={() => setShowFullResetModal(true)}
-              style={{ ...smallBtn('#450a0a'), border: '1px dashed #ef4444' }}
-            >
+            <Button variant="contained" color="error" size="small" onClick={resetAuction}>⚠ Reset Auction</Button>
+            <Button variant="outlined" color="error" size="small" onClick={() => setShowFullResetModal(true)} sx={{ borderStyle: 'dashed' }}>
               ☠ Full Reset
-            </button>
-          </div>
-        </div>
-      </section>
-    </div>
+            </Button>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
-}
-
-// ─── Load Test Data Modal ─────────────────────────────────────────────────────
-
-function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
-
-  async function handleLoad() {
-    setLoading(true);
-    setError('');
-    try {
-      await axios.post('/api/admin/load-test-data', { password });
-      setDone(true);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load test data');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Modal onClose={onClose}>
-      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>🧪</div>
-      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem' }}>
-        Load Test Data
-      </div>
-
-      {done ? (
-        <>
-          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
-            ✓ Test data loaded successfully!
-          </div>
-          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
-            <div style={{ marginBottom: '0.4rem', color: '#64748b', fontSize: '0.72rem', textTransform: 'uppercase' }}>Team passwords</div>
-            {[['Team Alpha', 'alpha123'], ['Team Beta', 'beta123'], ['Team Gamma', 'gamma123']].map(([name, pw]) => (
-              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0' }}>
-                <span>{name}</span>
-                <code style={{ color: '#f59e0b' }}>{pw}</code>
-              </div>
-            ))}
-          </div>
-          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
-        </>
-      ) : (
-        <>
-          <div style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '1rem' }}>
-            This will populate the auction with sample data for testing:
-          </div>
-
-          <div style={{ background: '#0f172a', borderRadius: '8px', padding: '0.75rem 1rem', fontSize: '0.82rem', marginBottom: '1rem' }}>
-            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
-              <span style={{ color: '#f59e0b', fontWeight: 700 }}>3 Teams</span> — Team Alpha, Beta, Gamma (budget: 30,000 pts each)
-            </div>
-            <div style={{ color: '#94a3b8', marginBottom: '0.5rem' }}>
-              <span style={{ color: '#f59e0b', fontWeight: 700 }}>33 Players</span> across 3 pools:
-            </div>
-            <div style={{ paddingLeft: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-              <div style={{ color: '#94a3b8' }}>Pool A — 11 players, base price <span style={{ color: '#22c55e' }}>3,000 pts</span></div>
-              <div style={{ color: '#94a3b8' }}>Pool B — 11 players, base price <span style={{ color: '#22c55e' }}>2,000 pts</span></div>
-              <div style={{ color: '#94a3b8' }}>Pool C — 11 players, base price <span style={{ color: '#22c55e' }}>1,000 pts</span></div>
-            </div>
-          </div>
-
-          {hasExistingData && (
-            <div style={{
-              background: '#451a03', border: '1px solid #f59e0b40',
-              borderRadius: '8px', padding: '0.65rem 0.85rem',
-              color: '#fbbf24', fontSize: '0.82rem', marginBottom: '1rem',
-            }}>
-              ⚠ Existing teams and players will be replaced.
-            </div>
-          )}
-
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Enter admin password to confirm:</div>
-            <input
-              type="password"
-              placeholder="Admin password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && password && handleLoad()}
-              autoFocus
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
-                color: '#f1f5f9', borderRadius: '7px',
-                padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
-              }}
-            />
-          </div>
-
-          {error && (
-            <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>
-          )}
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
-            <button
-              onClick={handleLoad}
-              disabled={!password || loading}
-              style={{ ...modalBtn('#0369a1'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
-            >
-              {loading ? 'Loading…' : hasExistingData ? '⚠ Replace & Load' : '🧪 Load Test Data'}
-            </button>
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-// ─── Rollback Modal ───────────────────────────────────────────────────────────
-
-function RollbackModal({ auctionState, onClose }) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(null); // success message
-
-  const player = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
-  const team = player?.soldTo ? auctionState.teams[player.soldTo] : null;
-
-  async function handleRollback() {
-    setError('');
-    setLoading(true);
-    try {
-      const res = await axios.post('/api/admin/rollback-last-sale');
-      setDone(res.data.message);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Rollback failed');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (!player) {
-    return (
-      <Modal onClose={onClose}>
-        <div style={{ color: '#ef4444', fontSize: '0.9rem' }}>No recent sale found to rollback.</div>
-        <button onClick={onClose} style={{ ...modalBtn('#334155'), marginTop: '1rem', width: '100%' }}>Close</button>
-      </Modal>
-    );
-  }
-
-  return (
-    <Modal onClose={onClose}>
-      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>↩</div>
-      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
-        Rollback Last Sale
-      </div>
-
-      {done ? (
-        <>
-          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1rem' }}>✓ {done}</div>
-          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
-        </>
-      ) : (
-        <>
-          <div style={{
-            background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem', marginBottom: '1rem',
-            display: 'flex', flexDirection: 'column', gap: '0.4rem',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: '#64748b' }}>Player</span>
-              <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{player.name}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: '#64748b' }}>Pool</span>
-              <span style={{ color: '#94a3b8' }}>{player.pool}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: '#64748b' }}>Sold to</span>
-              <span style={{ color: '#f1f5f9' }}>{team?.name || '—'}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-              <span style={{ color: '#64748b' }}>Sold for</span>
-              <span style={{ color: '#f59e0b', fontWeight: 700 }}>{player.soldFor?.toLocaleString()} pts</span>
-            </div>
-          </div>
-
-          <div style={{
-            background: '#2e1065', border: '1px solid #7c3aed',
-            borderRadius: '8px', padding: '0.65rem 0.85rem',
-            color: '#c4b5fd', fontSize: '0.82rem', marginBottom: '1rem',
-          }}>
-            This will return <strong>{player.name}</strong> to the player pool and
-            refund <strong>{player.soldFor?.toLocaleString()} pts</strong> to <strong>{team?.name}</strong>.
-          </div>
-
-          {error && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
-            <button
-              onClick={handleRollback}
-              disabled={loading}
-              style={{ ...modalBtn('#7c3aed'), flex: 2, opacity: loading ? 0.5 : 1 }}
-            >
-              {loading ? 'Rolling back…' : '↩ Confirm Rollback'}
-            </button>
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-// ─── Import State Modal ───────────────────────────────────────────────────────
-
-function ImportStateModal({ importedState: s, onClose }) {
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
-
-  const players = s.players || [];
-  const teams = Object.values(s.teams || {});
-  const sold = players.filter(p => p.status === 'SOLD').length;
-  const pending = players.filter(p => p.status === 'PENDING').length;
-  const unsold = players.filter(p => p.status === 'UNSOLD').length;
-  const currentPlayer = s.currentPlayerIndex != null ? players[s.currentPlayerIndex] : null;
-
-  const phaseLabel = { SETUP: 'Setup', LIVE: '● Live', PAUSED: '⏸ Paused', ENDED: 'Ended' }[s.phase] || s.phase;
-  const phaseColor = { SETUP: '#64748b', LIVE: '#22c55e', PAUSED: '#f59e0b', ENDED: '#94a3b8' }[s.phase] || '#94a3b8';
-
-  async function handleImport() {
-    setError('');
-    setLoading(true);
-    try {
-      await axios.post('/api/admin/import-state', { password, state: s });
-      setDone(true);
-    } catch (err) {
-      setError(err.response?.data?.error || 'Import failed');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const rowStyle = { display: 'flex', justifyContent: 'space-between', padding: '0.2rem 0', fontSize: '0.82rem' };
-  const labelStyle = { color: '#64748b' };
-  const valueStyle = { color: '#f1f5f9', fontWeight: 600 };
-
-  return (
-    <Modal onClose={onClose}>
-      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>📦</div>
-      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
-        Restore Backup
-      </div>
-
-      {done ? (
-        <>
-          <div style={{ color: '#22c55e', fontSize: '0.9rem', marginBottom: '1rem' }}>
-            ✓ Backup restored successfully!
-          </div>
-          {s.phase === 'LIVE' && (
-            <div style={{
-              background: '#451a03', border: '1px solid #f59e0b40',
-              borderRadius: '8px', padding: '0.65rem 0.85rem',
-              color: '#fbbf24', fontSize: '0.82rem', marginBottom: '1rem',
-            }}>
-              ⏸ The auction was mid-round — the timer has been paused. Press Resume when ready.
-            </div>
-          )}
-          <button onClick={onClose} style={{ ...modalBtn('#22c55e'), width: '100%' }}>Close</button>
-        </>
-      ) : (
-        <>
-          {/* Snapshot summary */}
-          <div style={{
-            background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem',
-            marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.1rem',
-          }}>
-            <div style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase', marginBottom: '0.4rem' }}>
-              Backup snapshot
-            </div>
-            <div style={rowStyle}>
-              <span style={labelStyle}>Phase</span>
-              <span style={{ ...valueStyle, color: phaseColor }}>{phaseLabel}</span>
-            </div>
-            <div style={rowStyle}>
-              <span style={labelStyle}>Players</span>
-              <span style={valueStyle}>
-                {sold} sold · {pending} pending · {unsold} unsold
-              </span>
-            </div>
-            {currentPlayer && (
-              <div style={rowStyle}>
-                <span style={labelStyle}>On block</span>
-                <span style={valueStyle}>{currentPlayer.name}</span>
-              </div>
-            )}
-            <div style={rowStyle}>
-              <span style={labelStyle}>Teams</span>
-              <span style={valueStyle}>{teams.length}</span>
-            </div>
-            {teams.map(t => (
-              <div key={t.id} style={{ ...rowStyle, paddingLeft: '0.75rem' }}>
-                <span style={labelStyle}>{t.name}</span>
-                <span style={{ color: '#94a3b8', fontSize: '0.82rem' }}>
-                  {(t.budget || 0).toLocaleString()} pts · {(t.roster || []).length} players
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <div style={{
-            background: '#450a0a', border: '1px solid #ef4444',
-            borderRadius: '8px', padding: '0.65rem 0.85rem',
-            color: '#fca5a5', fontSize: '0.82rem', marginBottom: '1rem',
-          }}>
-            ⚠ This will overwrite all current auction data with the backup.
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Admin password to confirm:</div>
-            <input
-              type="password"
-              placeholder="Admin password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && password && handleImport()}
-              autoFocus
-              style={{
-                width: '100%', boxSizing: 'border-box',
-                background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
-                color: '#f1f5f9', borderRadius: '7px',
-                padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
-              }}
-            />
-            {error && <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '5px' }}>{error}</div>}
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
-            <button
-              onClick={handleImport}
-              disabled={!password || loading}
-              style={{ ...modalBtn('#0f766e'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
-            >
-              {loading ? 'Restoring…' : '📦 Restore Backup'}
-            </button>
-          </div>
-        </>
-      )}
-    </Modal>
-  );
-}
-
-// ─── Full Reset Modal ─────────────────────────────────────────────────────────
-
-function FullResetModal({ onClose }) {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  async function handleReset() {
-    setError('');
-    setLoading(true);
-    try {
-      await axios.post('/api/admin/full-reset', { password });
-      onClose();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Reset failed');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Modal onClose={onClose}>
-      <div style={{ fontSize: '1.6rem', marginBottom: '0.25rem' }}>☠</div>
-      <div style={{ color: '#ef4444', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
-        Full Reset — Permanent
-      </div>
-
-      <div style={{
-        background: '#450a0a', border: '1px solid #ef4444',
-        borderRadius: '8px', padding: '0.75rem 1rem', marginBottom: '1rem',
-      }}>
-        <div style={{ color: '#fca5a5', fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.5rem' }}>
-          This will permanently delete:
-        </div>
-        {['All teams and rosters', 'All player data', 'All bids and auction results', 'League configuration (resets to defaults)'].map(item => (
-          <div key={item} style={{ color: '#fca5a5', fontSize: '0.82rem', padding: '0.15rem 0' }}>✕ {item}</div>
-        ))}
-        <div style={{ color: '#ef4444', fontSize: '0.78rem', marginTop: '0.5rem', fontWeight: 600 }}>
-          This action cannot be undone.
-        </div>
-      </div>
-
-      <div style={{ marginBottom: '1rem' }}>
-        <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>Enter admin password to confirm:</div>
-        <input
-          type="password"
-          placeholder="Admin password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && password && handleReset()}
-          autoFocus
-          style={{
-            width: '100%', boxSizing: 'border-box',
-            background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
-            color: '#f1f5f9', borderRadius: '7px',
-            padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
-          }}
-        />
-        {error && (
-          <div style={{ color: '#ef4444', fontSize: '0.8rem', marginTop: '5px' }}>{error}</div>
-        )}
-      </div>
-
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
-        <button
-          onClick={handleReset}
-          disabled={!password || loading}
-          style={{ ...modalBtn('#7f1d1d'), flex: 2, opacity: (!password || loading) ? 0.5 : 1 }}
-        >
-          {loading ? 'Deleting…' : '☠ Permanently Delete All Data'}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-// ─── Modal shell ──────────────────────────────────────────────────────────────
-
-function Modal({ children, onClose }) {
-  return (
-    <div
-      style={{
-        position: 'fixed', inset: 0, zIndex: 1000,
-        background: 'rgba(0,0,0,0.7)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '1rem',
-      }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
-    >
-      <div style={{
-        background: '#1e293b', border: '1px solid #334155',
-        borderRadius: '14px', padding: '1.75rem',
-        width: '100%', maxWidth: '420px',
-        display: 'flex', flexDirection: 'column',
-      }}>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function modalBtn(bg) {
-  return {
-    background: bg, border: 'none', color: '#f1f5f9',
-    borderRadius: '7px', padding: '0.6rem 1rem',
-    fontSize: '0.88rem', cursor: 'pointer', fontWeight: 600,
-  };
 }
 
 // ─── Teams Tab ────────────────────────────────────────────────────────────────
@@ -1159,12 +539,11 @@ function modalBtn(bg) {
 function TeamsTab({ auctionState }) {
   if (!auctionState) return null;
   const { teams, leagueConfig } = auctionState;
-
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: '800px' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 800 }}>
       <SectionTitle>All Teams</SectionTitle>
       <TeamRosterTable teams={teams} leagueConfig={leagueConfig} />
-    </div>
+    </Box>
   );
 }
 
@@ -1186,16 +565,13 @@ function PlayerDataTab({ auctionState, adminAction }) {
 
   if (players.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>
+      <Box sx={{ textAlign: 'center', p: 6, color: 'text.disabled' }}>
         No players imported yet. Use the League Setup tab to import a CSV.
-      </div>
+      </Box>
     );
   }
 
-  // Columns from extra that should never be shown in the table
   const HIDDEN_EXTRA_COLS = new Set(['player_type', 'other_s25']);
-
-  // Collect all extra keys across all players (preserve insertion order), minus hidden ones
   const extraKeys = [];
   for (const p of players) {
     if (p.extra) {
@@ -1211,7 +587,7 @@ function PlayerDataTab({ auctionState, adminAction }) {
     UNSOLD:  { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
   };
 
-  const poolColor = (poolId) => {
+  const poolClr = (poolId) => {
     if (poolId?.startsWith('A')) return { color: '#f59e0b', bg: '#1c0d00', border: '#f59e0b40' };
     if (poolId?.startsWith('B')) return { color: '#60a5fa', bg: '#0d1c35', border: '#3b82f640' };
     if (poolId?.startsWith('C')) return { color: '#a78bfa', bg: '#150d2e', border: '#8b5cf640' };
@@ -1223,7 +599,6 @@ function PlayerDataTab({ auctionState, adminAction }) {
     else { setSortCol(col); setSortDir('asc'); }
   }
 
-  // Apply status + text filters
   let filtered = players.filter(p => {
     if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
     if (search) {
@@ -1238,7 +613,6 @@ function PlayerDataTab({ auctionState, adminAction }) {
     return true;
   });
 
-  // Apply sort
   if (sortCol) {
     filtered = [...filtered].sort((a, b) => {
       let av, bv;
@@ -1248,20 +622,13 @@ function PlayerDataTab({ auctionState, adminAction }) {
       else if (sortCol === 'base')    { av = Number(a.basePrice); bv = Number(b.basePrice); }
       else if (sortCol === 'status')  { av = a.status; bv = b.status; }
       else if (sortCol === 'soldFor') { av = Number(a.soldFor ?? -1); bv = Number(b.soldFor ?? -1); }
-      else if (sortCol === 'soldTo')  {
-        av = a.soldTo ? (teams[a.soldTo]?.name ?? '') : '';
-        bv = b.soldTo ? (teams[b.soldTo]?.name ?? '') : '';
-      }
+      else if (sortCol === 'soldTo')  { av = a.soldTo ? (teams[a.soldTo]?.name ?? '') : ''; bv = b.soldTo ? (teams[b.soldTo]?.name ?? '') : ''; }
       else {
-        // Extra columns: try numeric parse, fall back to string
-        const ra = a.extra?.[sortCol] ?? '';
-        const rb = b.extra?.[sortCol] ?? '';
-        const na = parseFloat(ra);
-        const nb = parseFloat(rb);
+        const ra = a.extra?.[sortCol] ?? '', rb = b.extra?.[sortCol] ?? '';
+        const na = parseFloat(ra), nb = parseFloat(rb);
         if (!isNaN(na) && !isNaN(nb)) { av = na; bv = nb; }
         else { av = String(ra).toLowerCase(); bv = String(rb).toLowerCase(); }
       }
-
       if (typeof av === 'string') av = av.toLowerCase();
       if (typeof bv === 'string') bv = bv.toLowerCase();
       if (av < bv) return sortDir === 'asc' ? -1 : 1;
@@ -1271,84 +638,71 @@ function PlayerDataTab({ auctionState, adminAction }) {
   }
 
   const sortIndicator = (col) => {
-    if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: '3px', fontSize: '0.6rem' }}>⇅</span>;
-    return <span style={{ color: '#94a3b8', marginLeft: '3px', fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
+    if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: 3, fontSize: '0.6rem' }}>⇅</span>;
+    return <span style={{ color: '#94a3b8', marginLeft: 3, fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
   };
 
   const thSort = (col, label, opts = {}) => (
-    <th
-      onClick={() => handleSort(col)}
-      style={{
-        padding: '0.55rem 0.75rem',
-        textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
-        color: sortCol === col ? '#cbd5e1' : '#64748b',
-        fontWeight: 700, fontSize: '0.68rem', textTransform: 'uppercase',
-        letterSpacing: '0.05em', whiteSpace: 'nowrap',
-        borderBottom: '1px solid #1e293b',
-        cursor: 'pointer', userSelect: 'none',
-        ...(opts.first && { paddingLeft: '1rem' }),
-        ...(opts.right && { paddingRight: '1rem' }),
-      }}
-    >
+    <th key={col} onClick={() => handleSort(col)} style={{
+      padding: '0.55rem 0.75rem', textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
+      color: sortCol === col ? '#cbd5e1' : '#64748b', fontWeight: 700, fontSize: '0.68rem',
+      textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+      borderBottom: '1px solid #1e293b', cursor: 'pointer', userSelect: 'none',
+      ...(opts.first && { paddingLeft: '1rem' }), ...(opts.right && { paddingRight: '1rem' }),
+    }}>
       {label}{sortIndicator(col)}
     </th>
   );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {editPlayer && (
-        <EditPriceModal
-          player={editPlayer}
-          teams={teams}
-          adminAction={adminAction}
-          onClose={() => setEditPlayer(null)}
-        />
+        <EditPriceModal player={editPlayer} teams={teams} adminAction={adminAction} onClose={() => setEditPlayer(null)} />
       )}
 
-      {/* Header row: title + search + filter chips */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-        <div>
-          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#f1f5f9' }}>Player Data</div>
-          <div style={{ color: '#64748b', fontSize: '0.8rem', marginTop: '2px' }}>
-            {filtered.length} of {players.length} players
-          </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-          <input
-            type="text"
+      {/* Header row */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1.5 }}>
+        <Box>
+          <Typography fontWeight={700}>Player Data</Typography>
+          <Typography variant="caption" color="text.disabled">{filtered.length} of {players.length} players</Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
             placeholder="Search…"
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{
-              background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
-              borderRadius: '6px', padding: '0.3rem 0.6rem', fontSize: '0.8rem', width: '140px',
-            }}
+            sx={{ width: 150 }}
           />
-          <div style={{ display: 'flex', gap: '0.4rem' }}>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
             {['ALL', 'PENDING', 'SOLD', 'UNSOLD'].map(f => {
               const count = f === 'ALL' ? players.length : players.filter(p => p.status === f).length;
               const active = statusFilter === f;
-              const cfg = f === 'ALL' ? { color: '#94a3b8', bg: '#1e293b' } : statusCfg[f];
+              const cfg = f === 'ALL' ? { color: '#94a3b8' } : statusCfg[f];
               return (
-                <button key={f} onClick={() => setStatusFilter(f)} style={{
-                  background: active ? cfg.bg : 'transparent',
-                  border: `1px solid ${active ? cfg.color : '#334155'}`,
-                  color: active ? cfg.color : '#64748b',
-                  borderRadius: '6px', padding: '0.3rem 0.7rem',
-                  cursor: 'pointer', fontSize: '0.75rem', fontWeight: active ? 700 : 400,
-                  transition: 'all 0.15s',
-                }}>
-                  {f === 'ALL' ? 'All' : statusCfg[f].label} ({count})
-                </button>
+                <Chip
+                  key={f}
+                  label={`${f === 'ALL' ? 'All' : statusCfg[f].label} (${count})`}
+                  size="small"
+                  onClick={() => setStatusFilter(f)}
+                  variant={active ? 'filled' : 'outlined'}
+                  sx={{
+                    fontSize: '0.72rem',
+                    bgcolor: active ? `${cfg.color}20` : 'transparent',
+                    color: active ? cfg.color : 'text.disabled',
+                    borderColor: active ? cfg.color : 'divider',
+                    cursor: 'pointer',
+                  }}
+                />
               );
             })}
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
 
       {/* Table */}
-      <div style={{ overflowX: 'auto', borderRadius: '10px', border: '1px solid #1e293b' }}>
-        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: '600px', fontSize: '0.82rem' }}>
+      <Box sx={{ overflowX: 'auto', borderRadius: 2, border: '1px solid #1e293b' }}>
+        <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600, fontSize: '0.82rem' }}>
           <thead>
             <tr style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 1 }}>
               {thSort('#', '#', { first: true })}
@@ -1366,10 +720,9 @@ function PlayerDataTab({ auctionState, adminAction }) {
             {filtered.map((p, i) => {
               const owner = playerIsOwner(p);
               const sc = statusCfg[p.status] || statusCfg.PENDING;
-              const pc = poolColor(p.pool);
+              const pc = poolClr(p.pool);
               const soldTeam = p.soldTo ? teams[p.soldTo] : null;
               const rowBg = i % 2 === 0 ? '#0f172a' : '#0a111e';
-
               return (
                 <tr key={p.id} style={{ background: rowBg, transition: 'background 0.1s' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#162032'}
@@ -1380,59 +733,31 @@ function PlayerDataTab({ auctionState, adminAction }) {
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                       {p.name}
                       {owner && (
-                        <span style={{
-                          background: '#1e1035', color: '#a78bfa',
-                          border: '1px solid #7c3aed60',
-                          borderRadius: '3px', padding: '0.05rem 0.35rem',
-                          fontSize: '0.62rem', fontWeight: 700,
-                        }}>OWNER</span>
+                        <span style={{ background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
                       )}
                     </span>
                   </TD>
                   <TD>
-                    <span style={{
-                      background: pc.bg, color: pc.color,
-                      border: `1px solid ${pc.border}`,
-                      borderRadius: '4px', padding: '0.15rem 0.45rem',
-                      fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{p.pool}</span>
+                    <span style={{ background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`, borderRadius: 4, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{p.pool}</span>
                   </TD>
                   <TD center>
-                    <span style={{
-                      background: sc.bg, color: sc.color,
-                      borderRadius: '999px', padding: '0.15rem 0.55rem',
-                      fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap',
-                    }}>{sc.label}</span>
+                    <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
                   </TD>
                   <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
                   <TD right style={{ whiteSpace: 'nowrap' }}>
                     {owner && p.soldFor ? (
-                      <span style={{ color: '#a78bfa', fontWeight: 600 }}>
-                        {formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span>
-                      </span>
+                      <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
                     ) : p.soldFor ? (
                       <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
                     ) : (
                       <span style={{ color: '#334155' }}>—</span>
                     )}
                   </TD>
-                  {extraKeys.map(k => (
-                    <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>
-                  ))}
+                  {extraKeys.map(k => <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>)}
                   <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
                   <TD center>
                     {p.status === 'SOLD' && !owner && (
-                      <button
-                        onClick={() => setEditPlayer(p)}
-                        style={{
-                          background: 'none', border: '1px solid #334155', color: '#94a3b8',
-                          borderRadius: '4px', padding: '0.2rem 0.5rem',
-                          fontSize: '0.7rem', cursor: 'pointer',
-                        }}
-                        title="Edit sold price"
-                      >
-                        ✏
-                      </button>
+                      <button onClick={() => setEditPlayer(p)} style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', borderRadius: 4, padding: '0.2rem 0.5rem', fontSize: '0.7rem', cursor: 'pointer' }} title="Edit sold price">✏</button>
                     )}
                   </TD>
                 </tr>
@@ -1440,12 +765,364 @@ function PlayerDataTab({ auctionState, adminAction }) {
             })}
           </tbody>
         </table>
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
-// ─── Edit Price Modal ─────────────────────────────────────────────────────────
+// ─── Settings Tab ─────────────────────────────────────────────────────────────
+
+function SettingsTab({ auctionState }) {
+  const { teams, settings } = auctionState;
+  const teamList = Object.values(teams);
+  const [passwords, setPasswords] = useState({});
+  const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState(null);
+
+  useEffect(() => { setDashPin(settings.dashboardPin || ''); }, [settings.dashboardPin]);
+  useEffect(() => { setPasswords({}); }, [Object.keys(teams).join(',')]);
+
+  const hasChanges = Object.values(passwords).some(p => p.trim()) || dashPin !== (settings.dashboardPin || '');
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      await axios.post('/api/admin/update-passwords', { teams: passwords, dashboardPin: dashPin });
+      setPasswords({});
+      setMsg({ type: 'ok', text: 'Settings saved!' });
+    } catch (err) {
+      setMsg({ type: 'err', text: err.response?.data?.error || 'Save failed' });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Box sx={{ maxWidth: 560, display: 'flex', flexDirection: 'column', gap: 4 }}>
+
+      {/* Team Passwords */}
+      <Box>
+        <SectionTitle>Team Passwords</SectionTitle>
+        {teamList.length === 0 ? (
+          <Typography color="text.disabled" fontSize="0.85rem">No teams configured yet. Set up teams in League Setup first.</Typography>
+        ) : (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, px: 0.5 }}>
+              <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>Team Name</Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>New Password</Typography>
+            </Box>
+            {teamList.map(team => (
+              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
+                <Typography fontSize="0.88rem">{team.name}</Typography>
+                <TextField
+                  size="small"
+                  type="text"
+                  placeholder="Leave empty to keep current"
+                  value={passwords[team.id] || ''}
+                  onChange={e => setPasswords(prev => ({ ...prev, [team.id]: e.target.value }))}
+                />
+              </Box>
+            ))}
+            <Typography variant="caption" color="text.disabled" sx={{ pl: 0.5 }}>
+              Leave a field empty to keep the existing password unchanged.
+            </Typography>
+          </Box>
+        )}
+      </Box>
+
+      {/* Dashboard PIN */}
+      <Box>
+        <SectionTitle>Dashboard PIN</SectionTitle>
+        <Typography color="text.secondary" fontSize="0.82rem" mb={1.5}>
+          Spectators must enter this PIN to view the live dashboard at <code>/dashboard</code>. Leave empty for open access.
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <TextField
+            size="small"
+            value={dashPin}
+            onChange={e => setDashPin(e.target.value)}
+            placeholder="No PIN — open access"
+            inputProps={{ maxLength: 20 }}
+            sx={{ width: 220 }}
+          />
+          <Typography variant="caption" color={settings.dashboardPin ? 'warning.main' : 'text.disabled'}>
+            {settings.dashboardPin ? '● PIN active' : '○ Open access'}
+          </Typography>
+        </Box>
+      </Box>
+
+      {/* Save */}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Button
+          variant="contained"
+          color="success"
+          onClick={save}
+          disabled={saving || !hasChanges}
+          startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
+        >
+          {saving ? 'Saving…' : 'Save Settings'}
+        </Button>
+        {msg && (
+          <Typography variant="caption" color={msg.type === 'ok' ? 'success.main' : 'error.main'}>
+            {msg.type === 'ok' ? '✓' : '✗'} {msg.text}
+          </Typography>
+        )}
+      </Box>
+    </Box>
+  );
+}
+
+// ─── Modals ───────────────────────────────────────────────────────────────────
+
+function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  async function handleLoad() {
+    setLoading(true); setError('');
+    try {
+      await axios.post('/api/admin/load-test-data', { password });
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to load test data');
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>🧪 Load Test Data</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {done ? (
+          <>
+            <Alert severity="success">Test data loaded successfully!</Alert>
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Typography variant="caption" color="text.disabled" display="block" mb={0.75} sx={{ textTransform: 'uppercase' }}>Team passwords</Typography>
+              {[['Team Alpha', 'alpha123'], ['Team Beta', 'beta123'], ['Team Gamma', 'gamma123']].map(([name, pw]) => (
+                <Box key={name} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.25 }}>
+                  <Typography fontSize="0.85rem">{name}</Typography>
+                  <Typography component="code" fontSize="0.85rem" color="primary.main">{pw}</Typography>
+                </Box>
+              ))}
+            </Paper>
+          </>
+        ) : (
+          <>
+            <Typography variant="body2" color="text.secondary">This will populate the auction with sample data for testing:</Typography>
+            <Paper variant="outlined" sx={{ p: 1.5, fontSize: '0.82rem' }}>
+              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>3 Teams</Box> — Team Alpha, Beta, Gamma (30,000 pts each)</Typography>
+              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>33 Players</Box> across 3 pools:</Typography>
+              <Box sx={{ pl: 1.5, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                <Typography fontSize="0.82rem" color="text.secondary">Pool A — 11 players, base price <Box component="span" color="success.main">3,000 pts</Box></Typography>
+                <Typography fontSize="0.82rem" color="text.secondary">Pool B — 11 players, base price <Box component="span" color="success.main">2,000 pts</Box></Typography>
+                <Typography fontSize="0.82rem" color="text.secondary">Pool C — 11 players, base price <Box component="span" color="success.main">1,000 pts</Box></Typography>
+              </Box>
+            </Paper>
+            {hasExistingData && <Alert severity="warning">⚠ Existing teams and players will be replaced.</Alert>}
+            <TextField type="password" label="Admin password" placeholder="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleLoad()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {done ? (
+          <Button onClick={onClose} variant="contained" color="success">Close</Button>
+        ) : (
+          <>
+            <Button onClick={onClose} color="inherit">Cancel</Button>
+            <Button onClick={handleLoad} variant="contained" color="info" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+              {loading ? 'Loading…' : hasExistingData ? '⚠ Replace & Load' : '🧪 Load Test Data'}
+            </Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function RollbackModal({ auctionState, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(null);
+
+  const player = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
+  const team = player?.soldTo ? auctionState.teams[player.soldTo] : null;
+
+  async function handleRollback() {
+    setError(''); setLoading(true);
+    try {
+      const res = await axios.post('/api/admin/rollback-last-sale');
+      setDone(res.data.message);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Rollback failed');
+    } finally { setLoading(false); }
+  }
+
+  if (!player) {
+    return (
+      <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+        <DialogTitle>↩ Rollback</DialogTitle>
+        <DialogContent><Alert severity="error">No recent sale found to rollback.</Alert></DialogContent>
+        <DialogActions><Button onClick={onClose} color="inherit">Close</Button></DialogActions>
+      </Dialog>
+    );
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>↩ Rollback Last Sale</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {done ? (
+          <Alert severity="success">✓ {done}</Alert>
+        ) : (
+          <>
+            <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {[['Player', player.name, '#f1f5f9'], ['Pool', player.pool, '#94a3b8'], ['Sold to', team?.name || '—', '#f1f5f9'], ['Sold for', `${player.soldFor?.toLocaleString()} pts`, '#f59e0b']].map(([label, val, color]) => (
+                <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <Typography fontSize="0.85rem" color="text.disabled">{label}</Typography>
+                  <Typography fontSize="0.85rem" fontWeight={600} color={color}>{val}</Typography>
+                </Box>
+              ))}
+            </Paper>
+            <Alert severity="info" sx={{ fontSize: '0.82rem' }}>
+              This will return <strong>{player.name}</strong> to the player pool and refund <strong>{player.soldFor?.toLocaleString()} pts</strong> to <strong>{team?.name}</strong>.
+            </Alert>
+            {error && <Alert severity="error">{error}</Alert>}
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {done ? (
+          <Button onClick={onClose} variant="contained" color="success">Close</Button>
+        ) : (
+          <>
+            <Button onClick={onClose} color="inherit">Cancel</Button>
+            <Button onClick={handleRollback} variant="contained" color="secondary" disabled={loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+              {loading ? 'Rolling back…' : '↩ Confirm Rollback'}
+            </Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ImportStateModal({ importedState: s, onClose }) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [done, setDone] = useState(false);
+
+  const players = s.players || [];
+  const teamsList = Object.values(s.teams || {});
+  const sold = players.filter(p => p.status === 'SOLD').length;
+  const pending = players.filter(p => p.status === 'PENDING').length;
+  const unsold = players.filter(p => p.status === 'UNSOLD').length;
+  const currentPlayer = s.currentPlayerIndex != null ? players[s.currentPlayerIndex] : null;
+  const phaseLabel = { SETUP: 'Setup', LIVE: '● Live', PAUSED: '⏸ Paused', ENDED: 'Ended' }[s.phase] || s.phase;
+  const phaseColor = { SETUP: 'text.disabled', LIVE: 'success.main', PAUSED: 'warning.main', ENDED: 'text.disabled' }[s.phase] || 'text.disabled';
+
+  async function handleImport() {
+    setError(''); setLoading(true);
+    try {
+      await axios.post('/api/admin/import-state', { password, state: s });
+      setDone(true);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Import failed');
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>📦 Restore Backup</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        {done ? (
+          <>
+            <Alert severity="success">Backup restored successfully!</Alert>
+            {s.phase === 'LIVE' && <Alert severity="warning">⏸ The auction was mid-round — the timer has been paused. Press Resume when ready.</Alert>}
+          </>
+        ) : (
+          <>
+            <Paper variant="outlined" sx={{ p: 1.5 }}>
+              <Typography variant="caption" color="text.disabled" display="block" mb={1} sx={{ textTransform: 'uppercase' }}>Backup snapshot</Typography>
+              {[
+                ['Phase', phaseLabel, phaseColor],
+                ['Players', `${sold} sold · ${pending} pending · ${unsold} unsold`, 'text.primary'],
+                ...(currentPlayer ? [['On block', currentPlayer.name, 'text.primary']] : []),
+                ['Teams', String(teamsList.length), 'text.primary'],
+              ].map(([label, val, color]) => (
+                <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.25 }}>
+                  <Typography fontSize="0.82rem" color="text.disabled">{label}</Typography>
+                  <Typography fontSize="0.82rem" fontWeight={600} color={color}>{val}</Typography>
+                </Box>
+              ))}
+              {teamsList.map(t => (
+                <Box key={t.id} sx={{ display: 'flex', justifyContent: 'space-between', py: 0.2, pl: 1.5 }}>
+                  <Typography fontSize="0.82rem" color="text.disabled">{t.name}</Typography>
+                  <Typography fontSize="0.82rem" color="text.secondary">{(t.budget || 0).toLocaleString()} pts · {(t.roster || []).length} players</Typography>
+                </Box>
+              ))}
+            </Paper>
+            <Alert severity="error">⚠ This will overwrite all current auction data with the backup.</Alert>
+            <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleImport()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+          </>
+        )}
+      </DialogContent>
+      <DialogActions>
+        {done ? (
+          <Button onClick={onClose} variant="contained" color="success">Close</Button>
+        ) : (
+          <>
+            <Button onClick={onClose} color="inherit">Cancel</Button>
+            <Button onClick={handleImport} variant="contained" color="secondary" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+              {loading ? 'Restoring…' : '📦 Restore Backup'}
+            </Button>
+          </>
+        )}
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function FullResetModal({ onClose }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleReset() {
+    setError(''); setLoading(true);
+    try {
+      await axios.post('/api/admin/full-reset', { password });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Reset failed');
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ color: 'error.main' }}>☠ Full Reset — Permanent</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Alert severity="error">
+          <Typography fontWeight={700} fontSize="0.82rem" mb={0.5}>This will permanently delete:</Typography>
+          {['All teams and rosters', 'All player data', 'All bids and auction results', 'League configuration (resets to defaults)'].map(item => (
+            <div key={item}>✕ {item}</div>
+          ))}
+          <Typography fontWeight={700} mt={0.5} fontSize="0.78rem">This action cannot be undone.</Typography>
+        </Alert>
+        <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleReset()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">Cancel</Button>
+        <Button onClick={handleReset} variant="contained" color="error" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+          {loading ? 'Deleting…' : '☠ Permanently Delete All Data'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
 
 function EditPriceModal({ player, teams, adminAction, onClose }) {
   const soldTeam = player.soldTo ? teams[player.soldTo] : null;
@@ -1455,98 +1132,66 @@ function EditPriceModal({ player, teams, adminAction, onClose }) {
 
   function handleSave() {
     const parsed = parseInt(amount);
-    if (isNaN(parsed) || parsed <= 0) {
-      setError('Enter a valid positive amount');
-      return;
-    }
-    setSaving(true);
-    setError('');
+    if (isNaN(parsed) || parsed <= 0) { setError('Enter a valid positive amount'); return; }
+    setSaving(true); setError('');
     adminAction('admin:editSalePrice', { playerId: player.id, newAmount: parsed });
-    // Close optimistically — if there's an error it'll show via admin:error
     setTimeout(onClose, 200);
   }
 
   return (
-    <Modal onClose={onClose}>
-      <div style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>✏</div>
-      <div style={{ color: '#f1f5f9', fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.75rem' }}>
-        Edit Sold Price
-      </div>
-
-      <div style={{
-        background: '#0f172a', borderRadius: '8px', padding: '0.85rem 1rem',
-        marginBottom: '1rem', display: 'flex', flexDirection: 'column', gap: '0.3rem',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: '#64748b' }}>Player</span>
-          <span style={{ color: '#f1f5f9', fontWeight: 700 }}>{player.name}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: '#64748b' }}>Pool</span>
-          <span style={{ color: '#94a3b8' }}>{player.pool}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: '#64748b' }}>Sold to</span>
-          <span style={{ color: '#f1f5f9' }}>{soldTeam?.name || '—'}</span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-          <span style={{ color: '#64748b' }}>Current price</span>
-          <span style={{ color: '#f59e0b', fontWeight: 700 }}>{player.soldFor?.toLocaleString()} pts</span>
-        </div>
-      </div>
-
-      <div style={{ color: '#64748b', fontSize: '0.75rem', marginBottom: '6px' }}>New sold price (pts):</div>
-      <input
-        type="number"
-        min="1"
-        value={amount}
-        onChange={e => { setAmount(e.target.value); setError(''); }}
-        onKeyDown={e => e.key === 'Enter' && handleSave()}
-        autoFocus
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          background: '#0f172a', border: `1px solid ${error ? '#ef4444' : '#334155'}`,
-          color: '#f1f5f9', borderRadius: '7px',
-          padding: '0.55rem 0.75rem', fontSize: '0.9rem', outline: 'none',
-          marginBottom: '0.5rem',
-        }}
-      />
-
-      <div style={{ color: '#64748b', fontSize: '0.72rem', marginBottom: '1rem' }}>
-        Team budget will be adjusted automatically. Owner averages in Pool {player.pool} will be recalculated.
-      </div>
-
-      {error && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginBottom: '0.75rem' }}>{error}</div>}
-
-      <div style={{ display: 'flex', gap: '0.75rem' }}>
-        <button onClick={onClose} style={{ ...modalBtn('#334155'), flex: 1 }}>Cancel</button>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{ ...modalBtn('#22c55e'), flex: 2, opacity: saving ? 0.5 : 1 }}
-        >
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>✏ Edit Sold Price</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+          {[['Player', player.name, 'text.primary'], ['Pool', player.pool, 'text.secondary'], ['Sold to', soldTeam?.name || '—', 'text.primary'], ['Current price', `${player.soldFor?.toLocaleString()} pts`, 'primary.main']].map(([label, val, color]) => (
+            <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography fontSize="0.85rem" color="text.disabled">{label}</Typography>
+              <Typography fontSize="0.85rem" fontWeight={600} color={color}>{val}</Typography>
+            </Box>
+          ))}
+        </Paper>
+        <TextField
+          type="number"
+          label="New sold price (pts)"
+          inputProps={{ min: 1 }}
+          value={amount}
+          onChange={e => { setAmount(e.target.value); setError(''); }}
+          onKeyDown={e => e.key === 'Enter' && handleSave()}
+          autoFocus
+          error={!!error}
+          helperText={error || `Team budget will be adjusted. Owner averages in Pool ${player.pool} will be recalculated.`}
+          size="small"
+          fullWidth
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">Cancel</Button>
+        <Button onClick={handleSave} variant="contained" color="success" disabled={saving}>
           {saving ? 'Saving…' : 'Save Price'}
-        </button>
-      </div>
-    </Modal>
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// ─── Shared helpers ───────────────────────────────────────────────────────────
+
+function SectionTitle({ children, style }) {
+  return (
+    <Typography variant="overline" color="text.secondary" display="block" fontWeight={700} sx={{ mb: 1, ...style }}>
+      {children}
+    </Typography>
   );
 }
 
 function TH({ children, first, right, center }) {
   return (
     <th style={{
-      padding: '0.55rem 0.75rem',
-      textAlign: right ? 'right' : center ? 'center' : 'left',
-      color: '#64748b',
-      fontWeight: 700,
-      fontSize: '0.68rem',
-      textTransform: 'uppercase',
-      letterSpacing: '0.06em',
-      whiteSpace: 'nowrap',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
+      padding: '0.55rem 0.75rem', textAlign: right ? 'right' : center ? 'center' : 'left',
+      color: '#64748b', fontWeight: 700, fontSize: '0.68rem', textTransform: 'uppercase',
+      letterSpacing: '0.06em', whiteSpace: 'nowrap', borderLeft: first ? 'none' : '1px solid #1e293b',
       borderBottom: '2px solid #1e293b',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
+      ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }),
     }}>
       {children}
     </th>
@@ -1556,199 +1201,12 @@ function TH({ children, first, right, center }) {
 function TD({ children, first, right, center, style = {} }) {
   return (
     <td style={{
-      padding: '0.5rem 0.75rem',
-      textAlign: right ? 'right' : center ? 'center' : 'left',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
-      borderBottom: '1px solid #0f172a',
+      padding: '0.5rem 0.75rem', textAlign: right ? 'right' : center ? 'center' : 'left',
+      borderLeft: first ? 'none' : '1px solid #1e293b', borderBottom: '1px solid #0f172a',
       verticalAlign: 'middle',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
-      ...style,
+      ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }), ...style,
     }}>
       {children}
     </td>
-  );
-}
-
-// ─── Settings Tab ─────────────────────────────────────────────────────────────
-
-function SettingsTab({ auctionState }) {
-  const { teams, settings } = auctionState;
-  const teamList = Object.values(teams);
-
-  // Local state for new passwords — empty means "keep current"
-  const [passwords, setPasswords] = useState({});
-  const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
-  const [saving, setSaving] = useState(false);
-  const [msg, setMsg] = useState(null);
-
-  // Reset local pin state when server state changes
-  useEffect(() => {
-    setDashPin(settings.dashboardPin || '');
-  }, [settings.dashboardPin]);
-
-  // Reset password fields when teams change (e.g. after load test data)
-  useEffect(() => {
-    setPasswords({});
-  }, [Object.keys(teams).join(',')]);
-
-  async function save() {
-    setSaving(true);
-    setMsg(null);
-    try {
-      await axios.post('/api/admin/update-passwords', {
-        teams: passwords,
-        dashboardPin: dashPin,
-      });
-      setPasswords({}); // clear after save
-      setMsg({ type: 'ok', text: 'Settings saved!' });
-    } catch (err) {
-      setMsg({ type: 'err', text: err.response?.data?.error || 'Save failed' });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const inputSm = {
-    background: '#0f172a', border: '1px solid #334155', color: '#f1f5f9',
-    borderRadius: '6px', padding: '0.4rem 0.5rem', fontSize: '0.85rem', width: '100%',
-    boxSizing: 'border-box',
-  };
-
-  const hasChanges = Object.values(passwords).some(p => p.trim()) || dashPin !== (settings.dashboardPin || '');
-
-  return (
-    <div style={{ maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-
-      {/* Team Passwords */}
-      <section>
-        <SectionTitle>Team Passwords</SectionTitle>
-        {teamList.length === 0 ? (
-          <div style={{ color: '#475569', fontSize: '0.85rem' }}>
-            No teams configured yet. Set up teams in League Setup first.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', padding: '0 0.5rem' }}>
-              <span style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>Team Name</span>
-              <span style={{ color: '#475569', fontSize: '0.7rem', textTransform: 'uppercase' }}>New Password</span>
-            </div>
-            {teamList.map(team => (
-              <div key={team.id} style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem',
-                background: '#0f172a', padding: '0.5rem 0.6rem', borderRadius: '6px', alignItems: 'center',
-              }}>
-                <span style={{ color: '#f1f5f9', fontSize: '0.88rem' }}>{team.name}</span>
-                <input
-                  style={inputSm}
-                  type="text"
-                  placeholder="Leave empty to keep current"
-                  value={passwords[team.id] || ''}
-                  onChange={e => setPasswords(prev => ({ ...prev, [team.id]: e.target.value }))}
-                />
-              </div>
-            ))}
-            <div style={{ color: '#475569', fontSize: '0.72rem', marginTop: '0.25rem', paddingLeft: '0.25rem' }}>
-              Leave a field empty to keep the existing password unchanged.
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Dashboard PIN */}
-      <section>
-        <SectionTitle>Dashboard PIN</SectionTitle>
-        <div style={{ color: '#64748b', fontSize: '0.82rem', marginBottom: '0.75rem' }}>
-          Spectators must enter this PIN to view the live dashboard at <code style={{ color: '#94a3b8' }}>/dashboard</code>.
-          Leave empty for open access.
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <input
-            style={{ ...inputSm, width: '200px' }}
-            type="text"
-            value={dashPin}
-            onChange={e => setDashPin(e.target.value)}
-            placeholder="No PIN — open access"
-            maxLength={20}
-          />
-          {settings.dashboardPin
-            ? <span style={{ color: '#f59e0b', fontSize: '0.78rem' }}>● PIN active</span>
-            : <span style={{ color: '#475569', fontSize: '0.78rem' }}>○ Open access</span>
-          }
-        </div>
-      </section>
-
-      {/* Save */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-        <button
-          onClick={save}
-          disabled={saving || !hasChanges}
-          style={{
-            padding: '0.65rem 2rem', fontWeight: 700, fontSize: '0.95rem',
-            background: hasChanges ? '#22c55e' : '#334155',
-            color: hasChanges ? '#fff' : '#64748b',
-            border: hasChanges ? 'none' : '1px dashed #475569',
-            borderRadius: '8px',
-            cursor: hasChanges && !saving ? 'pointer' : 'not-allowed',
-            opacity: saving ? 0.6 : 1,
-          }}
-        >
-          {saving ? 'Saving…' : 'Save Settings'}
-        </button>
-        {msg && (
-          <span style={{ fontSize: '0.85rem', color: msg.type === 'ok' ? '#22c55e' : '#ef4444' }}>
-            {msg.type === 'ok' ? '✓' : '✗'} {msg.text}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── Shared helpers ───────────────────────────────────────────────────────────
-
-function SectionTitle({ children, style }) {
-  return (
-    <h3 style={{
-      color: '#94a3b8', fontSize: '0.75rem', textTransform: 'uppercase',
-      letterSpacing: '0.08em', marginBottom: '0.75rem', ...style,
-    }}>
-      {children}
-    </h3>
-  );
-}
-
-function PhaseChip({ phase }) {
-  const cfg = {
-    SETUP:  { label: 'Setup',  bg: '#1e293b', color: '#64748b' },
-    LIVE:   { label: '● Live', bg: '#14532d', color: '#22c55e' },
-    PAUSED: { label: '⏸ Paused', bg: '#451a03', color: '#f59e0b' },
-    ENDED:  { label: 'Ended', bg: '#1e293b', color: '#94a3b8' },
-  }[phase] || { label: phase, bg: '#1e293b', color: '#94a3b8' };
-
-  return (
-    <span style={{
-      background: cfg.bg, color: cfg.color,
-      borderRadius: '999px', padding: '0.15rem 0.6rem',
-      fontSize: '0.75rem', fontWeight: 700,
-    }}>
-      {cfg.label}
-    </span>
-  );
-}
-
-function smallBtn(bg) {
-  return {
-    background: bg, border: 'none', color: '#f1f5f9',
-    borderRadius: '6px', padding: '0.4rem 0.8rem',
-    fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600,
-  };
-}
-
-function Loading() {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', color: '#475569' }}>
-      Connecting to auction…
-    </div>
   );
 }

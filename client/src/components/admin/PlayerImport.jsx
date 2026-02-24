@@ -1,9 +1,13 @@
 import React, { useState, useRef } from 'react';
 import axios from 'axios';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 
 export default function PlayerImport({ onImported }) {
   const [dragging, setDragging] = useState(false);
-  const [status, setStatus] = useState(null); // { type: 'ok'|'err', msg }
+  const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
 
@@ -36,40 +40,38 @@ export default function PlayerImport({ onImported }) {
       const res = await axios.get('/api/admin/csv-template', { responseType: 'blob' });
       const url = URL.createObjectURL(res.data);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = 'players-template.csv';
-      a.click();
+      a.href = url; a.download = 'players-template.csv'; a.click();
       URL.revokeObjectURL(url);
-    } catch (err) {
+    } catch {
       alert('Failed to download template');
     }
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-      {/* Drop zone */}
-      <div
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+      <Box
         onDragOver={e => { e.preventDefault(); setDragging(true); }}
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
         onClick={() => inputRef.current?.click()}
-        style={{
+        sx={{
           border: `2px dashed ${dragging ? '#f59e0b' : '#334155'}`,
-          borderRadius: '10px',
-          padding: '2rem',
+          borderRadius: 2,
+          p: 4,
           textAlign: 'center',
           cursor: 'pointer',
-          background: dragging ? '#1e293b' : '#0f172a',
+          bgcolor: dragging ? 'action.hover' : 'background.default',
           transition: 'all 0.15s',
+          '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' },
         }}
       >
-        <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📄</div>
-        <div style={{ color: '#94a3b8', fontSize: '0.9rem' }}>
+        <Typography fontSize="2rem" mb={1}>📄</Typography>
+        <Typography color="text.secondary" fontSize="0.9rem">
           {loading ? 'Uploading…' : 'Drop CSV here or click to select'}
-        </div>
-        <div style={{ color: '#475569', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+        </Typography>
+        <Typography color="text.disabled" fontSize="0.75rem" mt={0.5}>
           Format: name, pool (header row required)
-        </div>
+        </Typography>
         <input
           ref={inputRef}
           type="file"
@@ -77,33 +79,23 @@ export default function PlayerImport({ onImported }) {
           style={{ display: 'none' }}
           onChange={e => uploadFile(e.target.files[0])}
         />
-      </div>
+      </Box>
 
-      {/* Status */}
       {status && (
-        <div style={{
-          padding: '0.6rem 1rem',
-          borderRadius: '7px',
-          fontSize: '0.85rem',
-          background: status.type === 'ok' ? '#14532d40' : '#7f1d1d40',
-          color: status.type === 'ok' ? '#22c55e' : '#ef4444',
-          border: `1px solid ${status.type === 'ok' ? '#22c55e40' : '#ef444440'}`,
-        }}>
+        <Alert severity={status.type === 'ok' ? 'success' : 'error'} sx={{ py: 0.5 }}>
           {status.msg}
-        </div>
+        </Alert>
       )}
 
-      {/* Template download */}
-      <button
+      <Button
+        variant="outlined"
+        color="inherit"
+        size="small"
         onClick={downloadTemplate}
-        style={{
-          background: 'none', border: '1px solid #334155', color: '#94a3b8',
-          borderRadius: '6px', padding: '0.5rem 1rem', cursor: 'pointer', fontSize: '0.8rem',
-          alignSelf: 'flex-start',
-        }}
+        sx={{ alignSelf: 'flex-start', borderColor: 'divider', color: 'text.secondary', fontSize: '0.8rem' }}
       >
         ⬇ Download CSV Template
-      </button>
-    </div>
+      </Button>
+    </Box>
   );
 }

@@ -1,4 +1,11 @@
 import React, { useState, useCallback } from 'react';
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Chip from '@mui/material/Chip';
+import Card from '@mui/material/Card';
+import LinearProgress from '@mui/material/LinearProgress';
+import { poolColor as themePoolColor } from '../../theme.js';
 
 export default function DashboardView({ state }) {
   const [rightWidth, setRightWidth] = useState(380);
@@ -20,51 +27,43 @@ export default function DashboardView({ state }) {
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
 
-      {/* Current player banner (when LIVE/PAUSED) */}
+      {/* Current player banner */}
       {currentPlayer && (
-        <div style={{
-          background: phase === 'PAUSED' ? '#1c0a00' : '#0c1a10',
-          borderBottom: `1px solid ${phase === 'PAUSED' ? '#92400e' : '#166534'}`,
-          padding: '0.6rem 1.5rem',
-          display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap',
+        <Paper square sx={{
+          bgcolor: phase === 'PAUSED' ? '#1c0a00' : '#0c1a10',
+          borderBottom: '1px solid',
+          borderColor: phase === 'PAUSED' ? '#92400e' : '#166534',
+          px: 3, py: 1,
+          display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '0.7rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em' }}>On Block</span>
-            <span style={{ fontWeight: 700, color: '#f1f5f9' }}>{currentPlayer.name}</span>
-            <span style={{
-              background: '#1e293b', border: '1px solid #334155', borderRadius: '4px',
-              padding: '0.1rem 0.4rem', fontSize: '0.7rem', color: '#94a3b8',
-            }}>{currentPlayer.pool}</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Current Bid</span>
-            <span style={{ fontWeight: 800, color: '#22c55e', fontSize: '1.1rem' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="overline" color="text.disabled">On Block</Typography>
+            <Typography fontWeight={700}>{currentPlayer.name}</Typography>
+            <Chip label={currentPlayer.pool} size="small" sx={{ height: 20, fontSize: '0.68rem', bgcolor: `${themePoolColor(currentPlayer.pool)}20`, color: themePoolColor(currentPlayer.pool) }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="caption" color="text.disabled">Current Bid</Typography>
+            <Typography fontWeight={800} color="success.main" fontSize="1.1rem">
               {state.currentBid?.amount?.toLocaleString()} pts
-            </span>
+            </Typography>
             {state.currentBid?.teamId && (
-              <span style={{ color: '#94a3b8', fontSize: '0.8rem' }}>
-                — {teams[state.currentBid.teamId]?.name}
-              </span>
+              <Typography variant="caption" color="text.secondary">— {teams[state.currentBid.teamId]?.name}</Typography>
             )}
-          </div>
+          </Box>
           {phase === 'PAUSED' && (
-            <span style={{ color: '#f59e0b', fontSize: '0.78rem', fontWeight: 600 }}>⏸ PAUSED</span>
+            <Chip label="⏸ PAUSED" size="small" color="warning" sx={{ fontWeight: 700 }} />
           )}
-        </div>
+        </Paper>
       )}
 
-      {/* Main content: teams grid + drag handle + remaining players pane */}
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* Main: teams grid + drag + remaining pane */}
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
         {/* Teams grid */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '1.25rem 1.5rem' }}>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1rem',
-          }}>
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 2 }}>
             {teamList.map(team => (
               <TeamCard
                 key={team.id}
@@ -74,15 +73,15 @@ export default function DashboardView({ state }) {
                 isLeading={state.currentBid?.teamId === team.id}
               />
             ))}
-          </div>
+          </Box>
           {teamList.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '4rem', color: '#475569' }}>
+            <Typography color="text.disabled" sx={{ textAlign: 'center', p: 6 }}>
               No teams configured yet. Admin needs to complete League Setup.
-            </div>
+            </Typography>
           )}
-        </div>
+        </Box>
 
-        {/* Right drag handle */}
+        {/* Drag handle */}
         <div
           onMouseDown={startDragRight}
           title="Drag to resize"
@@ -98,8 +97,8 @@ export default function DashboardView({ state }) {
           currentPlayerId={currentPlayer?.id ?? null}
           width={rightWidth}
         />
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
@@ -116,37 +115,24 @@ function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) 
   const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
 
   return (
-    <div style={{
+    <Box sx={{
       width,
       flexShrink: 0,
-      borderLeft: '1px solid #1e293b',
-      background: '#0a111e',
+      borderLeft: '1px solid',
+      borderColor: 'divider',
+      bgcolor: 'background.default',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
     }}>
-      <div style={{
-        padding: '0.75rem 1rem',
-        borderBottom: '1px solid #1e293b',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexShrink: 0,
-        background: '#0f172a',
-      }}>
-        <span style={{ color: '#94a3b8', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-          Remaining Players
-        </span>
-        <span style={{ background: '#1e293b', color: '#f59e0b', borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
-          {pending.length}
-        </span>
-      </div>
+      <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
+        <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining Players</Typography>
+        <Chip label={pending.length} size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
+      </Box>
 
-      <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
         {pending.length === 0 ? (
-          <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#334155', fontSize: '0.8rem' }}>
-            No players remaining
-          </div>
+          <Typography color="text.disabled" fontSize="0.8rem" sx={{ p: 2, textAlign: 'center' }}>No players remaining</Typography>
         ) : (
           orderedPools.map(poolId => {
             const poolPlayers = byPool[poolId];
@@ -154,29 +140,12 @@ function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) 
             const GRID = 'minmax(0,1fr) auto auto';
             return (
               <div key={poolId}>
-                <div style={{
-                  padding: '0.45rem 1rem',
-                  background: clr.bg,
-                  borderTop: `2px solid ${clr.border}`,
-                  borderBottom: `1px solid ${clr.border}50`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  position: 'sticky',
-                  top: 0,
-                  zIndex: 1,
-                }}>
-                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>
-                    Pool {poolId}
-                  </span>
-                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>
-                    {poolPlayers.length}
-                  </span>
+                <div style={{ padding: '0.45rem 1rem', background: clr.bg, borderTop: `2px solid ${clr.border}`, borderBottom: `1px solid ${clr.border}50`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</span>
+                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
-                  <DColHead label="Player" first />
-                  <DColHead label="Pool" />
-                  <DColHead label="Base" right />
+                  <DColHead label="Player" first /><DColHead label="Pool" /><DColHead label="Base" right />
                 </div>
                 {poolPlayers.map((player, rowIdx) => {
                   const isOnBlock = player.id === currentPlayerId;
@@ -184,16 +153,10 @@ function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) 
                   return (
                     <div key={player.id} style={{ display: 'grid', gridTemplateColumns: GRID, background: rowBg, borderBottom: '1px solid #0f172a' }}>
                       <DCell first style={{ color: isOnBlock ? '#22c55e' : '#cbd5e1', fontWeight: isOnBlock ? 700 : 400 }}>
-                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
-                        {player.name}
+                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}{player.name}
                       </DCell>
                       <DCell center>
-                        <span style={{
-                          background: clr.bg, color: clr.text,
-                          border: `1px solid ${clr.border}50`,
-                          borderRadius: '4px', padding: '0.1rem 0.35rem',
-                          fontSize: '0.65rem', fontWeight: 700,
-                        }}>{player.pool}</span>
+                        <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{player.pool}</span>
                       </DCell>
                       <DCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
                         {fmtPts(player.basePrice)}
@@ -205,8 +168,8 @@ function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) 
             );
           })
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 }
 
@@ -217,100 +180,70 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
   const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
   const roster   = team.roster ?? [];
 
+  const progressColor = spentPct > 80 ? 'error' : spentPct > 60 ? 'warning' : 'success';
+
   return (
-    <div style={{
-      background: '#1e293b',
-      border: `1px solid ${isLeading ? '#22c55e' : '#334155'}`,
-      borderRadius: '12px',
-      overflow: 'hidden',
+    <Card sx={{
+      border: '1px solid',
+      borderColor: isLeading ? 'success.main' : 'divider',
       boxShadow: isLeading ? '0 0 0 1px #22c55e40' : 'none',
       transition: 'border-color 0.3s',
     }}>
-      <div style={{
-        padding: '0.85rem 1rem',
-        borderBottom: '1px solid #334155',
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span style={{ fontSize: '1.1rem' }}>🏏</span>
-          <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{team.name}</span>
-          {isLeading && (
-            <span style={{
-              background: '#14532d', color: '#22c55e', border: '1px solid #22c55e40',
-              borderRadius: '999px', padding: '0.1rem 0.5rem', fontSize: '0.65rem', fontWeight: 700,
-            }}>● LEADING</span>
-          )}
-        </div>
-        <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-          {roster.length} / {squadSize} players
-        </span>
-      </div>
+      <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Typography fontWeight={700}>🏏 {team.name}</Typography>
+          {isLeading && <Chip label="● LEADING" size="small" color="success" sx={{ height: 20, fontSize: '0.62rem' }} />}
+        </Box>
+        <Typography variant="caption" color="text.disabled">{roster.length} / {squadSize} players</Typography>
+      </Box>
 
-      <div style={{ padding: '0.85rem 1rem', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', borderBottom: '1px solid #1e293b' }}>
-        <Stat label="Initial Budget" value={fmtPts(startingBudget)} color="#94a3b8" />
-        <Stat label="Spent"          value={fmtPts(spent)}          color="#ef4444" />
-        <Stat label="Remaining"      value={fmtPts(team.budget)}    color="#22c55e" />
-      </div>
+      <Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Stat label="Initial Budget" value={fmtPts(startingBudget)} color="text.secondary" />
+        <Stat label="Spent"          value={fmtPts(spent)}          color="error.main" />
+        <Stat label="Remaining"      value={fmtPts(team.budget)}    color="success.main" />
+      </Box>
 
-      <div style={{ padding: '0 1rem 0.75rem' }}>
-        <div style={{ height: '4px', background: '#0f172a', borderRadius: '2px', marginTop: '0.6rem' }}>
-          <div style={{
-            height: '100%', borderRadius: '2px',
-            width: `${Math.min(100, spentPct)}%`,
-            background: spentPct > 80 ? '#ef4444' : spentPct > 60 ? '#f59e0b' : '#22c55e',
-            transition: 'width 0.4s ease',
-          }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
-          <span style={{ fontSize: '0.65rem', color: '#475569' }}>0</span>
-          <span style={{ fontSize: '0.65rem', color: '#475569' }}>{spentPct.toFixed(0)}% spent</span>
-          <span style={{ fontSize: '0.65rem', color: '#475569' }}>{fmtPts(startingBudget)}</span>
-        </div>
-      </div>
+      <Box sx={{ px: 2, pb: 1.5, pt: 1 }}>
+        <LinearProgress
+          variant="determinate"
+          value={Math.min(100, spentPct)}
+          color={progressColor}
+          sx={{ height: 4, borderRadius: 2, bgcolor: 'background.default' }}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+          <Typography variant="caption" color="text.disabled">0</Typography>
+          <Typography variant="caption" color="text.disabled">{spentPct.toFixed(0)}% spent</Typography>
+          <Typography variant="caption" color="text.disabled">{fmtPts(startingBudget)}</Typography>
+        </Box>
+      </Box>
 
       {roster.length > 0 ? (
-        <div style={{ borderTop: '1px solid #334155' }}>
-          <div style={{
-            padding: '0.4rem 1rem',
-            display: 'grid', gridTemplateColumns: '1fr auto auto',
-            gap: '0.5rem',
-          }}>
-            <span style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Player</span>
-            <span style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Pool</span>
-            <span style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Price</span>
-          </div>
-          <div style={{ maxHeight: '220px', overflowY: 'auto' }}>
-            {roster.map((r, i) => (
-              <div key={i} style={{ borderTop: '1px solid #1e293b', background: i % 2 === 0 ? 'transparent' : '#0f172a20' }}>
-                <div style={{
-                  padding: '0.35rem 1rem',
-                  display: 'grid', gridTemplateColumns: '1fr auto auto',
-                  gap: '0.5rem', alignItems: 'center',
-                }}>
-                  <span style={{ fontSize: '0.82rem', color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {r.playerName}
-                  </span>
-                  <span style={{
-                    fontSize: '0.68rem', color: '#64748b',
-                    background: '#0f172a', border: '1px solid #334155',
-                    borderRadius: '4px', padding: '0.1rem 0.3rem',
-                  }}>
-                    {r.pool}
-                  </span>
-                  <span style={{ fontSize: '0.82rem', color: '#22c55e', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {r.price.toLocaleString()}
-                  </span>
-                </div>
-              </div>
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
+          <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
+            {['Player','Pool','Price'].map((h, i) => (
+              <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i === 2 ? 'right' : 'left' }}>{h}</Typography>
             ))}
-          </div>
-        </div>
+          </Box>
+          <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
+            {roster.map((r, i) => (
+              <Box key={i} sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default' }}>
+                <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1, alignItems: 'center' }}>
+                  <Typography variant="body2" noWrap>{r.playerName}</Typography>
+                  <Chip label={r.pool} size="small" sx={{ height: 18, fontSize: '0.62rem', bgcolor: `${themePoolColor(r.pool)}20`, color: themePoolColor(r.pool) }} />
+                  <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {r.price.toLocaleString()}
+                  </Typography>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        </Box>
       ) : (
-        <div style={{ padding: '0.75rem 1rem', borderTop: '1px solid #334155', color: '#334155', fontSize: '0.8rem', textAlign: 'center' }}>
+        <Typography color="text.disabled" fontSize="0.8rem" sx={{ textAlign: 'center', py: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
           No players yet
-        </div>
+        </Typography>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -325,42 +258,22 @@ function poolColor(poolId) {
 
 function DColHead({ label, first, right }) {
   return (
-    <span style={{
-      padding: '0.32rem 0.6rem',
-      fontSize: '0.62rem', fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: '0.06em',
-      color: '#64748b',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
-      textAlign: right ? 'right' : first ? 'left' : 'center',
-      whiteSpace: 'nowrap',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
-    }}>{label}</span>
+    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', borderLeft: first ? 'none' : '1px solid #1e293b', textAlign: right ? 'right' : first ? 'left' : 'center', whiteSpace: 'nowrap', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }) }}>{label}</span>
   );
 }
 
 function DCell({ children, first, right, center, style = {} }) {
   return (
-    <span style={{
-      padding: '0.32rem 0.6rem',
-      fontSize: '0.74rem',
-      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
-      display: 'flex', alignItems: 'center',
-      justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
-      ...style,
-    }}>{children}</span>
+    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.74rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: first ? 'none' : '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }), ...style }}>{children}</span>
   );
 }
 
 function Stat({ label, value, color }) {
   return (
-    <div>
-      <div style={{ color: '#475569', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>{label}</div>
-      <div style={{ color, fontWeight: 700, fontSize: '0.88rem' }}>{value}</div>
-    </div>
+    <Box>
+      <Typography variant="caption" color="text.disabled" display="block" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', mb: 0.25 }}>{label}</Typography>
+      <Typography fontWeight={700} fontSize="0.88rem" color={color}>{value}</Typography>
+    </Box>
   );
 }
 

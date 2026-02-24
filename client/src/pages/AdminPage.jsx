@@ -398,11 +398,12 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   const { phase, players, teams } = auctionState;
 
   const pending = players.filter(p => p.status === 'PENDING').length;
-  const sold    = players.filter(p => p.status === 'SOLD').length;
-  const unsold  = players.filter(p => p.status === 'UNSOLD').length;
+  const sold = players.filter(p => p.status === 'SOLD').length;
+  const unsold = players.filter(p => p.status === 'UNSOLD').length;
 
   const [showLoadTestModal, setShowLoadTestModal] = useState(false);
   const [showFullResetModal, setShowFullResetModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
   const [importData, setImportData] = useState(null);
   const [showRollbackModal, setShowRollbackModal] = useState(false);
 
@@ -443,6 +444,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
 
       {/* Modals */}
       {showLoadTestModal && <LoadTestDataModal hasExistingData={hasExistingData} isSetup={isSetup} onClose={() => setShowLoadTestModal(false)} />}
+      {showResetModal && <ResetAuctionModal onClose={() => setShowResetModal(false)} />}
       {showFullResetModal && <FullResetModal onClose={() => setShowFullResetModal(false)} />}
       {importData && <ImportStateModal importedState={importData} onClose={() => setImportData(null)} />}
       {showRollbackModal && <RollbackModal auctionState={auctionState} onClose={() => setShowRollbackModal(false)} />}
@@ -451,8 +453,8 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
         {[
           { label: 'Pending', val: pending, color: 'warning.main' },
-          { label: 'Sold',    val: sold,    color: 'success.main' },
-          { label: 'Unsold',  val: unsold,  color: 'error.main'   },
+          { label: 'Sold', val: sold, color: 'success.main' },
+          { label: 'Unsold', val: unsold, color: 'error.main' },
         ].map(s => (
           <Paper key={s.label} variant="outlined" sx={{ p: 1.5, textAlign: 'center' }}>
             <Typography color={s.color} fontWeight={800} fontSize="1.8rem" lineHeight={1}>{s.val}</Typography>
@@ -523,7 +525,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
                 </Button>
               ) : null;
             })()}
-            <Button variant="contained" color="error" size="small" onClick={resetAuction}>⚠ Reset Auction</Button>
+            <Button variant="contained" color="error" size="small" onClick={() => setShowResetModal(true)}>⚠ Reset Auction</Button>
             <Button variant="outlined" color="error" size="small" onClick={() => setShowFullResetModal(true)} sx={{ borderStyle: 'dashed' }}>
               ☠ Full Reset
             </Button>
@@ -583,8 +585,8 @@ function PlayerDataTab({ auctionState, adminAction }) {
 
   const statusCfg = {
     PENDING: { color: '#f59e0b', bg: '#451a03', label: 'Pending' },
-    SOLD:    { color: '#22c55e', bg: '#14532d', label: 'Sold' },
-    UNSOLD:  { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
+    SOLD: { color: '#22c55e', bg: '#14532d', label: 'Sold' },
+    UNSOLD: { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
   };
 
   const poolClr = (poolId) => {
@@ -616,13 +618,13 @@ function PlayerDataTab({ auctionState, adminAction }) {
   if (sortCol) {
     filtered = [...filtered].sort((a, b) => {
       let av, bv;
-      if (sortCol === '#')            { av = Number(a.sortOrder); bv = Number(b.sortOrder); }
-      else if (sortCol === 'pool')    { av = a.pool; bv = b.pool; }
-      else if (sortCol === 'name')    { av = a.name; bv = b.name; }
-      else if (sortCol === 'base')    { av = Number(a.basePrice); bv = Number(b.basePrice); }
-      else if (sortCol === 'status')  { av = a.status; bv = b.status; }
+      if (sortCol === '#') { av = Number(a.sortOrder); bv = Number(b.sortOrder); }
+      else if (sortCol === 'pool') { av = a.pool; bv = b.pool; }
+      else if (sortCol === 'name') { av = a.name; bv = b.name; }
+      else if (sortCol === 'base') { av = Number(a.basePrice); bv = Number(b.basePrice); }
+      else if (sortCol === 'status') { av = a.status; bv = b.status; }
       else if (sortCol === 'soldFor') { av = Number(a.soldFor ?? -1); bv = Number(b.soldFor ?? -1); }
-      else if (sortCol === 'soldTo')  { av = a.soldTo ? (teams[a.soldTo]?.name ?? '') : ''; bv = b.soldTo ? (teams[b.soldTo]?.name ?? '') : ''; }
+      else if (sortCol === 'soldTo') { av = a.soldTo ? (teams[a.soldTo]?.name ?? '') : ''; bv = b.soldTo ? (teams[b.soldTo]?.name ?? '') : ''; }
       else {
         const ra = a.extra?.[sortCol] ?? '', rb = b.extra?.[sortCol] ?? '';
         const na = parseFloat(ra), nb = parseFloat(rb);
@@ -1011,6 +1013,7 @@ function RollbackModal({ auctionState, onClose }) {
 
 function ImportStateModal({ importedState: s, onClose }) {
   const [password, setPassword] = useState('');
+  const [storagePref, setStoragePref] = useState('auto');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -1027,7 +1030,7 @@ function ImportStateModal({ importedState: s, onClose }) {
   async function handleImport() {
     setError(''); setLoading(true);
     try {
-      await axios.post('/api/admin/import-state', { password, state: s });
+      await axios.post('/api/admin/import-state', { password, state: s, storagePreference: storagePref });
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Import failed');
@@ -1067,6 +1070,8 @@ function ImportStateModal({ importedState: s, onClose }) {
             </Paper>
             <Alert severity="error">⚠ This will overwrite all current auction data with the backup.</Alert>
             <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleImport()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+
+            <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
           </>
         )}
       </DialogContent>
@@ -1088,13 +1093,14 @@ function ImportStateModal({ importedState: s, onClose }) {
 
 function FullResetModal({ onClose }) {
   const [password, setPassword] = useState('');
+  const [storagePref, setStoragePref] = useState('auto');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   async function handleReset() {
     setError(''); setLoading(true);
     try {
-      await axios.post('/api/admin/full-reset', { password });
+      await axios.post('/api/admin/full-reset', { password, storagePreference: storagePref });
       onClose();
     } catch (err) {
       setError(err.response?.data?.error || 'Reset failed');
@@ -1113,11 +1119,50 @@ function FullResetModal({ onClose }) {
           <Typography fontWeight={700} mt={0.5} fontSize="0.78rem">This action cannot be undone.</Typography>
         </Alert>
         <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleReset()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+        <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="inherit">Cancel</Button>
         <Button onClick={handleReset} variant="contained" color="error" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
           {loading ? 'Deleting…' : '☠ Permanently Delete All Data'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ResetAuctionModal({ onClose }) {
+  const [storagePref, setStoragePref] = useState('auto');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleReset() {
+    setError(''); setLoading(true);
+    try {
+      await axios.post('/api/admin/reset-auction', { storagePreference: storagePref });
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Reset failed');
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ color: 'warning.main' }}>⚠ Reset Auction</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+        <Alert severity="warning">
+          <Typography fontWeight={700} fontSize="0.82rem" mb={0.5}>Reset auction progress?</Typography>
+          <Typography fontSize="0.78rem">All bids, sold records, and team budgets will be cleared back to starting amounts.</Typography>
+          <Typography fontSize="0.78rem" mt={0.5}>Teams and players remain.</Typography>
+        </Alert>
+        {error && <Alert severity="error">{error}</Alert>}
+
+        <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">Cancel</Button>
+        <Button onClick={handleReset} variant="contained" color="warning" disabled={loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+          {loading ? 'Resetting…' : '⚠ Reset Auction'}
         </Button>
       </DialogActions>
     </Dialog>
@@ -1175,6 +1220,25 @@ function EditPriceModal({ player, teams, adminAction, onClose }) {
 }
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
+
+function StoragePreferenceSelector({ value, onChange }) {
+  return (
+    <Box sx={{ mt: 1, p: 1.5, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.default' }}>
+      <Typography variant="overline" color="text.secondary" display="block" mb={1} lineHeight={1}>Storage Preference</Typography>
+      <ToggleButtonGroup exclusive size="small" value={value} onChange={(_, val) => val && onChange(val)} fullWidth>
+        <ToggleButton value="auto" sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+          ☁ Auto (Redis if ENV)
+        </ToggleButton>
+        <ToggleButton value="local" sx={{ textTransform: 'none', fontSize: '0.8rem' }}>
+          💾 Force Local JSON
+        </ToggleButton>
+      </ToggleButtonGroup>
+      <Typography variant="caption" color="text.disabled" display="block" mt={1} lineHeight={1.2}>
+        {value === 'auto' ? 'Uses Upstash Serverless Redis if credentials are provided in the environment. Fast and persistent across Railway restarts.' : 'Forces writes to disk (state.json). Warning: Railway deployment disks are ephemeral by default.'}
+      </Typography>
+    </Box>
+  );
+}
 
 function SectionTitle({ children, style }) {
   return (

@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCountdown } from '../../hooks/useCountdown.js';
 import { motion } from 'framer-motion';
+import { audioSystem } from '../../utils/audioSystem.js';
 
 const SIZE = 120;
 const STROKE = 8;
@@ -21,6 +22,14 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
   const dashOffset = CIRC * (1 - pct);
 
   const warningState = !timerPaused && !awaitingHammer && remaining <= 5 && remaining > 0;
+
+  const prevRemaining = React.useRef(remaining);
+  React.useEffect(() => {
+    if (!timerPaused && !awaitingHammer && remaining <= 3 && remaining > 0 && remaining !== prevRemaining.current) {
+      audioSystem.playTickSound();
+    }
+    prevRemaining.current = remaining;
+  }, [remaining, timerPaused, awaitingHammer]);
 
   return (
     <motion.div

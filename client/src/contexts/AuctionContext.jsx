@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext.jsx';
+import { audioSystem } from '../utils/audioSystem.js';
 
 const AuctionContext = createContext(null);
 
@@ -48,11 +49,13 @@ export function AuctionProvider({ children }) {
     socket.on('auction:bid', ({ bid, publicState }) => {
       setAuctionState(publicState);
       setLastEvent({ type: 'bid', data: bid });
+      audioSystem.playBidSound();
     });
 
     socket.on('auction:sold', ({ player, teamId, amount, teamName, publicState }) => {
       setAuctionState(publicState);
       setLastEvent({ type: 'sold', data: { player, teamId, amount, teamName } });
+      audioSystem.playSoldSound();
     });
 
     socket.on('auction:unsold', ({ player, publicState }) => {

@@ -63,6 +63,8 @@ export default function DashboardView({ state }) {
 
         {/* Teams grid */}
         <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
+          <BudgetChart teams={teams} startingBudget={startingBudget} />
+
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 2 }}>
             {teamList.map(team => (
               <TeamCard
@@ -248,6 +250,37 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+function BudgetChart({ teams, startingBudget }) {
+  const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
+  if (teamList.length === 0 || startingBudget <= 0) return null;
+
+  return (
+    <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
+      <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.05em' }}>League Budget Overview</Typography>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2 }}>
+        {teamList.map(team => {
+          const spent = startingBudget - team.budget;
+          const spentPct = Math.min(100, (spent / startingBudget) * 100);
+          const remPct = 100 - spentPct;
+
+          return (
+            <Box key={team.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.75rem' }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>{team.name}</Typography>
+                <Typography sx={{ fontWeight: 700, color: 'success.main', fontSize: '0.8rem' }}>{fmtPts(team.budget)} rem</Typography>
+              </Box>
+              <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default' }}>
+                {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
+                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: 'success.main', opacity: 0.85 }} />}
+              </Box>
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+}
 
 function poolColor(poolId) {
   if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };

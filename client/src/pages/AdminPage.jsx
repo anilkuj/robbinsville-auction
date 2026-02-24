@@ -419,6 +419,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   const [showResetModal, setShowResetModal] = useState(false);
   const [importData, setImportData] = useState(null);
   const [showRollbackModal, setShowRollbackModal] = useState(false);
+  const [copiedWA, setCopiedWA] = useState(false);
 
   const isSetup = phase === 'SETUP';
   const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
@@ -441,6 +442,31 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       a.href = url; a.download = 'auction-state.json'; a.click();
       URL.revokeObjectURL(url);
     } catch { alert('Export failed'); }
+  }
+
+  function copyWhatsAppSummary() {
+    if (!teams || Object.keys(teams).length === 0) return;
+
+    let text = `🏆 *RPL Auction Summary* 🏆\n\n`;
+    const sortedTeams = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
+
+    sortedTeams.forEach(t => {
+      text += `🏏 *${t.name}*\n`;
+      text += `💰 Budget Remaining: ${formatPts(t.budget)}\n`;
+      const roster = t.roster || [];
+      if (roster.length > 0) {
+        text += `👥 Roster:\n`;
+        roster.forEach(r => text += `  - ${r.playerName} (${r.pool}) - ${formatPts(r.price)}\n`);
+      } else {
+        text += `👥 Roster: (Empty)\n`;
+      }
+      text += `\n`;
+    });
+
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedWA(true);
+      setTimeout(() => setCopiedWA(false), 2000);
+    }).catch(err => alert("Failed to copy text: " + err));
   }
 
   async function resetAuction() {
@@ -502,6 +528,9 @@ function AuctionControlsTab({ auctionState, adminAction }) {
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
           <Button variant="contained" color="info" size="small" onClick={downloadResults}>⬇ Results CSV</Button>
           <Button variant="outlined" color="inherit" size="small" onClick={downloadState}>⬇ Backup State</Button>
+          <Button variant="contained" color="success" size="small" sx={{ fontWeight: 700 }} onClick={copyWhatsAppSummary}>
+            📋 {copiedWA ? 'Copied!' : 'WhatsApp'}
+          </Button>
 
           <Button variant="contained" color="secondary" size="small" component="label">
             ⬆ Restore Backup

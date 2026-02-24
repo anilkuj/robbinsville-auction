@@ -23,7 +23,14 @@ npm run build         # builds client/dist via Vite
 npm start             # serves built client + API from :3001
 ```
 
-### No lint or test scripts are configured in this project.
+### Testing & Linting
+```bash
+npm run lint --prefix server    # run ESLint on the server
+npm run lint --prefix client    # run ESLint on the client
+
+npm run test --prefix server    # run Vitest unit tests for the server
+npm run test --prefix client    # run Vitest unit tests for the client
+```
 
 ## Architecture
 
@@ -82,7 +89,12 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 
 **Auction phases:** `SETUP → LIVE → SETUP` (per player) cycling until all players are done, then `ENDED`. Phase transitions are driven by `startPlayer`, `processSold`, `processUnsold` in `auction.js`.
 
-**Persistence:** `saveState()` debounces disk writes to `server/data/state.json` (500ms). On server start, `loadState()` restores state and reschedules the timer if an active round is in progress.
+**Payload Validation:** Incoming Socket.IO payloads from the client (e.g., `bid:place`, `admin:manualSale`) are validated via **Zod** schemas in the respective handler files before they touch the application state. Malformed payloads emit `bid:rejected` or `admin:error` back to the client.
+
+**Persistence:** The `server/persistence.js` module saves state via debounced writes (500ms).
+- **Primary (Upstash Redis):** If `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are present, state is written to/read from a Serverless Redis instance instead of disk.
+- **Fallback (Local Disk):** If Redis credentials are not found, state is written to `server/data/state.json`. 
+- On server start (`index.js`), `loadState()` is awaited to pull state either remotely or locally before Socket connections begin accepting traffic.
 
 **Player order (randomizePool):** `settings.randomizePool` (default `false`). When `true`, `findNextPendingIndex` in `auction.js` identifies the current pool from the first PENDING player (preserving pool sequence A1 → A2 → B1…), then picks a random player within that pool. Toggled via the **Player order** control (↕ Fixed / 🔀 Random) in AuctionControls live settings.
 
@@ -126,15 +138,19 @@ maxBid = budget - (Math.max(0, squadSize - rosterSize - 1) * minBid)
 - Tokens stored in `localStorage` as `rpl_token` and `rpl_user`
 - Socket connections pass JWT in `socket.handshake.auth.token`
 
-### Environment Variables (`.env` in repo root, consumed by `server/index.js`)
+### Environment Variables (`.env` in repo root, consumed by `server/index.js` and `server/config.js`)
 ```
 JWT_SECRET=
 ADMIN_PASSWORD=
 NODE_ENV=production
 PORT=3001
+
+# Optional but recommended (Stateless Persistence)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
 ```
 
 ### Production Notes
-- In production, Express serves the built client from `client/dist/` as static files
-- `server/data/state.json` is ephemeral on free-tier PaaS (Railway/Render) — use Export State JSON to back up
-- Do not redeploy mid-auction without exporting state first
+- In production, Express serves the built client from `client/dist/` as static files.
+- If not using Upstash Redis, `server/data/state.json` is ephemeral on free-tier PaaS (Railway/Render) — use Export State JSON to back up.
+- Using Upstash Redis entirely decouples the state from the ephemeral filesystem, meaning container spin-downs will not cause data loss.

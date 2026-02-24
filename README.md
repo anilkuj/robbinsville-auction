@@ -21,8 +21,13 @@ npm run dev:server
 # Terminal 2 — client on :5173
 npm run dev:client
 ```
-
 Open http://localhost:5173
+
+### Testing
+```bash
+npm run test --prefix server
+npm run test --prefix client
+```
 
 **Admin login:** username `admin`, password `admin123`
 
@@ -43,6 +48,10 @@ JWT_SECRET=your-long-random-secret
 ADMIN_PASSWORD=your-admin-password
 NODE_ENV=production
 PORT=3001
+
+# Optional but recommended (Stateless Persistence)
+UPSTASH_REDIS_REST_URL=your-upstash-redis-url
+UPSTASH_REDIS_REST_TOKEN=your-upstash-redis-token
 ```
 
 ### First-Time Setup (Admin Panel)
@@ -98,8 +107,9 @@ Total: 180 players = 10 teams × 18 players ✓
 1. Push to GitHub
 2. Create new Railway project → deploy from repo
 3. Set env vars: `JWT_SECRET`, `ADMIN_PASSWORD`, `NODE_ENV=production`
-4. Build command: `npm run install:all && npm run build`
-5. Start command: `node server/index.js`
+4. Building uses `npm run install:all && npm run build`
+5. Start command uses `node server/index.js`
+6. (Optional) **Upstash Redis**: Add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in your environment variables for stateless deployment.
 
 ### Render
 Same env vars. Set build + start commands as above.
@@ -114,7 +124,10 @@ Same env vars. Set build + start commands as above.
 
 - **Backend:** Node.js + Express + Socket.io (authoritative timer)
 - **Frontend:** React 18 + Vite (served statically from Express in production)
-- **Storage:** In-memory singleton + `server/data/state.json` (debounced writes)
+- **Validation:** Server uses **Zod** to validate all Socket.io client payloads.
+- **Storage:** In-memory singleton with 500ms debounced persistence.
+  - *Primary:* **Upstash Serverless Redis** (if env vars are provided).
+  - *Fallback:* Local `server/data/state.json`.
 - **Auth:** JWT (24h expiry), team credentials managed via admin panel
 
 ### Budget Constraint

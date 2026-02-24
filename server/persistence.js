@@ -15,13 +15,17 @@ function saveState() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     try {
-      const data = JSON.stringify(getState(), null, 2);
+      const state = getState();
+      const pref = state.settings?.storagePreference || 'auto';
+      const useRedis = !!redis && pref !== 'local';
 
-      if (redis) {
+      const data = JSON.stringify(state, null, 2);
+
+      if (useRedis) {
         // Save to Redis key 'auction_state'
         await redis.set('auction_state', data);
       } else {
-        // Fallback to local disk if Redis isn't configured
+        // Fallback to local disk if Redis isn't configured, or forced local
         if (!fs.existsSync(config.dataDir)) {
           fs.mkdirSync(config.dataDir, { recursive: true });
         }
@@ -37,26 +41,41 @@ function saveState() {
 async function loadState() {
   try {
     let data = null;
+    let diskState = null;
 
-    if (redis) {
+    if (fs.existsSync(config.stateFile)) {
+      try {
+        const raw = fs.readFileSync(config.stateFile, 'utf8');
+        diskState = JSON.parse(raw);
+      } catch (e) { }
+    }
+
+    // If disk state explicitly asked for local storage, bypass Redis checks
+    if (diskState && diskState.settings && diskState.settings.storagePreference === 'local') {
+      data = diskState;
+      console.log('Forced loading state from local disk (storagePreference=local)');
+    } else if (redis) {
       // Attempt to load from Redis
-      data = await redis.get('auction_state');
+      let rData = await redis.get('auction_state');
       // Upstash might return an object directly if it parsed the JSON, or a string
-      if (data && typeof data !== 'string') {
-        data = JSON.stringify(data);
+      if (rData && typeof rData !== 'string') {
+        rData = JSON.stringify(rData);
+      }
+      if (rData) {
+        data = JSON.parse(rData);
+        console.log('State loaded from Upstash Redis');
       }
     }
 
-    // Fallback to disk if Redis has no data or isn't configured
-    if (!data && fs.existsSync(config.stateFile)) {
-      data = fs.readFileSync(config.stateFile, 'utf8');
+    // Fallback to disk if Redis has no data, or Redis load failed
+    if (!data && diskState) {
+      data = diskState;
+      console.log('State loaded from local disk (Redis empty or fallback)');
     }
 
     if (data) {
-      const saved = JSON.parse(data);
       const state = getState();
-      Object.assign(state, saved);
-      console.log(redis ? 'State loaded from Upstash Redis' : 'State loaded from local disk');
+      Object.assign(state, data);
       return true;
     }
   } catch (err) {

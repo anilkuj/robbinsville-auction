@@ -54,25 +54,27 @@ if (isProd) {
 registerSocketHandlers(io);
 
 // Load persisted state, reschedule timer if needed
-loadState();
-const state = getState();
-if (state.phase === 'LIVE' && !state.timerPaused && state.timerEndsAt) {
-  const remaining = state.timerEndsAt - Date.now();
-  if (remaining > 0) {
-    console.log(`[Startup] Rescheduling auction timer: ${remaining}ms remaining`);
-    scheduleTimer(io, remaining);
-  } else {
-    console.log('[Startup] Timer expired during downtime — processing expiry');
-    setTimeout(() => handleTimerExpiry(io), 200);
+(async () => {
+  await loadState();
+  const state = getState();
+  if (state.phase === 'LIVE' && !state.timerPaused && state.timerEndsAt) {
+    const remaining = state.timerEndsAt - Date.now();
+    if (remaining > 0) {
+      console.log(`[Startup] Rescheduling auction timer: ${remaining}ms remaining`);
+      scheduleTimer(io, remaining);
+    } else {
+      console.log('[Startup] Timer expired during downtime — processing expiry');
+      setTimeout(() => handleTimerExpiry(io), 200);
+    }
   }
-}
 
-server.listen(config.port, () => {
-  console.log(`\n🏏 Robbinsville Auction Server`);
-  console.log(`   Port: ${config.port}`);
-  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`   Admin password: ${config.admin.password}`);
-  console.log(`   State file: ${config.stateFile}\n`);
-});
+  server.listen(config.port, () => {
+    console.log(`\n🏏 Robbinsville Auction Server`);
+    console.log(`   Port: ${config.port}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   Admin password: ${config.admin.password}`);
+    console.log(`   State file/kv: ${config.redisUrl ? 'Upstash Redis' : config.stateFile}\n`);
+  });
+})();
 
 module.exports = { io };

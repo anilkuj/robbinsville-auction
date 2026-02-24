@@ -5,6 +5,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BidDisplay({ currentBid, teams, player }) {
   const leadingTeam = currentBid?.teamId ? teams?.[currentBid.teamId] : null;
@@ -16,18 +17,30 @@ export default function BidDisplay({ currentBid, teams, player }) {
       <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em' }}>
         {hasBid ? 'Highest Bid' : 'Opening Bid'}
       </Typography>
-      <Typography
-        variant="h3"
-        fontWeight={900}
-        sx={{
-          color: hasBid ? 'success.main' : 'primary.main',
-          fontVariantNumeric: 'tabular-nums',
-          letterSpacing: '-0.02em',
-          lineHeight: 1.1,
-        }}
-      >
-        {formatPts(amount || player?.basePrice)}
-      </Typography>
+
+      {/* Animated Bid Amount */}
+      <AnimatePresence mode="popLayout">
+        <motion.div
+          key={amount || player?.basePrice}
+          initial={{ y: 20, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: -20, opacity: 0, scale: 1.1 }}
+          transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+        >
+          <Typography
+            variant="h3"
+            fontWeight={900}
+            sx={{
+              color: hasBid ? 'success.main' : 'primary.main',
+              fontVariantNumeric: 'tabular-nums',
+              letterSpacing: '-0.02em',
+              lineHeight: 1.1,
+            }}
+          >
+            {formatPts(amount || player?.basePrice)}
+          </Typography>
+        </motion.div>
+      </AnimatePresence>
       {hasBid && leadingTeam && (
         <Chip
           icon={<EmojiEventsIcon sx={{ fontSize: '0.9rem !important' }} />}

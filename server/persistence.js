@@ -2,18 +2,31 @@ const fs = require('fs');
 const path = require('path');
 const config = require('./config');
 const { getState } = require('./state');
+const { Redis } = require('@upstash/redis');
+
+// Initialize Redis if credentials exist, otherwise fallback to null
+const redis = (config.redisUrl && config.redisToken)
+  ? new Redis({ url: config.redisUrl, token: config.redisToken })
+  : null;
 
 let saveTimer = null;
 
 function saveState() {
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
+  saveTimer = setTimeout(async () => {
     try {
-      if (!fs.existsSync(config.dataDir)) {
-        fs.mkdirSync(config.dataDir, { recursive: true });
-      }
       const data = JSON.stringify(getState(), null, 2);
-      fs.writeFileSync(config.stateFile, data, 'utf8');
+
+      if (redis) {
+        // Save to Redis key 'auction_state'
+        await redis.set('auction_state', data);
+      } else {
+        // Fallback to local disk if Redis isn't configured
+        if (!fs.existsSync(config.dataDir)) {
+          fs.mkdirSync(config.dataDir, { recursive: true });
+        }
+        fs.writeFileSync(config.stateFile, data, 'utf8');
+      }
     } catch (err) {
       console.error('Failed to save state:', err);
     }
@@ -21,14 +34,29 @@ function saveState() {
   }, 500);
 }
 
-function loadState() {
+async function loadState() {
   try {
-    if (fs.existsSync(config.stateFile)) {
-      const data = fs.readFileSync(config.stateFile, 'utf8');
+    let data = null;
+
+    if (redis) {
+      // Attempt to load from Redis
+      data = await redis.get('auction_state');
+      // Upstash might return an object directly if it parsed the JSON, or a string
+      if (data && typeof data !== 'string') {
+        data = JSON.stringify(data);
+      }
+    }
+
+    // Fallback to disk if Redis has no data or isn't configured
+    if (!data && fs.existsSync(config.stateFile)) {
+      data = fs.readFileSync(config.stateFile, 'utf8');
+    }
+
+    if (data) {
       const saved = JSON.parse(data);
       const state = getState();
       Object.assign(state, saved);
-      console.log('State loaded from disk');
+      console.log(redis ? 'State loaded from Upstash Redis' : 'State loaded from local disk');
       return true;
     }
   } catch (err) {

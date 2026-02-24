@@ -1,5 +1,6 @@
 import React from 'react';
 import { useCountdown } from '../../hooks/useCountdown.js';
+import { motion } from 'framer-motion';
 
 const SIZE = 120;
 const STROKE = 8;
@@ -19,8 +20,14 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
   const color = timerPaused ? '#f59e0b' : awaitingHammer ? '#a855f7' : getColor(pct);
   const dashOffset = CIRC * (1 - pct);
 
+  const warningState = !timerPaused && !awaitingHammer && remaining <= 5 && remaining > 0;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+    <motion.div
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}
+      animate={warningState ? { scale: [1, 1.1, 1] } : { scale: 1 }}
+      transition={warningState ? { repeat: Infinity, duration: 1 } : {}}
+    >
       <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)' }}>
         {/* Track */}
         <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#1e293b" strokeWidth={STROKE} />
@@ -51,6 +58,6 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
       <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: '0.75rem' }}>
         {timerPaused ? 'PAUSED' : awaitingHammer ? 'HAMMER?' : 'seconds'}
       </span>
-    </div>
+    </motion.div>
   );
 }

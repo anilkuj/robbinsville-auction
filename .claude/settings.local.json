@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(cygpath:*)",
+      "Bash(where railway:*)",
+      "Bash(tail:*)",
+      "Bash(railway:*)",
+      "Bash(cd /d/Claude/robbinsville-auction && RAILWAY_TOKEN=a68e273e-9de7-4734-a94a-0ce0e05e150e railway whoami 2>&1)",
+      "Bash(cd /d/Claude/robbinsville-auction && RAILWAY_TOKEN=3c1867aa-6953-4a65-8ba2-e6629fac85c7 railway whoami 2>&1)",
+      "Bash(curl:*)",
+      "Bash(railway version:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:auction-server-production.up.railway.app)",
+      "Bash(cat:*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(powershell.exe:*)",
+      "Bash(npm run:*)"
+    ]
+  }
+}

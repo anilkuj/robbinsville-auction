@@ -12,6 +12,34 @@ const {
   isOwner,
   syncOwnerAverages,
 } = require('../auction');
+const { z } = require('zod');
+
+// Zod Schemas
+const reAuctionSchema = z.object({
+  playerId: z.string().min(1),
+  basePrice: z.union([z.string(), z.number()]).optional(),
+});
+
+const manualSaleSchema = z.object({
+  playerId: z.string().min(1),
+  teamId: z.string().min(1),
+  saleAmount: z.union([z.string(), z.number()]),
+});
+
+const editSalePriceSchema = z.object({
+  playerId: z.string().min(1),
+  newAmount: z.union([z.string(), z.number()]),
+});
+
+const settingsSchema = z.object({
+  timerSeconds: z.union([z.string(), z.number()]).optional(),
+  bidIncrement: z.union([z.string(), z.number()]).optional(),
+  timerBumpSeconds: z.union([z.string(), z.number()]).optional(),
+  endMode: z.enum(['timer', 'manual']).optional(),
+  dashboardPin: z.string().optional(),
+  requireBidConfirm: z.boolean().optional(),
+  randomizePool: z.boolean().optional(),
+});
 
 function registerAdminHandlers(io, socket) {
   socket.on('admin:nextPlayer', () => {
@@ -64,7 +92,14 @@ function registerAdminHandlers(io, socket) {
     processUnsold(io);
   });
 
-  socket.on('admin:reAuction', ({ playerId, basePrice }) => {
+  socket.on('admin:reAuction', (payload) => {
+    const parsed = reAuctionSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('admin:error', { message: 'Invalid payload for reAuction' });
+      return;
+    }
+    const { playerId, basePrice } = parsed.data;
+
     const state = getState();
     if (state.phase !== 'SETUP') {
       socket.emit('admin:error', { message: 'Can only re-auction in SETUP phase' });
@@ -127,7 +162,14 @@ function registerAdminHandlers(io, socket) {
     }
   });
 
-  socket.on('admin:manualSale', ({ playerId, teamId, saleAmount }) => {
+  socket.on('admin:manualSale', (payload) => {
+    const parsed = manualSaleSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('admin:error', { message: 'Invalid payload for manualSale' });
+      return;
+    }
+    const { playerId, teamId, saleAmount } = parsed.data;
+
     const state = getState();
 
     if (state.phase !== 'SETUP' && state.phase !== 'ENDED') {
@@ -200,7 +242,14 @@ function registerAdminHandlers(io, socket) {
     });
   });
 
-  socket.on('admin:editSalePrice', ({ playerId, newAmount }) => {
+  socket.on('admin:editSalePrice', (payload) => {
+    const parsed = editSalePriceSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('admin:error', { message: 'Invalid payload for editSalePrice' });
+      return;
+    }
+    const { playerId, newAmount } = parsed.data;
+
     const state = getState();
 
     const player = state.players.find(p => p.id === playerId);
@@ -247,7 +296,14 @@ function registerAdminHandlers(io, socket) {
     io.emit('state:full', getPublicState());
   });
 
-  socket.on('admin:updateSettings', ({ timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool }) => {
+  socket.on('admin:updateSettings', (payload) => {
+    const parsed = settingsSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('admin:error', { message: 'Invalid settings payload' });
+      return;
+    }
+    const { timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool } = parsed.data;
+
     const state = getState();
 
     if (timerSeconds !== undefined && parseInt(timerSeconds) > 0) {

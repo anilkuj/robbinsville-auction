@@ -1,9 +1,23 @@
 const { getState } = require('../state');
 const { saveState } = require('../persistence');
 const { getPublicState, computeMaxBid, scheduleTimer } = require('../auction');
+const { z } = require('zod');
+
+const bidSchema = z.object({
+  playerId: z.string().min(1),
+  amount: z.number().positive(),
+});
 
 function registerBidHandlers(io, socket) {
-  socket.on('bid:place', ({ playerId, amount }) => {
+  socket.on('bid:place', (payload) => {
+    // 0. Payload validation
+    const parsed = bidSchema.safeParse(payload);
+    if (!parsed.success) {
+      socket.emit('bid:rejected', { reason: 'Invalid bid payload' });
+      return;
+    }
+    const { playerId, amount } = parsed.data;
+
     const state = getState();
     const user = socket.user;
 
@@ -66,7 +80,7 @@ function registerBidHandlers(io, socket) {
       ? currentPlayer.basePrice
       : state.currentBid.amount + bidIncrement;
 
-    const bidAmount = parseInt(amount);
+    const bidAmount = amount;
     if (isNaN(bidAmount) || bidAmount < minNextBid) {
       socket.emit('bid:rejected', { reason: `Minimum bid is ${minNextBid.toLocaleString()} pts` });
       return;

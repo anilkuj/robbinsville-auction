@@ -6,6 +6,7 @@ import CardContent from '@mui/material/CardContent';
 import Chip from '@mui/material/Chip';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PlayerCard({ player }) {
   if (!player) {
@@ -25,7 +26,7 @@ export default function PlayerCard({ player }) {
       boxShadow: `0 0 24px ${color}20`,
       borderTop: `3px solid ${color}`,
     }}>
-      <CardContent>
+      <CardContent sx={{ position: 'relative' }}>
         <Box sx={{ mb: 1 }}>
           <Chip
             label={`POOL ${player.pool}`}
@@ -42,6 +43,36 @@ export default function PlayerCard({ player }) {
             {formatPts(player.basePrice)}
           </Box>
         </Typography>
+
+        {/* SOLD Stamp Animation */}
+        <AnimatePresence>
+          {player.status === 'SOLD' && (
+            <motion.div
+              initial={{ scale: 3, opacity: 0, rotate: -15 }}
+              animate={{ scale: 1, opacity: 1, rotate: -15 }}
+              transition={{ type: 'spring', damping: 10, stiffness: 100 }}
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '60%',
+                transform: 'translate(-50%, -50%) rotate(-15deg)',
+                color: '#ef4444',
+                border: '4px solid #ef4444',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                fontSize: '2rem',
+                fontWeight: 900,
+                textTransform: 'uppercase',
+                pointerEvents: 'none',
+                backgroundColor: 'rgba(255,255,255,0.8)',
+                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                zIndex: 10
+              }}
+            >
+              SOLD
+            </motion.div>
+          )}
+        </AnimatePresence>
       </CardContent>
     </Card>
   );

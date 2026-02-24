@@ -11,4 +11,6 @@ module.exports = {
   dataDir: path.join(__dirname, 'data'),
   stateFile: path.join(__dirname, 'data', 'state.json'),
   clientDist: path.join(__dirname, '..', 'client', 'dist'),
+  redisUrl: process.env.UPSTASH_REDIS_REST_URL,
+  redisToken: process.env.UPSTASH_REDIS_REST_TOKEN,
 };

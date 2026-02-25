@@ -159,6 +159,8 @@ function LeagueSetupTab({ auctionState }) {
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
   const [editingPools, setEditingPools] = useState(false);
+  const [editingGlobal, setEditingGlobal] = useState(false);
+  const [editingTeams, setEditingTeams] = useState(false);
 
   useEffect(() => {
     setCfg(JSON.parse(JSON.stringify(leagueConfig)));
@@ -178,7 +180,12 @@ function LeagueSetupTab({ auctionState }) {
   function updatePool(idx, field, val) {
     setCfg(prev => {
       const pools = [...prev.pools];
-      pools[idx] = { ...pools[idx], [field]: val };
+      const p = pools[idx];
+      // Keep track of the original id so the backend can cascade renames to players
+      if (field === 'id' && p.oldId === undefined) {
+        p.oldId = p.id;
+      }
+      pools[idx] = { ...p, [field]: val };
       if (field === 'id') {
         pools[idx].label = val; // Keep label in sync with id
       }
@@ -223,7 +230,11 @@ function LeagueSetupTab({ auctionState }) {
           squadSize: parseInt(cfg.squadSize),
           startingBudget: parseInt(cfg.startingBudget),
           minBid: parseInt(cfg.minBid),
-          pools: cfg.pools.map(p => ({ ...p, count: parseInt(p.count), basePrice: parseInt(p.basePrice) })),
+          pools: cfg.pools.map(p => ({
+            ...p,
+            count: parseInt(p.count),
+            basePrice: parseInt(p.basePrice)
+          })),
         },
         teams,
       };
@@ -248,27 +259,62 @@ function LeagueSetupTab({ auctionState }) {
 
       {/* Global Settings */}
       <Box>
-        <SectionTitle>Global Settings</SectionTitle>
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <SectionTitle style={{ margin: 0 }}>Global Settings</SectionTitle>
+          {isSetup && (
+            <Button size="small" variant="outlined" color="primary" onClick={() => setEditingGlobal(!editingGlobal)} sx={{ fontSize: '0.75rem' }}>
+              {editingGlobal ? 'Done Editing' : 'Edit Settings'}
+            </Button>
+          )}
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
           {[
-            { label: 'Number of Teams', key: 'numTeams', min: 2 },
-            { label: 'Squad Size', key: 'squadSize', min: 1 },
-            { label: 'Starting Budget', key: 'startingBudget', min: 1000 },
-            { label: 'Min Bid', key: 'minBid', min: 100 },
-          ].map(({ label, key, min }) => (
-            <TextField
-              key={key}
-              label={label}
-              type="number"
-              inputProps={{ min }}
-              size="small"
-              value={cfg[key]}
-              disabled={!isSetup}
-              onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
-              fullWidth
-            />
+            { label: 'Number of Teams', key: 'numTeams', min: 2, unit: '' },
+            { label: 'Squad Size', key: 'squadSize', min: 1, unit: '' },
+            { label: 'Starting Budget', key: 'startingBudget', min: 1000, unit: 'pts' },
+            { label: 'Min Bid', key: 'minBid', min: 100, unit: 'pts' },
+          ].map(({ label, key, min, unit }) => (
+            <Box key={key} sx={{ flex: '1 1 160px', minWidth: 160 }}>
+              {editingGlobal ? (
+                <TextField
+                  label={label}
+                  type="number"
+                  inputProps={{ min }}
+                  size="small"
+                  value={cfg[key]}
+                  disabled={!isSetup}
+                  onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
+                  fullWidth
+                />
+              ) : (
+                <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                  <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {parseInt(cfg[key] || 0).toLocaleString()} {unit}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           ))}
         </Box>
+        {isSetup && editingGlobal && (
+          <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              onClick={() => {
+                setEditingGlobal(false);
+                save();
+              }}
+              disabled={!canSave || saving}
+              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+              sx={{ px: 3 }}
+            >
+              {saving ? 'Saving…' : 'Save Settings'}
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Pool Configuration */}
@@ -322,6 +368,28 @@ function LeagueSetupTab({ auctionState }) {
             </Box>
           ))}
         </Box>
+
+        {isSetup && editingPools && (
+          <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+            {(!poolsValid) && (
+              <Typography variant="caption" color="error.main">Pool total ({poolTotal}) must equal {required} to save.</Typography>
+            )}
+            <Button
+              variant="contained"
+              color="success"
+              size="small"
+              onClick={() => {
+                setEditingPools(false);
+                save();
+              }}
+              disabled={!canSave || saving}
+              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+              sx={{ px: 3 }}
+            >
+              {saving ? 'Saving…' : 'Save Pools'}
+            </Button>
+          </Box>
+        )}
       </Box>
 
       {/* Teams */}
@@ -332,7 +400,18 @@ function LeagueSetupTab({ auctionState }) {
             <Typography variant="caption" color={teamsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {teamCount} / {cfg.numTeams} teams
             </Typography>
-            {isSetup && <Button size="small" variant="outlined" color="inherit" onClick={addTeam} sx={{ fontSize: '0.75rem' }}>+ Add Team</Button>}
+            {isSetup && (
+              <>
+                <Button size="small" variant="outlined" color="primary" onClick={() => setEditingTeams(!editingTeams)} sx={{ fontSize: '0.75rem' }}>
+                  {editingTeams ? 'Done Editing' : 'Edit Teams'}
+                </Button>
+                {editingTeams && (
+                  <Button size="small" variant="outlined" color="inherit" onClick={addTeam} sx={{ fontSize: '0.75rem' }}>
+                    + Add Team
+                  </Button>
+                )}
+              </>
+            )}
           </Box>
         </Box>
 
@@ -345,91 +424,110 @@ function LeagueSetupTab({ auctionState }) {
 
           {Object.entries(teams).map(([id, team]) => (
             <Box key={id} sx={{ bgcolor: 'background.default', p: 1, borderRadius: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
-                <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Team name" value={team.name || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'name', e.target.value)} />
-                <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Password" value={team.password || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'password', e.target.value)} />
-                {isSetup
-                  ? <Button size="small" color="error" variant="outlined" onClick={() => removeTeam(id)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
-                  : <Box />}
-              </Box>
+              {editingTeams ? (
+                <>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 40px', gap: 1, alignItems: 'center' }}>
+                    <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Team name" value={team.name || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'name', e.target.value)} />
+                    <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} placeholder="Password" value={team.password || ''} disabled={!isSetup} onChange={e => updateTeam(id, 'password', e.target.value)} />
+                    {isSetup
+                      ? <Button size="small" color="error" variant="outlined" onClick={() => removeTeam(id)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
+                      : <Box />}
+                  </Box>
 
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pl: 0.5 }}>
-                <FormControlLabel
-                  control={<Checkbox size="small" checked={!!team.ownerIsPlayer} disabled={!isSetup} onChange={e => updateTeam(id, 'ownerIsPlayer', e.target.checked)} sx={{ py: 0 }} />}
-                  label={<Typography variant="caption" color="text.secondary">Owner is also a player</Typography>}
-                  sx={{ m: 0 }}
-                />
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pl: 0.5 }}>
+                    <FormControlLabel
+                      control={<Checkbox size="small" checked={!!team.ownerIsPlayer} disabled={!isSetup} onChange={e => updateTeam(id, 'ownerIsPlayer', e.target.checked)} sx={{ py: 0 }} />}
+                      label={<Typography variant="caption" color="text.secondary">Owner is also a player</Typography>}
+                      sx={{ m: 0 }}
+                    />
 
-                {team.ownerIsPlayer && (() => {
-                  const takenIds = new Set(
-                    Object.entries(teams)
-                      .filter(([tid]) => tid !== id)
-                      .map(([, t]) => t.ownerPlayerId)
-                      .filter(Boolean)
-                  );
-                  const available = ownerPlayers.filter(p => !takenIds.has(p.id));
-                  return (
-                    <FormControl size="small" sx={{ flex: 1, maxWidth: 260 }} error={!team.ownerPlayerId}>
-                      <InputLabel>Select owner player</InputLabel>
-                      <Select
-                        label="Select owner player"
-                        value={team.ownerPlayerId || ''}
-                        disabled={!isSetup}
-                        onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
-                      >
-                        <MenuItem value=""><em>— Select team owner —</em></MenuItem>
-                        {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
-                          const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
-                          return p ? <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem> : null;
-                        })()}
-                        {available.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>)}
-                      </Select>
-                    </FormControl>
-                  );
-                })()}
-                {team.ownerIsPlayer && !team.ownerPlayerId && (
-                  <Typography variant="caption" color="error">Required</Typography>
-                )}
-              </Box>
+                    {team.ownerIsPlayer && (() => {
+                      const takenIds = new Set(
+                        Object.entries(teams)
+                          .filter(([tid]) => tid !== id)
+                          .map(([, t]) => t.ownerPlayerId)
+                          .filter(Boolean)
+                      );
+                      const available = ownerPlayers.filter(p => !takenIds.has(p.id));
+                      return (
+                        <FormControl size="small" sx={{ flex: 1, maxWidth: 260 }} error={!team.ownerPlayerId}>
+                          <InputLabel>Select owner player</InputLabel>
+                          <Select
+                            label="Select owner player"
+                            value={team.ownerPlayerId || ''}
+                            disabled={!isSetup}
+                            onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
+                          >
+                            <MenuItem value=""><em>— Select team owner —</em></MenuItem>
+                            {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
+                              const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
+                              return p ? <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem> : null;
+                            })()}
+                            {available.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>)}
+                          </Select>
+                        </FormControl>
+                      );
+                    })()}
+                    {team.ownerIsPlayer && !team.ownerPlayerId && (
+                      <Typography variant="caption" color="error">Required</Typography>
+                    )}
+                  </Box>
+                </>
+              ) : (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) minmax(120px, 1fr)', gap: 1, alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="body1" fontWeight={600} noWrap>{team.name || '—'}</Typography>
+                    {team.ownerIsPlayer && team.ownerPlayerId && (
+                      <Typography variant="caption" color="primary.main" display="block">
+                        Owner: {ownerPlayers.find(p => p.id === team.ownerPlayerId)?.name || 'Unknown'}
+                      </Typography>
+                    )}
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" sx={{ fontFamily: 'monospace' }}>
+                      {team.password ? '••••••••' : '—'}
+                    </Typography>
+                  </Box>
+                </Box>
+              )}
             </Box>
           ))}
         </Box>
-      </Box>
 
-      {/* Save */}
-      {isSetup && (
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {(!poolsValid || !teamsValid || !ownerValid) && (
-            <Alert severity="error">
-              <Typography fontWeight={700} fontSize="0.8rem" mb={0.5}>Cannot save — fix the following:</Typography>
-              {!poolsValid && <div>• Pool total is <strong>{poolTotal}</strong> but must equal {cfg.numTeams} × {cfg.squadSize} = <strong>{required}</strong></div>}
-              {!teamsValid && <div>• Team count is <strong>{teamCount}</strong> but "Number of Teams" is set to <strong>{cfg.numTeams}</strong></div>}
-              {!ownerValid && <div>• Teams with "Owner is also a player" must have an owner player selected</div>}
-            </Alert>
-          )}
-
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {isSetup && editingTeams && (
+          <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 2 }}>
+            {(!teamsValid || !ownerValid) && (
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+                {!teamsValid && <Typography variant="caption" color="error.main">Team count ({teamCount}) must equal {cfg.numTeams}.</Typography>}
+                {!ownerValid && <Typography variant="caption" color="error.main">Teams with "Owner is also a player" must have an owner selected.</Typography>}
+              </Box>
+            )}
             <Button
               variant="contained"
               color="success"
-              size="large"
-              onClick={save}
+              size="small"
+              onClick={() => {
+                setEditingTeams(false);
+                save();
+              }}
               disabled={!canSave || saving}
-              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : null}
+              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : null}
+              sx={{ px: 3 }}
             >
-              {saving ? 'Saving…' : 'Save League Config'}
+              {saving ? 'Saving…' : 'Save TeamInfo'}
             </Button>
-            {canSave && <Typography variant="caption" color="success.main">✓ Ready to save</Typography>}
           </Box>
-        </Box>
-      )}
+        )}
+      </Box>
 
-      {msg && (
-        <Alert severity={msg.type === 'ok' ? 'success' : 'error'} sx={{ py: 0.5 }}>
-          {msg.msg}
-        </Alert>
-      )}
-    </Box>
+      {
+        msg && (
+          <Alert severity={msg.type === 'ok' ? 'success' : 'error'} sx={{ py: 0.5 }}>
+            {msg.msg}
+          </Alert>
+        )
+      }
+    </Box >
   );
 }
 

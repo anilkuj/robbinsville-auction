@@ -215,6 +215,39 @@ function createAdminRouter(io) {
     }
     state.teams = newTeams;
 
+    // Cascade pool ID renames and base prices to players
+    const poolUpdateMap = {};
+    for (const p of pools) {
+      if (p.oldId && p.oldId !== p.id) {
+        poolUpdateMap[p.oldId] = { id: p.id, basePrice: parseInt(p.basePrice) };
+      }
+    }
+
+    // Also build a map of current base prices to update players whose pool didn't change name but changed price
+    const currentBasePrices = {};
+    for (const p of pools) {
+      currentBasePrices[p.id] = parseInt(p.basePrice);
+    }
+
+    if (state.players && state.players.length > 0) {
+      for (const player of state.players) {
+        // If pool was renamed
+        if (poolUpdateMap[player.pool]) {
+          player.pool = poolUpdateMap[player.pool].id;
+          // Optionally sync basePrice if the player hasn't been sold
+          if (player.status === 'PENDING') {
+            player.basePrice = poolUpdateMap[player.oldPool || player.pool]?.basePrice || currentBasePrices[player.pool] || player.basePrice;
+          }
+        }
+        // If pool kept the same name, we can still sync basePrice
+        else if (currentBasePrices[player.pool] !== undefined) {
+          if (player.status === 'PENDING') {
+            player.basePrice = currentBasePrices[player.pool];
+          }
+        }
+      }
+    }
+
     saveState();
     io.emit('state:full', getPublicState());
     res.json({ message: 'League config saved', publicState: getPublicState() });

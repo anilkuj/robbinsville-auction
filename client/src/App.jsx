@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext.jsx';
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx';
 import { AuctionProvider } from './contexts/AuctionContext.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import AuctionPage from './pages/AuctionPage.jsx';
@@ -13,7 +13,8 @@ import Alert from '@mui/material/Alert';
 
 function ConnectionBanner() {
   const { connected } = useAuction();
-  if (connected) return null;
+  const { user } = useAuth();
+  if (connected || !user) return null;
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 9999 }}>
       <Alert severity="error" variant="filled" square sx={{ justifyContent: 'center', fontWeight: 'bold' }}>

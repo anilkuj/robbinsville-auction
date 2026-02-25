@@ -22,7 +22,7 @@ export default function AuctionPage() {
   const { auctionState, connected, lastEvent } = useAuction();
   const { user } = useAuth();
   const [toast, setToast] = useState(null);
-  const [leftWidth, setLeftWidth]   = useState(240);
+  const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function AuctionPage() {
     const startX = e.clientX;
     const startW = leftWidth;
     const onMove = (ev) => setLeftWidth(Math.max(160, Math.min(480, startW + ev.clientX - startX)));
-    const onUp   = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   }, [leftWidth]);
@@ -58,7 +58,7 @@ export default function AuctionPage() {
     const startX = e.clientX;
     const startW = rightWidth;
     const onMove = (ev) => setRightWidth(Math.max(220, Math.min(700, startW + startX - ev.clientX)));
-    const onUp   = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
+    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   }, [rightWidth]);
@@ -160,7 +160,16 @@ export default function AuctionPage() {
             )}
 
             {!auctionState && (
-              <Typography color="text.disabled" sx={{ textAlign: 'center', p: 4 }}>Connecting…</Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, gap: 2 }}>
+                <Typography color="text.disabled">Connecting…</Typography>
+                <Button variant="outlined" color="inherit" size="small" onClick={user?.logout || (() => {
+                  localStorage.removeItem('rpl_token');
+                  localStorage.removeItem('rpl_user');
+                  window.location.href = '/login';
+                })} sx={{ borderColor: 'divider', color: 'text.secondary' }}>
+                  Sign Out
+                </Button>
+              </Box>
             )}
 
             {/* Mobile roster */}
@@ -172,7 +181,7 @@ export default function AuctionPage() {
                 </Box>
                 <Box sx={{ py: 0.5 }}>
                   <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
-                    {['Player','Pool','Price'].map(h => (
+                    {['Player', 'Pool', 'Price'].map(h => (
                       <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
                     ))}
                   </Box>
@@ -235,7 +244,7 @@ export default function AuctionPage() {
 function poolColor(poolId) {
   if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };
   if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
-  if (poolId === 'C')         return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
+  if (poolId === 'C') return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
   return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
 }
 
@@ -381,10 +390,10 @@ function PCell({ children, first, right, center, style = {} }) {
 
 function PhaseBar({ phase, playerCount }) {
   const labels = {
-    SETUP:  { text: 'Setup',     color: 'default' },
-    LIVE:   { text: '● LIVE',    color: 'success' },
+    SETUP: { text: 'Setup', color: 'default' },
+    LIVE: { text: '● LIVE', color: 'success' },
     PAUSED: { text: '⏸ Paused', color: 'warning' },
-    ENDED:  { text: 'Ended',     color: 'default' },
+    ENDED: { text: 'Ended', color: 'default' },
   };
   const cfg = labels[phase] || labels.SETUP;
   return (

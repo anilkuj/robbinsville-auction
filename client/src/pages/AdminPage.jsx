@@ -48,8 +48,11 @@ export default function AdminPage() {
 
   if (!auctionState) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 2 }}>
         <Typography color="text.disabled">Connecting to auction…</Typography>
+        <Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ borderColor: 'divider', color: 'text.secondary' }}>
+          Sign Out
+        </Button>
       </Box>
     );
   }
@@ -155,6 +158,7 @@ function LeagueSetupTab({ auctionState }) {
   });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [editingPools, setEditingPools] = useState(false);
 
   useEffect(() => {
     setCfg(JSON.parse(JSON.stringify(leagueConfig)));
@@ -275,24 +279,46 @@ function LeagueSetupTab({ auctionState }) {
             <Typography variant="caption" color={poolsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {poolTotal} / {required} players
             </Typography>
-            {isSetup && <Button size="small" variant="outlined" color="inherit" onClick={addPool} sx={{ fontSize: '0.75rem' }}>+ Add Pool</Button>}
+            {isSetup && (
+              <>
+                <Button size="small" variant="outlined" color="primary" onClick={() => setEditingPools(!editingPools)} sx={{ fontSize: '0.75rem' }}>
+                  {editingPools ? 'Done Editing' : 'Edit Pools'}
+                </Button>
+                {editingPools && (
+                  <Button size="small" variant="outlined" color="inherit" onClick={addPool} sx={{ fontSize: '0.75rem' }}>
+                    + Add Pool
+                  </Button>
+                )}
+              </>
+            )}
           </Box>
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 110px 40px', gap: 1, px: 1 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 120px) 1fr minmax(80px, 110px) 40px', gap: 1, px: 1 }}>
             {['ID', 'Base Price', 'Count', ''].map(h => (
               <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>{h}</Typography>
             ))}
           </Box>
           {cfg.pools.map((pool, idx) => (
-            <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 110px 40px', gap: 1, bgcolor: 'background.default', p: 0.75, borderRadius: 1, alignItems: 'center' }}>
-              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.id} disabled={!isSetup} onChange={e => updatePool(idx, 'id', e.target.value.toUpperCase())} />
-              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="100" value={pool.basePrice} disabled={!isSetup} onChange={e => updatePool(idx, 'basePrice', e.target.value)} />
-              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="0" value={pool.count} disabled={!isSetup} onChange={e => updatePool(idx, 'count', e.target.value)} />
-              {isSetup
-                ? <Button size="small" color="error" variant="outlined" onClick={() => removePool(idx)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
-                : <Box />}
+            <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: 'minmax(80px, 120px) 1fr minmax(80px, 110px) 40px', gap: 1, bgcolor: 'background.default', p: 0.75, borderRadius: 1, alignItems: 'center', minHeight: '40px' }}>
+              {editingPools ? (
+                <>
+                  <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.id} disabled={!isSetup} onChange={e => updatePool(idx, 'id', e.target.value.toUpperCase())} />
+                  <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="100" value={pool.basePrice} disabled={!isSetup} onChange={e => updatePool(idx, 'basePrice', e.target.value)} />
+                  <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="0" value={pool.count} disabled={!isSetup} onChange={e => updatePool(idx, 'count', e.target.value)} />
+                  {isSetup
+                    ? <Button size="small" color="error" variant="outlined" onClick={() => removePool(idx)} sx={{ minWidth: 32, p: '2px 4px', fontSize: '0.7rem' }}>✕</Button>
+                    : <Box />}
+                </>
+              ) : (
+                <>
+                  <Typography variant="body2" sx={{ px: 1, fontWeight: 600 }}>{pool.id}</Typography>
+                  <Typography variant="body2" sx={{ px: 1 }}>{parseInt(pool.basePrice).toLocaleString()} pts</Typography>
+                  <Typography variant="body2" sx={{ px: 1 }}>{pool.count}</Typography>
+                  <Box />
+                </>
+              )}
             </Box>
           ))}
         </Box>
@@ -527,40 +553,42 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       {/* Exports & Reset */}
       <Box>
         <SectionTitle>Exports &amp; Reset</SectionTitle>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
-          <Button variant="contained" color="info" size="small" onClick={downloadResults}>⬇ Results CSV</Button>
-          <Button variant="outlined" color="inherit" size="small" onClick={downloadState}>⬇ Backup State</Button>
-          <Button variant="contained" color="success" size="small" sx={{ fontWeight: 700 }} onClick={copyWhatsAppSummary}>
-            📋 {copiedWA ? 'Copied!' : 'WhatsApp'}
-          </Button>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, alignItems: 'center' }}>
+            <Button variant="contained" color="info" size="small" onClick={downloadResults}>⬇ Results CSV</Button>
+            <Button variant="outlined" color="inherit" size="small" onClick={downloadState}>⬇ Backup State</Button>
+            <Button variant="contained" color="success" size="small" sx={{ fontWeight: 700 }} onClick={copyWhatsAppSummary}>
+              📋 {copiedWA ? 'Copied!' : 'WhatsApp'}
+            </Button>
 
-          <Button variant="contained" color="secondary" size="small" component="label">
-            ⬆ Restore Backup
-            <input type="file" accept=".json" hidden onChange={e => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              e.target.value = '';
-              const reader = new FileReader();
-              reader.onload = evt => {
-                try { setImportData(JSON.parse(evt.target.result)); }
-                catch { alert('Invalid JSON file — could not parse the backup.'); }
-              };
-              reader.readAsText(file);
-            }} />
-          </Button>
+            <Button variant="contained" color="secondary" size="small" component="label">
+              ⬆ Restore Backup
+              <input type="file" accept=".json" hidden onChange={e => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                e.target.value = '';
+                const reader = new FileReader();
+                reader.onload = evt => {
+                  try { setImportData(JSON.parse(evt.target.result)); }
+                  catch { alert('Invalid JSON file — could not parse the backup.'); }
+                };
+                reader.readAsText(file);
+              }} />
+            </Button>
 
-          <Button
-            variant="contained"
-            color="info"
-            size="small"
-            disabled={!isSetup}
-            onClick={() => setShowLoadTestModal(true)}
-            title={!isSetup ? 'Reset the auction first to load test data' : ''}
-          >
-            🧪 Load Test Data
-          </Button>
+            <Button
+              variant="contained"
+              color="info"
+              size="small"
+              disabled={!isSetup}
+              onClick={() => setShowLoadTestModal(true)}
+              title={!isSetup ? 'Reset the auction first to load test data' : ''}
+            >
+              🧪 Load Test Data
+            </Button>
+          </Box>
 
-          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pt: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
             {isSetup && auctionState.lastSoldPlayerId && (() => {
               const lsp = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
               return lsp ? (

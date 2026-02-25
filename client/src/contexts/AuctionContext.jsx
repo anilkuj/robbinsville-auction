@@ -6,7 +6,7 @@ import { audioSystem } from '../utils/audioSystem.js';
 const AuctionContext = createContext(null);
 
 export function AuctionProvider({ children }) {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [auctionState, setAuctionState] = useState(null);
   const [connected, setConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState(null); // { type, data }
@@ -36,6 +36,12 @@ export function AuctionProvider({ children }) {
 
     socket.on('connect', () => setConnected(true));
     socket.on('disconnect', () => setConnected(false));
+
+    socket.on('connect_error', (err) => {
+      if (err.message === 'Invalid or expired token') {
+        if (logout) logout();
+      }
+    });
 
     socket.on('state:full', (state) => {
       setAuctionState(state);

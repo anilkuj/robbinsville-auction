@@ -175,6 +175,9 @@ function LeagueSetupTab({ auctionState }) {
     setCfg(prev => {
       const pools = [...prev.pools];
       pools[idx] = { ...pools[idx], [field]: val };
+      if (field === 'id') {
+        pools[idx].label = val; // Keep label in sync with id
+      }
       return { ...prev, pools };
     });
   }
@@ -277,15 +280,14 @@ function LeagueSetupTab({ auctionState }) {
         </Box>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px', gap: 1, px: 1 }}>
-            {['ID', 'Label', 'Base Price', 'Count', ''].map(h => (
+          <Box sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 110px 40px', gap: 1, px: 1 }}>
+            {['ID', 'Base Price', 'Count', ''].map(h => (
               <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>{h}</Typography>
             ))}
           </Box>
           {cfg.pools.map((pool, idx) => (
-            <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '80px 80px 1fr 110px 40px', gap: 1, bgcolor: 'background.default', p: 0.75, borderRadius: 1, alignItems: 'center' }}>
+            <Box key={idx} sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 110px 40px', gap: 1, bgcolor: 'background.default', p: 0.75, borderRadius: 1, alignItems: 'center' }}>
               <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.id} disabled={!isSetup} onChange={e => updatePool(idx, 'id', e.target.value.toUpperCase())} />
-              <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} value={pool.label} disabled={!isSetup} onChange={e => updatePool(idx, 'label', e.target.value)} />
               <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="100" value={pool.basePrice} disabled={!isSetup} onChange={e => updatePool(idx, 'basePrice', e.target.value)} />
               <input style={{ ...inputSm, width: '100%', boxSizing: 'border-box' }} type="number" min="0" value={pool.count} disabled={!isSetup} onChange={e => updatePool(idx, 'count', e.target.value)} />
               {isSetup
@@ -1174,6 +1176,7 @@ function FullResetModal({ onClose }) {
 }
 
 function ResetAuctionModal({ onClose }) {
+  const [password, setPassword] = useState('');
   const [storagePref, setStoragePref] = useState('auto');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -1181,7 +1184,7 @@ function ResetAuctionModal({ onClose }) {
   async function handleReset() {
     setError(''); setLoading(true);
     try {
-      await axios.post('/api/admin/reset-auction', { storagePreference: storagePref });
+      await axios.post('/api/admin/reset-auction', { password, storagePreference: storagePref });
       onClose();
     } catch (err) {
       setError(err.response?.data?.error || 'Reset failed');
@@ -1197,13 +1200,12 @@ function ResetAuctionModal({ onClose }) {
           <Typography fontSize="0.78rem">All bids, sold records, and team budgets will be cleared back to starting amounts.</Typography>
           <Typography fontSize="0.78rem" mt={0.5}>Teams and players remain.</Typography>
         </Alert>
-        {error && <Alert severity="error">{error}</Alert>}
-
+        <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleReset()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
         <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="inherit">Cancel</Button>
-        <Button onClick={handleReset} variant="contained" color="warning" disabled={loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
+        <Button onClick={handleReset} variant="contained" color="warning" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
           {loading ? 'Resetting…' : '⚠ Reset Auction'}
         </Button>
       </DialogActions>

@@ -222,8 +222,12 @@ function createAdminRouter(io) {
 
   // Reset auction (clears player statuses + team budgets/rosters)
   router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
-    const { storagePreference } = req.body;
+    const { password, storagePreference } = req.body;
     const state = getState();
+
+    if (!password || password !== config.admin.password) {
+      return res.status(401).json({ error: 'Invalid admin password' });
+    }
 
     if (storagePreference) {
       state.settings = state.settings || {};

@@ -58,7 +58,7 @@ UPSTASH_REDIS_REST_TOKEN=your-upstash-redis-token
 1. Log in as admin → go to **League Setup** tab
 2. Set global settings (teams, squad size, budget, min bid)
 3. Configure team names + passwords
-4. Configure player pools (counts must sum to `numTeams × squadSize`)
+4. Configure player pools (counts must sum to `numTeams × squadSize`). *Note: Deleting or adding pools will prompt a Merge/Split wizard to maintain the math.*
 5. Click **Save League Config**
 6. Go to **Auction Controls** tab → download CSV template
 7. Fill in player names, upload CSV
@@ -126,8 +126,8 @@ Same env vars. Set build + start commands as above.
 - **Frontend:** React 18 + Vite (served statically from Express in production)
 - **Validation:** Server uses **Zod** to validate all Socket.io client payloads.
 - **Storage:** In-memory singleton with 500ms debounced persistence.
-  - *Primary:* **Upstash Serverless Redis** (if env vars are provided).
-  - *Fallback:* Local `server/data/state.json`.
+  - *Primary:* **Upstash Serverless Redis** (if env vars are provided AND UI storage preference is set to Auto).
+  - *Fallback/Manual Override:* Local `server/data/state.json`. Forced by default during restores/resets.
 - **Auth:** JWT (24h expiry), team credentials managed via admin panel
 
 ### Budget Constraint

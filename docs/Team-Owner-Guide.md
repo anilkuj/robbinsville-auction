@@ -28,7 +28,7 @@ You **must** keep enough points in reserve to physically fill out your entire ro
 
 ### Viewing Your Progress
 *   **Top Nav Bar:** Your remaining Budget and current Squad Size (e.g., `12 / 18`) are pinned to the top of your screen at all times.
-*   **Roster Sidebar:** Click the "My Roster" button in the navigation bar to slide out a panel showing every player you have successfully purchased, what pool they belong to, and how much you spent on them.
+*   **Roster Sidebar:** Click the "My Roster" button in the navigation bar to slide out a panel showing every player you have successfully purchased. The players are sorted automatically by their **Average Points** so you can easily identify your highest-value players.
 
 ## 4. Tips for the Auction
 *   **Speed matters:** If the timer is blinking red, get your bid in. Depending on the Admin's settings, the player might be sold automatically the absolute millisecond the timer hits zero.

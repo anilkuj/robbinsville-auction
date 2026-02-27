@@ -11,6 +11,7 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
+import { getAvgPointsKey } from '../utils/playerSort.js';
 import DashboardView, { RemainingPlayersPane } from '../components/admin/DashboardView.jsx';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
@@ -161,6 +162,9 @@ function LeagueSetupTab({ auctionState }) {
   const [editingPools, setEditingPools] = useState(false);
   const [editingGlobal, setEditingGlobal] = useState(false);
   const [editingTeams, setEditingTeams] = useState(false);
+  const [poolTransfers, setPoolTransfers] = useState([]);
+  const [mergeModal, setMergeModal] = useState({ open: false, sourceIdx: null });
+  const [splitModal, setSplitModal] = useState({ open: false });
 
   useEffect(() => {
     setCfg(JSON.parse(JSON.stringify(leagueConfig)));
@@ -176,6 +180,7 @@ function LeagueSetupTab({ auctionState }) {
   const teamsValid = teamCount === parseInt(cfg.numTeams);
   const ownerValid = Object.values(teams).every(t => !t.ownerIsPlayer || (t.ownerPlayerId && t.ownerPlayerId !== ''));
   const canSave = isSetup && poolsValid && teamsValid && ownerValid;
+  const auctionStarted = phase !== 'SETUP' || (auctionState.players || []).some(p => p.status !== 'PENDING');
 
   function updatePool(idx, field, val) {
     setCfg(prev => {
@@ -194,12 +199,15 @@ function LeagueSetupTab({ auctionState }) {
   }
 
   function addPool() {
-    const id = `P${cfg.pools.length + 1}`;
-    setCfg(prev => ({ ...prev, pools: [...prev.pools, { id, label: id, basePrice: 1000, count: 0 }] }));
+    setSplitModal({ open: true });
   }
 
   function removePool(idx) {
-    setCfg(prev => ({ ...prev, pools: prev.pools.filter((_, i) => i !== idx) }));
+    if (cfg.pools[idx].count > 0) {
+      setMergeModal({ open: true, sourceIdx: idx });
+    } else {
+      setCfg(prev => ({ ...prev, pools: prev.pools.filter((_, i) => i !== idx) }));
+    }
   }
 
   function addTeam() {
@@ -237,9 +245,11 @@ function LeagueSetupTab({ auctionState }) {
           })),
         },
         teams,
+        poolTransfers,
       };
       await axios.post('/api/admin/league-config', payload);
       setMsg({ type: 'ok', msg: 'Saved successfully!' });
+      setPoolTransfers([]);
     } catch (err) {
       setMsg({ type: 'err', msg: err.response?.data?.error || 'Save failed' });
     } finally {
@@ -261,10 +271,15 @@ function LeagueSetupTab({ auctionState }) {
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <SectionTitle style={{ margin: 0 }}>Global Settings</SectionTitle>
-          {isSetup && (
+          {isSetup && !auctionStarted && (
             <Button size="small" variant="outlined" color="primary" onClick={() => setEditingGlobal(!editingGlobal)} sx={{ fontSize: '0.75rem' }}>
               {editingGlobal ? 'Done Editing' : 'Edit Settings'}
             </Button>
+          )}
+          {isSetup && auctionStarted && (
+            <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
+              Settings locked (auction started)
+            </Typography>
           )}
         </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
@@ -325,7 +340,7 @@ function LeagueSetupTab({ auctionState }) {
             <Typography variant="caption" color={poolsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {poolTotal} / {required} players
             </Typography>
-            {isSetup && (
+            {isSetup && !auctionStarted && (
               <>
                 <Button size="small" variant="outlined" color="primary" onClick={() => setEditingPools(!editingPools)} sx={{ fontSize: '0.75rem' }}>
                   {editingPools ? 'Done Editing' : 'Edit Pools'}
@@ -336,6 +351,11 @@ function LeagueSetupTab({ auctionState }) {
                   </Button>
                 )}
               </>
+            )}
+            {isSetup && auctionStarted && (
+              <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
+                Pools locked (auction started)
+              </Typography>
             )}
           </Box>
         </Box>
@@ -400,7 +420,7 @@ function LeagueSetupTab({ auctionState }) {
             <Typography variant="caption" color={teamsValid ? 'success.main' : 'error.main'} fontWeight={600}>
               {teamCount} / {cfg.numTeams} teams
             </Typography>
-            {isSetup && (
+            {isSetup && !auctionStarted && (
               <>
                 <Button size="small" variant="outlined" color="primary" onClick={() => setEditingTeams(!editingTeams)} sx={{ fontSize: '0.75rem' }}>
                   {editingTeams ? 'Done Editing' : 'Edit Teams'}
@@ -411,6 +431,11 @@ function LeagueSetupTab({ auctionState }) {
                   </Button>
                 )}
               </>
+            )}
+            {isSetup && auctionStarted && (
+              <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
+                Teams locked (auction started)
+              </Typography>
             )}
           </Box>
         </Box>
@@ -527,6 +552,128 @@ function LeagueSetupTab({ auctionState }) {
           </Alert>
         )
       }
+
+      {/* Merge Pool Modal (Delete Pool) */}
+      <Dialog open={mergeModal.open} onClose={() => setMergeModal({ open: false, sourceIdx: null })}>
+        <DialogTitle>Delete Pool & Merge Players</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
+            Pool {cfg.pools[mergeModal.sourceIdx]?.id} has {cfg.pools[mergeModal.sourceIdx]?.count} players.
+            Which pool should these players be moved to?
+          </Typography>
+          <FormControl fullWidth size="small">
+            <InputLabel>Target Pool</InputLabel>
+            <Select
+              label="Target Pool"
+              value={mergeModal.targetId || ''}
+              onChange={e => setMergeModal(prev => ({ ...prev, targetId: e.target.value }))}
+            >
+              <MenuItem value=""><em>Select Target Pool</em></MenuItem>
+              {cfg.pools.map((p, i) => (
+                i !== mergeModal.sourceIdx ? <MenuItem key={p.id} value={p.id}>Pool {p.id}</MenuItem> : null
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setMergeModal({ open: false, sourceIdx: null })}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={!mergeModal.targetId}
+            onClick={() => {
+              const sourcePool = cfg.pools[mergeModal.sourceIdx];
+              setCfg(prev => {
+                const newPools = prev.pools.filter((_, i) => i !== mergeModal.sourceIdx);
+                const targetIdx = newPools.findIndex(p => p.id === mergeModal.targetId);
+                if (targetIdx !== -1) {
+                  newPools[targetIdx].count += parseInt(sourcePool.count || 0);
+                }
+                return { ...prev, pools: newPools };
+              });
+              setPoolTransfers(prev => [...prev, {
+                type: 'MERGE',
+                sourcePoolId: sourcePool.oldId || sourcePool.id,
+                targetPoolId: mergeModal.targetId
+              }]);
+              setMergeModal({ open: false, sourceIdx: null, targetId: null });
+            }}
+          >
+            Confirm Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Split Pool Modal (Add Pool) */}
+      <Dialog open={splitModal.open} onClose={() => setSplitModal({ open: false, sourceId: null, count: 0 })}>
+        <DialogTitle>Add New Pool</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2, mt: 1 }}>
+            To add a new pool while maintaining the total player count, you can optionally move players from an existing pool.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <FormControl fullWidth size="small">
+              <InputLabel>Source Pool</InputLabel>
+              <Select
+                label="Source Pool"
+                value={splitModal.sourceId || ''}
+                onChange={e => setSplitModal(prev => ({ ...prev, sourceId: e.target.value }))}
+              >
+                <MenuItem value=""><em>None (0 count)</em></MenuItem>
+                {cfg.pools.map(p => (
+                  <MenuItem key={p.id} value={p.id}>Pool {p.id} (Count: {p.count})</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <TextField
+              label="Players to Move"
+              type="number"
+              size="small"
+              value={splitModal.count === undefined ? '' : splitModal.count}
+              onChange={e => setSplitModal(prev => ({ ...prev, count: parseInt(e.target.value) || 0 }))}
+              disabled={!splitModal.sourceId}
+              inputProps={{ min: 0 }}
+              fullWidth
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSplitModal({ open: false, sourceId: null, count: 0 })}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              const newId = `P${cfg.pools.length + 1}`;
+              const count = splitModal.sourceId ? (splitModal.count || 0) : 0;
+
+              setCfg(prev => {
+                const newPools = [...prev.pools];
+                if (splitModal.sourceId && count > 0) {
+                  const sourceIdx = newPools.findIndex(p => p.id === splitModal.sourceId);
+                  if (sourceIdx !== -1) {
+                    newPools[sourceIdx].count = Math.max(0, parseInt(newPools[sourceIdx].count || 0) - count);
+                  }
+                }
+                newPools.push({ id: newId, label: newId, basePrice: 1000, count });
+                return { ...prev, pools: newPools };
+              });
+
+              if (splitModal.sourceId && count > 0) {
+                const sourceConfigPool = cfg.pools.find(p => p.id === splitModal.sourceId);
+                setPoolTransfers(prev => [...prev, {
+                  type: 'SPLIT',
+                  sourcePoolId: sourceConfigPool.oldId || sourceConfigPool.id,
+                  targetPoolId: newId,
+                  count
+                }]);
+              }
+              setSplitModal({ open: false, sourceId: null, count: 0 });
+            }}
+          >
+            Add Pool
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box >
   );
 }
@@ -731,9 +878,20 @@ function PlayerDataTab({ auctionState, adminAction }) {
   const { players = [], teams = {} } = auctionState;
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [search, setSearch] = useState('');
-  const [sortCol, setSortCol] = useState(null);
-  const [sortDir, setSortDir] = useState('asc');
+
+  // default to average points descending if found
+  const initialSortCol = React.useMemo(() => getAvgPointsKey(players), [players]);
+  const [sortCol, setSortCol] = useState(initialSortCol);
+  const [sortDir, setSortDir] = useState('desc');
   const [editPlayer, setEditPlayer] = useState(null);
+
+  // keep default sort in sync if players array completely changes
+  useEffect(() => {
+    if (!sortCol && initialSortCol) {
+      setSortCol(initialSortCol);
+      setSortDir('desc');
+    }
+  }, [initialSortCol]);
 
   if (players.length === 0) {
     return (
@@ -1050,6 +1208,7 @@ function SettingsTab({ auctionState }) {
 
 function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
   const [password, setPassword] = useState('');
+  const [storagePref, setStoragePref] = useState('local');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -1057,7 +1216,7 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
   async function handleLoad() {
     setLoading(true); setError('');
     try {
-      await axios.post('/api/admin/load-test-data', { password });
+      await axios.post('/api/admin/load-test-data', { password, storagePreference: storagePref });
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load test data');
@@ -1095,6 +1254,7 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
             </Paper>
             {hasExistingData && <Alert severity="warning">⚠ Existing teams and players will be replaced.</Alert>}
             <TextField type="password" label="Admin password" placeholder="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleLoad()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
+            <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
           </>
         )}
       </DialogContent>
@@ -1183,7 +1343,7 @@ function RollbackModal({ auctionState, onClose }) {
 
 function ImportStateModal({ importedState: s, onClose }) {
   const [password, setPassword] = useState('');
-  const [storagePref, setStoragePref] = useState('auto');
+  const [storagePref, setStoragePref] = useState('local');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -1263,7 +1423,7 @@ function ImportStateModal({ importedState: s, onClose }) {
 
 function FullResetModal({ onClose }) {
   const [password, setPassword] = useState('');
-  const [storagePref, setStoragePref] = useState('auto');
+  const [storagePref, setStoragePref] = useState('local');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -1303,7 +1463,7 @@ function FullResetModal({ onClose }) {
 
 function ResetAuctionModal({ onClose }) {
   const [password, setPassword] = useState('');
-  const [storagePref, setStoragePref] = useState('auto');
+  const [storagePref, setStoragePref] = useState('local');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 

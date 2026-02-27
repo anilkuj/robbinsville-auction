@@ -6,6 +6,7 @@ import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
 import LinearProgress from '@mui/material/LinearProgress';
 import { poolColor as themePoolColor } from '../../theme.js';
+import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
 export default function DashboardView({ state }) {
   const [rightWidth, setRightWidth] = useState(380);
@@ -109,6 +110,7 @@ export default function DashboardView({ state }) {
 export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
+  const avgKey = getAvgPointsKey(players);
   const byPool = {};
   for (const p of pending) {
     if (!byPool[p.pool]) byPool[p.pool] = [];
@@ -149,7 +151,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
                 <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
                   <DColHead label="Player" first /><DColHead label="Pool" /><DColHead label="Base" right />
                 </div>
-                {poolPlayers.map((player, rowIdx) => {
+                {sortPlayersByPoints(poolPlayers, avgKey).map((player, rowIdx) => {
                   const isOnBlock = player.id === currentPlayerId;
                   const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
                   return (

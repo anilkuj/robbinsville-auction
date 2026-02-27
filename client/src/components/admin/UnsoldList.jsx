@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { formatPts } from '../../utils/budgetCalc.js';
+import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -16,8 +17,10 @@ export default function UnsoldList() {
 
   const { players, phase } = auctionState;
   const unsold = players.filter(p => p.status === 'UNSOLD');
+  const avgKey = getAvgPointsKey(players);
+  const sortedUnsold = sortPlayersByPoints(unsold, avgKey);
 
-  if (unsold.length === 0) {
+  if (sortedUnsold.length === 0) {
     return <Typography color="text.disabled" fontSize="0.85rem">No unsold players.</Typography>;
   }
 
@@ -34,7 +37,7 @@ export default function UnsoldList() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-      {unsold.map(player => {
+      {sortedUnsold.map(player => {
         const isEditing = editing?.playerId === player.id;
         return (
           <Paper key={player.id} variant="outlined" sx={{ p: 1.25 }}>

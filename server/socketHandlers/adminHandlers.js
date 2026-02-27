@@ -162,6 +162,29 @@ function registerAdminHandlers(io, socket) {
     }
   });
 
+  socket.on('admin:cancelLastBid', () => {
+    const state = getState();
+    if (state.phase !== 'LIVE') {
+      socket.emit('admin:error', { message: 'Can only cancel bids during a LIVE auction' });
+      return;
+    }
+
+    const player = state.players[state.currentPlayerIndex];
+    if (player) {
+      player.status = 'PENDING';
+    }
+
+    state.phase = 'SETUP';
+    state.currentPlayerIndex = null;
+    state.currentBid = { amount: 0, teamId: null, history: [] };
+    state.timerEndsAt = null;
+
+    clearAuctionTimer();
+
+    saveState();
+    io.emit('state:full', getPublicState());
+  });
+
   socket.on('admin:manualSale', (payload) => {
     const parsed = manualSaleSchema.safeParse(payload);
     if (!parsed.success) {

@@ -163,9 +163,61 @@ function createAdminRouter(io) {
       return res.status(400).json({ error: 'League config can only be modified in SETUP phase' });
     }
 
-    const { leagueConfig, teams } = req.body;
+    const { leagueConfig, teams, poolTransfers } = req.body;
     if (!leagueConfig || !teams) {
       return res.status(400).json({ error: 'leagueConfig and teams are required' });
+    }
+
+    const auctionStarted = state.players && state.players.some(p => p.status !== 'PENDING');
+
+    if (auctionStarted) {
+      if (poolTransfers && poolTransfers.length > 0) {
+        return res.status(400).json({ error: 'Pool transfers are not allowed after the auction has started.' });
+      }
+
+      const oldPools = state.leagueConfig.pools || [];
+      const newPools = leagueConfig.pools || [];
+
+      let poolChanged = oldPools.length !== newPools.length;
+      if (!poolChanged) {
+        const oldPoolMap = {};
+        oldPools.forEach(p => { oldPoolMap[p.id] = p; });
+
+        for (const p of newPools) {
+          const oldP = oldPoolMap[p.oldId || p.id];
+          if (!oldP || oldP.count !== parseInt(p.count)) {
+            poolChanged = true;
+            break;
+          }
+        }
+      }
+
+      if (poolChanged) {
+        return res.status(400).json({ error: 'Pool counts and IDs cannot be changed after the auction has started.' });
+      }
+
+      // Check for global settings changes
+      const oldConfig = state.leagueConfig;
+      if (
+        parseInt(oldConfig.numTeams) !== parseInt(leagueConfig.numTeams) ||
+        parseInt(oldConfig.squadSize) !== parseInt(leagueConfig.squadSize) ||
+        parseInt(oldConfig.startingBudget) !== parseInt(leagueConfig.startingBudget) ||
+        parseInt(oldConfig.minBid) !== parseInt(leagueConfig.minBid)
+      ) {
+        return res.status(400).json({ error: 'Global settings cannot be changed after the auction has started.' });
+      }
+
+      // Check for team structural/identity changes
+      const newTeamKeys = Object.keys(teams);
+      const oldTeamKeys = Object.keys(state.teams);
+      if (newTeamKeys.length !== oldTeamKeys.length) {
+        return res.status(400).json({ error: 'Team counts cannot be changed after the auction has started.' });
+      }
+      for (const id of newTeamKeys) {
+        if (!state.teams[id]) {
+          return res.status(400).json({ error: 'New teams cannot be added after the auction has started.' });
+        }
+      }
     }
 
     const { pools, numTeams, squadSize } = leagueConfig;
@@ -183,75 +235,123 @@ function createAdminRouter(io) {
       return res.status(400).json({
         error: `Number of teams defined (${teamEntries.length}) must equal numTeams setting (${numTeams})`,
       });
-    }
+      // Cache old pools before updating to detect actual price changes
+      const oldPoolsMap = {};
+      if (state.leagueConfig && state.leagueConfig.pools) {
+        for (const p of state.leagueConfig.pools) {
+          oldPoolsMap[p.id] = p;
+        }
+      }
 
-    // Update league config
-    state.leagueConfig = {
-      numTeams: parseInt(numTeams),
-      squadSize: parseInt(squadSize),
-      startingBudget: parseInt(leagueConfig.startingBudget),
-      minBid: parseInt(leagueConfig.minBid),
-      pools: pools.map(p => ({
-        id: String(p.id),
-        label: String(p.label || p.id),
-        basePrice: parseInt(p.basePrice),
-        count: parseInt(p.count),
-      })),
-    };
-
-    // Update teams — preserve budgets/rosters for existing teams, init new ones
-    const newTeams = {};
-    for (const [teamId, teamData] of teamEntries) {
-      const existing = state.teams[teamId];
-      newTeams[teamId] = {
-        id: teamId,
-        name: teamData.name,
-        password: teamData.password || existing?.password || 'team123',
-        budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
-        roster: existing?.roster || [],
-        ownerIsPlayer: teamData.ownerIsPlayer || false,
-        ownerPlayerId: teamData.ownerPlayerId || null,
+      // Update league config
+      state.leagueConfig = {
+        numTeams: parseInt(numTeams) || 0,
+        squadSize: parseInt(squadSize) || 0,
+        startingBudget: parseInt(leagueConfig.startingBudget) || 0,
+        minBid: parseInt(leagueConfig.minBid) || 0,
+        pools: pools.map(p => {
+          const bp = parseInt(p.basePrice);
+          const cnt = parseInt(p.count);
+          return {
+            id: String(p.id),
+            label: String(p.label || p.id),
+            basePrice: isNaN(bp) ? 0 : bp,
+            count: isNaN(cnt) ? 0 : cnt,
+          };
+        }),
       };
-    }
-    state.teams = newTeams;
 
-    // Cascade pool ID renames and base prices to players
-    const poolUpdateMap = {};
-    for (const p of pools) {
-      if (p.oldId && p.oldId !== p.id) {
-        poolUpdateMap[p.oldId] = { id: p.id, basePrice: parseInt(p.basePrice) };
+      // Update teams — preserve budgets/rosters for existing teams, init new ones
+      const newTeams = {};
+      for (const [teamId, teamData] of teamEntries) {
+        const existing = state.teams[teamId];
+        newTeams[teamId] = {
+          id: teamId,
+          name: teamData.name,
+          password: teamData.password || existing?.password || 'team123',
+          budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
+          roster: existing?.roster || [],
+          ownerIsPlayer: teamData.ownerIsPlayer || false,
+          ownerPlayerId: teamData.ownerPlayerId || null,
+        };
       }
-    }
+      state.teams = newTeams;
 
-    // Also build a map of current base prices to update players whose pool didn't change name but changed price
-    const currentBasePrices = {};
-    for (const p of pools) {
-      currentBasePrices[p.id] = parseInt(p.basePrice);
-    }
-
-    if (state.players && state.players.length > 0) {
-      for (const player of state.players) {
-        // If pool was renamed
-        if (poolUpdateMap[player.pool]) {
-          player.pool = poolUpdateMap[player.pool].id;
-          // Optionally sync basePrice if the player hasn't been sold
-          if (player.status === 'PENDING') {
-            player.basePrice = poolUpdateMap[player.oldPool || player.pool]?.basePrice || currentBasePrices[player.pool] || player.basePrice;
+      // Process pool transfers (MERGE and SPLIT) before pool renames
+      if (poolTransfers && Array.isArray(poolTransfers) && state.players) {
+        for (const transfer of poolTransfers) {
+          if (transfer.type === 'MERGE') {
+            // Move all PENDING players from source to target
+            for (const player of state.players) {
+              if (player.pool === transfer.sourcePoolId && player.status === 'PENDING') {
+                player.pool = transfer.targetPoolId;
+              }
+            }
+          } else if (transfer.type === 'SPLIT') {
+            // Move `count` PENDING players from source to target
+            let movedCount = 0;
+            for (const player of state.players) {
+              if (player.pool === transfer.sourcePoolId && player.status === 'PENDING' && movedCount < transfer.count) {
+                player.pool = transfer.targetPoolId;
+                movedCount++;
+              }
+            }
           }
         }
-        // If pool kept the same name, we can still sync basePrice
-        else if (currentBasePrices[player.pool] !== undefined) {
-          if (player.status === 'PENDING') {
-            player.basePrice = currentBasePrices[player.pool];
+      }
+
+      // Cascade pool ID renames and base prices to players
+      const poolUpdateMap = {};
+      for (const p of pools) {
+        if (p.oldId && p.oldId !== p.id) {
+          const bp = parseInt(p.basePrice);
+          poolUpdateMap[p.oldId] = { id: p.id, basePrice: isNaN(bp) ? 0 : bp };
+        }
+      }
+
+      // Only cascade base prices if the admin actually modified the base price of the pool
+      const changedBasePrices = {};
+      for (const p of pools) {
+        const bp = parseInt(p.basePrice);
+        if (isNaN(bp)) continue;
+
+        const oldPool = oldPoolsMap[p.oldId || p.id];
+        if (oldPool && parseInt(oldPool.basePrice) !== bp) {
+          changedBasePrices[p.id] = bp;
+        } else if (!oldPool) {
+          // It's a newly added pool
+          changedBasePrices[p.id] = bp;
+        }
+      }
+
+      if (state.players && state.players.length > 0) {
+        for (const player of state.players) {
+          // If pool was renamed
+          if (poolUpdateMap[player.pool]) {
+            player.pool = poolUpdateMap[player.pool].id;
+            // Sync basePrice if the player hasn't been sold
+            if (player.status === 'PENDING') {
+              if (changedBasePrices[player.pool] !== undefined) {
+                player.basePrice = changedBasePrices[player.pool];
+              } else if (poolUpdateMap[player.oldPool || player.pool]?.basePrice) {
+                // Fallback to the new base price if the pool was renamed and didn't trigger changedBasePrices
+                player.basePrice = poolUpdateMap[player.oldPool || player.pool].basePrice;
+              }
+            }
+          }
+          // If pool kept the same name, we only sync if the price was actually modified
+          else if (changedBasePrices[player.pool] !== undefined) {
+            if (player.status === 'PENDING') {
+              player.basePrice = changedBasePrices[player.pool];
+            }
           }
         }
       }
-    }
 
-    saveState();
-    io.emit('state:full', getPublicState());
-    res.json({ message: 'League config saved', publicState: getPublicState() });
-  });
+      saveState();
+      io.emit('state:full', getPublicState());
+      res.json({ message: 'League config saved', publicState: getPublicState() });
+    });
 
   // Reset auction (clears player statuses + team budgets/rosters)
   router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {
@@ -326,13 +426,18 @@ function createAdminRouter(io) {
 
   // Load test data — 3 teams × 33 players (pools A/B/C) — requires admin password confirmation
   router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
-    const { password } = req.body;
+    const { password, storagePreference } = req.body;
 
     if (!password || password !== config.admin.password) {
       return res.status(401).json({ error: 'Invalid admin password' });
     }
 
     const state = getState();
+
+    if (storagePreference) {
+      state.settings = state.settings || {};
+      state.settings.storagePreference = storagePreference;
+    }
 
     if (state.phase !== 'SETUP') {
       return res.status(400).json({ error: 'Can only load test data in SETUP phase. Reset the auction first.' });

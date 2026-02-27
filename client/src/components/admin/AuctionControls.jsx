@@ -148,6 +148,20 @@ export default function AuctionControls() {
           </Button>
         )}
 
+        {isLive && (
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={() => {
+              if (confirm('Are you sure you want to cancel the last bid received for this player?')) {
+                adminAction('admin:cancelLastBid');
+              }
+            }}
+          >
+            ⎌ Cancel Last Bid
+          </Button>
+        )}
+
         {isLive && isManual && !awaitingHammer && (
           <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => adminAction('admin:acceptBid')}>
             🔨 Hammer

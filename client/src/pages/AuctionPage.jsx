@@ -17,6 +17,7 @@ import Button from '@mui/material/Button';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import { formatPts } from '../utils/budgetCalc.js';
+import { getAvgPointsKey, sortPlayersByPoints } from '../utils/playerSort.js';
 
 export default function AuctionPage() {
   const { auctionState, connected, lastEvent } = useAuction();
@@ -276,6 +277,7 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
 
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
+  const avgKey = getAvgPointsKey(players);
   const byPool = {};
   for (const p of pending) {
     if (!byPool[p.pool]) byPool[p.pool] = [];
@@ -328,7 +330,7 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
                   <PColHead label="Pool" />
                   <PColHead label="Base" right />
                 </div>
-                {poolPlayers.map((p, rowIdx) => {
+                {sortPlayersByPoints(poolPlayers, avgKey).map((p, rowIdx) => {
                   const isOnBlock = p.id === currentPlayerId;
                   const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
                   return (

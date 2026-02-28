@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useRef } from 'react';
-import html2canvas from 'html2canvas';
+import React, { useState, useCallback } from 'react';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -15,21 +16,152 @@ import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js'
 
 export default function DashboardView({ state }) {
   const [rightWidth, setRightWidth] = useState(380);
-  const exportRef = useRef(null);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = async () => {
-    if (!exportRef.current) return;
     setIsExporting(true);
     try {
-      const canvas = await html2canvas(exportRef.current, { backgroundColor: '#0a0f1e' });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = dataUrl;
-      link.download = `Rosters-Export-${Date.now()}.png`;
-      link.click();
+      const startingBudget = state.leagueConfig?.startingBudget ?? 0;
+      const teamList = Object.values(state.teams).sort((a, b) => a.name.localeCompare(b.name));
+
+      const workbook = new ExcelJS.Workbook();
+      const sheet = workbook.addWorksheet('Rosters', {
+        views: [{ showGridLines: false }]
+      });
+
+      // Define side-by-side columns
+      sheet.columns = [
+        { width: 30 }, // A: Player (Team 1)
+        { width: 12 }, // B: Pool (Team 1)
+        { width: 15 }, // C: Price (Team 1)
+        { width: 4 },  // D: Spacer
+        { width: 30 }, // E: Player (Team 2)
+        { width: 12 }, // F: Pool (Team 2)
+        { width: 15 }, // G: Price (Team 2)
+      ];
+
+      // Document Title row
+      const titleRow = sheet.addRow(['RPL Auction Dashboard Export']);
+      titleRow.font = { size: 16, bold: true, color: { argb: 'FFFFFFFF' } };
+      titleRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1976D2' } };
+      sheet.mergeCells('A1:G1');
+      titleRow.alignment = { horizontal: 'center', vertical: 'middle' };
+      sheet.addRow([]); // empty row
+
+      // Process teams in pairs (side-by-side)
+      for (let i = 0; i < teamList.length; i += 2) {
+        const team1 = teamList[i];
+        const team2 = i + 1 < teamList.length ? teamList[i + 1] : null;
+
+        const t1Spent = startingBudget - team1.budget;
+        const t2Spent = team2 ? startingBudget - team2.budget : 0;
+
+        // Team Header Row (Name)
+        const headerRow = sheet.addRow([
+          team1.name.toUpperCase(), '', '', '',
+          team2 ? team2.name.toUpperCase() : '', '', ''
+        ]);
+        headerRow.font = { size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+
+        // Apply dark background to team names
+        ['A', 'B', 'C'].forEach(col => {
+          headerRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+        });
+        if (team2) {
+          ['E', 'F', 'G'].forEach(col => {
+            headerRow.getCell(col).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+          });
+        }
+        sheet.mergeCells(`A${headerRow.number}:C${headerRow.number}`);
+        if (team2) sheet.mergeCells(`E${headerRow.number}:G${headerRow.number}`);
+        headerRow.alignment = { horizontal: 'center' };
+
+        // Budget Row
+        const fmtPtsE = (n) => n >= 1000 ? (n / 1000).toFixed(n % 1000 === 0 ? 0 : 1) + 'K' : (n?.toString() || '0');
+        const budgetRow = sheet.addRow([
+          `Remaining: ${fmtPtsE(team1.budget)}`, `Spent: ${fmtPtsE(t1Spent)}`, '', '',
+          team2 ? `Remaining: ${fmtPtsE(team2.budget)}` : '', team2 ? `Spent: ${fmtPtsE(t2Spent)}` : '', ''
+        ]);
+        budgetRow.font = { size: 10, italic: true, bold: true, color: { argb: 'FF475569' } };
+        budgetRow.getCell('A').font = { size: 10, italic: true, bold: true, color: { argb: 'FF16A34A' } }; // Green
+        budgetRow.getCell('B').font = { size: 10, italic: true, bold: true, color: { argb: 'FFDC2626' } }; // Red
+        if (team2) {
+          budgetRow.getCell('E').font = { size: 10, italic: true, bold: true, color: { argb: 'FF16A34A' } };
+          budgetRow.getCell('F').font = { size: 10, italic: true, bold: true, color: { argb: 'FFDC2626' } };
+        }
+        sheet.mergeCells(`B${budgetRow.number}:C${budgetRow.number}`);
+        if (team2) sheet.mergeCells(`F${budgetRow.number}:G${budgetRow.number}`);
+
+        // Table Headers
+        const colsRow = sheet.addRow([
+          'Player Name', 'Pool', 'Sold Price', '',
+          team2 ? 'Player Name' : '', team2 ? 'Pool' : '', team2 ? 'Sold Price' : ''
+        ]);
+        colsRow.font = { bold: true, size: 10, color: { argb: 'FF1E293B' } };
+        ['A', 'B', 'C', 'E', 'F', 'G'].forEach(col => {
+          colsRow.getCell(col).border = { bottom: { style: 'medium', color: { argb: 'FFCBD5E1' } } };
+        });
+
+        // Roster Data
+        const roster1 = team1.roster || [];
+        const roster2 = team2 ? (team2.roster || []) : [];
+        const maxRoster = Math.max(roster1.length, roster2.length);
+
+        if (maxRoster === 0) {
+          const emptyRow = sheet.addRow(['No players drafted yet', '', '', '', team2 ? 'No players drafted yet' : '', '', '']);
+          emptyRow.font = { italic: true, color: { argb: 'FF94A3B8' } };
+          sheet.mergeCells(`A${emptyRow.number}:C${emptyRow.number}`);
+          if (team2) sheet.mergeCells(`E${emptyRow.number}:G${emptyRow.number}`);
+        } else {
+          for (let rIdx = 0; rIdx < maxRoster; rIdx++) {
+            const r1 = roster1[rIdx];
+            const r2 = roster2[rIdx];
+
+            const rowData = ['', '', '', '', '', '', ''];
+
+            if (r1) {
+              const isOwner = team1.ownerPlayerId === r1.playerId;
+              rowData[0] = r1.playerName + (isOwner ? ' (★ OWNER)' : '');
+              rowData[1] = r1.pool;
+              rowData[2] = r1.price;
+            }
+            if (r2) {
+              const isOwner2 = team2.ownerPlayerId === r2.playerId;
+              rowData[4] = r2.playerName + (isOwner2 ? ' (★ OWNER)' : '');
+              rowData[5] = r2.pool;
+              rowData[6] = r2.price;
+            }
+
+            const dataRow = sheet.addRow(rowData);
+            dataRow.font = { size: 10 };
+
+            // Format Price and Pool Colors
+            if (r1) {
+              dataRow.getCell('C').numFmt = '#,##0';
+              dataRow.getCell('C').font = { size: 10, bold: true, color: { argb: 'FF16A34A' } };
+              if (r1.pool.startsWith('A')) dataRow.getCell('B').font = { size: 10, bold: true, color: { argb: 'FFD97706' } };
+              if (r1.pool.startsWith('B')) dataRow.getCell('B').font = { size: 10, bold: true, color: { argb: 'FF2563EB' } };
+              if (r1.pool === 'C') dataRow.getCell('B').font = { size: 10, bold: true, color: { argb: 'FF7C3AED' } };
+            }
+            if (r2) {
+              dataRow.getCell('G').numFmt = '#,##0';
+              dataRow.getCell('G').font = { size: 10, bold: true, color: { argb: 'FF16A34A' } };
+              if (r2.pool.startsWith('A')) dataRow.getCell('F').font = { size: 10, bold: true, color: { argb: 'FFD97706' } };
+              if (r2.pool.startsWith('B')) dataRow.getCell('F').font = { size: 10, bold: true, color: { argb: 'FF2563EB' } };
+              if (r2.pool === 'C') dataRow.getCell('F').font = { size: 10, bold: true, color: { argb: 'FF7C3AED' } };
+            }
+          }
+        }
+
+        sheet.addRow([]); // Spacer between team blocks
+      }
+
+      // Generate file
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `Rosters-Export-${Date.now()}.xlsx`);
     } catch (err) {
-      console.error('Failed to export image', err);
+      console.error('Failed to export excel', err);
     } finally {
       setIsExporting(false);
     }
@@ -96,11 +228,11 @@ export default function DashboardView({ state }) {
               disabled={isExporting}
               sx={{ textTransform: 'none', fontWeight: 600, bgcolor: 'background.paper' }}
             >
-              {isExporting ? 'Exporting...' : 'Export Dashboard to Image'}
+              {isExporting ? 'Exporting...' : 'Export to Excel'}
             </Button>
           </Box>
 
-          <Box ref={exportRef} sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
+          <Box sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
             <BudgetChart teams={teams} startingBudget={startingBudget} />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(320px, 1fr))' }, gap: 2 }}>

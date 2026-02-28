@@ -145,7 +145,10 @@ function registerAdminHandlers(io, socket) {
     syncOwnerAverages(state, prevPool);
 
     saveState();
-    io.emit('state:full', getPublicState());
+
+    // Instead of just returning them to pending, instantly put them on the block
+    const playerIndex = state.players.findIndex(p => p.id === playerId);
+    startPlayer(io, playerIndex);
   });
 
   socket.on('admin:acceptBid', () => {

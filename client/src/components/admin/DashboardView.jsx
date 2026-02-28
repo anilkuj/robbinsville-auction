@@ -5,6 +5,9 @@ import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import Card from '@mui/material/Card';
 import LinearProgress from '@mui/material/LinearProgress';
+import IconButton from '@mui/material/IconButton';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { poolColor as themePoolColor } from '../../theme.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
@@ -108,6 +111,7 @@ export default function DashboardView({ state }) {
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
 export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
+  const [isOpen, setIsOpen] = React.useState(true);
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
   const avgKey = getAvgPointsKey(players);
@@ -117,6 +121,19 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
     byPool[p.pool].push(p);
   }
   const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
+
+  if (!isOpen) {
+    return (
+      <Box sx={{ width: 48, flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1 }}>
+        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane">
+          <ChevronLeftIcon />
+        </IconButton>
+        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', mt: 2, color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
+          REMAINING ({pending.length})
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{
@@ -130,7 +147,12 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
       overflow: 'hidden',
     }}>
       <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
-        <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining Players</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton size="small" onClick={() => setIsOpen(false)} title="Collapse pane" sx={{ ml: -1 }}>
+            <ChevronRightIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining</Typography>
+        </Box>
         <Chip label={pending.length} size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
       </Box>
 

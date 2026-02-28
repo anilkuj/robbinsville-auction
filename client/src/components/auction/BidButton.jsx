@@ -81,6 +81,14 @@ export default function BidButton() {
     else if (parsedCustom > maxBid) customError = `Max bid is ${formatPts(maxBid)}`;
   }
 
+  function handleIncrement(delta) {
+    const startVal = parsedCustom !== null ? parsedCustom : minNextBid;
+    let newVal = startVal + delta;
+    if (newVal < minNextBid) newVal = minNextBid;
+    if (newVal > maxBid) newVal = maxBid;
+    setCustomAmount(String(newVal));
+  }
+
   function handleBidClick() {
     if (disabled || customError) return;
     const budgetAfter = team.budget - effectiveBid;
@@ -109,7 +117,15 @@ export default function BidButton() {
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
         {!disabled && (
           <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', width: '100%', maxWidth: 320 }}>
-            <Box sx={{ flex: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+              <Button
+                variant="outlined"
+                sx={{ minWidth: 40, px: 0, height: 40 }}
+                onClick={() => handleIncrement(-100)}
+                disabled={disabled || (parsedCustom !== null ? parsedCustom : minNextBid) <= minNextBid}
+              >
+                -
+              </Button>
               <TextField
                 type="number"
                 label="Custom amount"
@@ -118,9 +134,21 @@ export default function BidButton() {
                 value={customAmount}
                 onChange={e => setCustomAmount(e.target.value)}
                 error={!!customError}
-                inputProps={{ min: minNextBid, max: maxBid }}
+                inputProps={{ min: minNextBid, max: maxBid, step: 100 }}
                 fullWidth
+                sx={{
+                  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { display: 'none' },
+                  '& input[type=number]': { MozAppearance: 'textfield' }
+                }}
               />
+              <Button
+                variant="outlined"
+                sx={{ minWidth: 40, px: 0, height: 40 }}
+                onClick={() => handleIncrement(100)}
+                disabled={disabled || (parsedCustom !== null ? parsedCustom : minNextBid) >= maxBid}
+              >
+                +
+              </Button>
             </Box>
             <Typography variant="caption" color="text.disabled" sx={{ lineHeight: 1.6, pt: '6px' }}>
               Min: {formatPts(minNextBid)}<br />

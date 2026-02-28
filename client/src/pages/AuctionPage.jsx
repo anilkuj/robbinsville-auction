@@ -16,6 +16,9 @@ import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import IconButton from '@mui/material/IconButton';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { formatPts } from '../utils/budgetCalc.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../utils/playerSort.js';
 
@@ -273,18 +276,45 @@ function PlayerExtraData({ player }) {
 // ── Right panel ────────────────────────────────────────────────────────────────
 
 function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 }) {
+  const [isOpen, setIsOpen] = useState(true);
+
   if (!players || !pools) return null;
 
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
   const avgKey = getAvgPointsKey(players);
+
+  // First, figure out which pools still have actual non-owner players pending
+  const poolsWithActionablePlayers = new Set(
+    pending.filter(p => p.extra?.type !== 'owner').map(p => p.pool)
+  );
+
   const byPool = {};
   for (const p of pending) {
+    // If this player is an owner, but their pool is empty of real auctionable players, hide them
+    if (p.extra?.type === 'owner' && !poolsWithActionablePlayers.has(p.pool)) {
+      continue;
+    }
+
     if (!byPool[p.pool]) byPool[p.pool] = [];
     byPool[p.pool].push(p);
   }
+
   const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
   const GRID = 'minmax(0,1fr) auto auto';
+
+  if (!isOpen) {
+    return (
+      <Box sx={{ width: 48, flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, height: '100vh', position: 'sticky', top: 0 }}>
+        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane">
+          <ChevronLeftIcon />
+        </IconButton>
+        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', mt: 2, color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
+          REMAINING ({pending.length})
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{
@@ -301,7 +331,12 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
       top: 0,
     }}>
       <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
-        <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining Players</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <IconButton size="small" onClick={() => setIsOpen(false)} title="Collapse pane" sx={{ ml: -1 }}>
+            <ChevronRightIcon fontSize="small" />
+          </IconButton>
+          <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining</Typography>
+        </Box>
         <Chip label={pending.length} size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
       </Box>
 

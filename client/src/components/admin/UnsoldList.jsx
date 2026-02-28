@@ -59,19 +59,45 @@ export default function UnsoldList() {
             <Collapse in={isEditing}>
               <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Typography variant="caption" color="text.secondary" whiteSpace="nowrap">Base price:</Typography>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  sx={{ minWidth: 36, px: 0 }}
+                  onClick={() => {
+                    const curr = parseInt(editing?.basePrice) || 0;
+                    setEditing(prev => ({ ...prev, basePrice: String(Math.max(100, curr - 100)) }));
+                  }}
+                >
+                  -
+                </Button>
                 <TextField
                   size="small"
                   type="number"
-                  inputProps={{ min: 1 }}
+                  inputProps={{ min: 100, step: 100 }}
                   value={editing?.basePrice ?? ''}
                   onChange={e => setEditing(prev => ({ ...prev, basePrice: e.target.value }))}
                   autoFocus
-                  sx={{ width: 100 }}
+                  sx={{
+                    width: 90,
+                    '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { display: 'none' },
+                    '& input[type=number]': { MozAppearance: 'textfield' }
+                  }}
                   onKeyDown={e => {
                     if (e.key === 'Enter') confirmReAuction();
                     if (e.key === 'Escape') setEditing(null);
                   }}
                 />
+                <Button
+                  size="small"
+                  variant="outlined"
+                  sx={{ minWidth: 36, px: 0 }}
+                  onClick={() => {
+                    const curr = parseInt(editing?.basePrice) || 0;
+                    setEditing(prev => ({ ...prev, basePrice: String(curr + 100) }));
+                  }}
+                >
+                  +
+                </Button>
                 <Button
                   size="small"
                   variant="contained"

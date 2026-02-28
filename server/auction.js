@@ -151,19 +151,48 @@ function handleTimerExpiry(io) {
 }
 
 // Only non-owner PENDING players are eligible for the auction queue.
+// To ensure we ALWAYS clear a pool before moving to the next, we use the pool
+// of the absolute first pending player in the list, rather than the fromIndex player.
 function findNextPendingIndex(fromIndex, randomize = false) {
   const state = getState();
   const pending = [];
+
+  // Find all pending eligible players after the fromIndex
   for (let i = fromIndex; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.status === 'PENDING' && !isOwner(p)) pending.push(i);
   }
+
   if (pending.length === 0) return -1;
+
+  // Determine the pool of the VERY FIRST pending player in the entire list
+  // regardless of fromIndex, so we finish pools in order
+  let firstPendingPool = null;
+  for (let i = 0; i < state.players.length; i++) {
+    const p = state.players[i];
+    if (p.status === 'PENDING' && !isOwner(p)) {
+      firstPendingPool = p.pool;
+      break;
+    }
+  }
+
+  // If randomize is off, just take the first pending from fromIndex (standard flow)
   if (!randomize) return pending[0];
 
-  const currentPool = state.players[pending[0]].pool;
-  const inPool = pending.filter(i => state.players[i].pool === currentPool);
-  return inPool[Math.floor(Math.random() * inPool.length)];
+  // If randomize is on, gather ALL pending players from the currently active pool
+  const inPool = [];
+  for (let i = 0; i < state.players.length; i++) {
+    const p = state.players[i];
+    if (p.status === 'PENDING' && !isOwner(p) && p.pool === firstPendingPool) {
+      inPool.push(i);
+    }
+  }
+
+  if (inPool.length > 0) {
+    return inPool[Math.floor(Math.random() * inPool.length)];
+  }
+
+  return pending[0];
 }
 
 function startPlayer(io, playerIndex) {

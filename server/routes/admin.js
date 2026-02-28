@@ -235,123 +235,124 @@ function createAdminRouter(io) {
       return res.status(400).json({
         error: `Number of teams defined (${teamEntries.length}) must equal numTeams setting (${numTeams})`,
       });
-      // Cache old pools before updating to detect actual price changes
-      const oldPoolsMap = {};
-      if (state.leagueConfig && state.leagueConfig.pools) {
-        for (const p of state.leagueConfig.pools) {
-          oldPoolsMap[p.id] = p;
-        }
+    }
+    // Cache old pools before updating to detect actual price changes
+    const oldPoolsMap = {};
+    if (state.leagueConfig && state.leagueConfig.pools) {
+      for (const p of state.leagueConfig.pools) {
+        oldPoolsMap[p.id] = p;
       }
+    }
 
-      // Update league config
-      state.leagueConfig = {
-        numTeams: parseInt(numTeams) || 0,
-        squadSize: parseInt(squadSize) || 0,
-        startingBudget: parseInt(leagueConfig.startingBudget) || 0,
-        minBid: parseInt(leagueConfig.minBid) || 0,
-        pools: pools.map(p => {
-          const bp = parseInt(p.basePrice);
-          const cnt = parseInt(p.count);
-          return {
-            id: String(p.id),
-            label: String(p.label || p.id),
-            basePrice: isNaN(bp) ? 0 : bp,
-            count: isNaN(cnt) ? 0 : cnt,
-          };
-        }),
-      };
-
-      // Update teams — preserve budgets/rosters for existing teams, init new ones
-      const newTeams = {};
-      for (const [teamId, teamData] of teamEntries) {
-        const existing = state.teams[teamId];
-        newTeams[teamId] = {
-          id: teamId,
-          name: teamData.name,
-          password: teamData.password || existing?.password || 'team123',
-          budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
-          roster: existing?.roster || [],
-          ownerIsPlayer: teamData.ownerIsPlayer || false,
-          ownerPlayerId: teamData.ownerPlayerId || null,
-        };
-      }
-      state.teams = newTeams;
-
-      // Process pool transfers (MERGE and SPLIT) before pool renames
-      if (poolTransfers && Array.isArray(poolTransfers) && state.players) {
-        for (const transfer of poolTransfers) {
-          if (transfer.type === 'MERGE') {
-            // Move all PENDING players from source to target
-            for (const player of state.players) {
-              if (player.pool === transfer.sourcePoolId && player.status === 'PENDING') {
-                player.pool = transfer.targetPoolId;
-              }
-            }
-          } else if (transfer.type === 'SPLIT') {
-            // Move `count` PENDING players from source to target
-            let movedCount = 0;
-            for (const player of state.players) {
-              if (player.pool === transfer.sourcePoolId && player.status === 'PENDING' && movedCount < transfer.count) {
-                player.pool = transfer.targetPoolId;
-                movedCount++;
-              }
-            }
-          }
-        }
-      }
-
-      // Cascade pool ID renames and base prices to players
-      const poolUpdateMap = {};
-      for (const p of pools) {
-        if (p.oldId && p.oldId !== p.id) {
-          const bp = parseInt(p.basePrice);
-          poolUpdateMap[p.oldId] = { id: p.id, basePrice: isNaN(bp) ? 0 : bp };
-        }
-      }
-
-      // Only cascade base prices if the admin actually modified the base price of the pool
-      const changedBasePrices = {};
-      for (const p of pools) {
+    // Update league config
+    state.leagueConfig = {
+      numTeams: parseInt(numTeams) || 0,
+      squadSize: parseInt(squadSize) || 0,
+      startingBudget: parseInt(leagueConfig.startingBudget) || 0,
+      minBid: parseInt(leagueConfig.minBid) || 0,
+      pools: pools.map(p => {
         const bp = parseInt(p.basePrice);
-        if (isNaN(bp)) continue;
+        const cnt = parseInt(p.count);
+        return {
+          id: String(p.id),
+          label: String(p.label || p.id),
+          basePrice: isNaN(bp) ? 0 : bp,
+          count: isNaN(cnt) ? 0 : cnt,
+        };
+      }),
+    };
 
-        const oldPool = oldPoolsMap[p.oldId || p.id];
-        if (oldPool && parseInt(oldPool.basePrice) !== bp) {
-          changedBasePrices[p.id] = bp;
-        } else if (!oldPool) {
-          // It's a newly added pool
-          changedBasePrices[p.id] = bp;
-        }
-      }
+    // Update teams — preserve budgets/rosters for existing teams, init new ones
+    const newTeams = {};
+    for (const [teamId, teamData] of teamEntries) {
+      const existing = state.teams[teamId];
+      newTeams[teamId] = {
+        id: teamId,
+        name: teamData.name,
+        password: teamData.password || existing?.password || 'team123',
+        budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
+        roster: existing?.roster || [],
+        ownerIsPlayer: teamData.ownerIsPlayer || false,
+        ownerPlayerId: teamData.ownerPlayerId || null,
+      };
+    }
+    state.teams = newTeams;
 
-      if (state.players && state.players.length > 0) {
-        for (const player of state.players) {
-          // If pool was renamed
-          if (poolUpdateMap[player.pool]) {
-            player.pool = poolUpdateMap[player.pool].id;
-            // Sync basePrice if the player hasn't been sold
-            if (player.status === 'PENDING') {
-              if (changedBasePrices[player.pool] !== undefined) {
-                player.basePrice = changedBasePrices[player.pool];
-              } else if (poolUpdateMap[player.oldPool || player.pool]?.basePrice) {
-                // Fallback to the new base price if the pool was renamed and didn't trigger changedBasePrices
-                player.basePrice = poolUpdateMap[player.oldPool || player.pool].basePrice;
-              }
+    // Process pool transfers (MERGE and SPLIT) before pool renames
+    if (poolTransfers && Array.isArray(poolTransfers) && state.players) {
+      for (const transfer of poolTransfers) {
+        if (transfer.type === 'MERGE') {
+          // Move all PENDING players from source to target
+          for (const player of state.players) {
+            if (player.pool === transfer.sourcePoolId && player.status === 'PENDING') {
+              player.pool = transfer.targetPoolId;
             }
           }
-          // If pool kept the same name, we only sync if the price was actually modified
-          else if (changedBasePrices[player.pool] !== undefined) {
-            if (player.status === 'PENDING') {
+        } else if (transfer.type === 'SPLIT') {
+          // Move `count` PENDING players from source to target
+          let movedCount = 0;
+          for (const player of state.players) {
+            if (player.pool === transfer.sourcePoolId && player.status === 'PENDING' && movedCount < transfer.count) {
+              player.pool = transfer.targetPoolId;
+              movedCount++;
+            }
+          }
+        }
+      }
+    }
+
+    // Cascade pool ID renames and base prices to players
+    const poolUpdateMap = {};
+    for (const p of pools) {
+      if (p.oldId && p.oldId !== p.id) {
+        const bp = parseInt(p.basePrice);
+        poolUpdateMap[p.oldId] = { id: p.id, basePrice: isNaN(bp) ? 0 : bp };
+      }
+    }
+
+    // Only cascade base prices if the admin actually modified the base price of the pool
+    const changedBasePrices = {};
+    for (const p of pools) {
+      const bp = parseInt(p.basePrice);
+      if (isNaN(bp)) continue;
+
+      const oldPool = oldPoolsMap[p.oldId || p.id];
+      if (oldPool && parseInt(oldPool.basePrice) !== bp) {
+        changedBasePrices[p.id] = bp;
+      } else if (!oldPool) {
+        // It's a newly added pool
+        changedBasePrices[p.id] = bp;
+      }
+    }
+
+    if (state.players && state.players.length > 0) {
+      for (const player of state.players) {
+        // If pool was renamed
+        if (poolUpdateMap[player.pool]) {
+          player.pool = poolUpdateMap[player.pool].id;
+          // Sync basePrice if the player hasn't been sold
+          if (player.status === 'PENDING') {
+            if (changedBasePrices[player.pool] !== undefined) {
               player.basePrice = changedBasePrices[player.pool];
+            } else if (poolUpdateMap[player.oldPool || player.pool]?.basePrice) {
+              // Fallback to the new base price if the pool was renamed and didn't trigger changedBasePrices
+              player.basePrice = poolUpdateMap[player.oldPool || player.pool].basePrice;
             }
           }
         }
+        // If pool kept the same name, we only sync if the price was actually modified
+        else if (changedBasePrices[player.pool] !== undefined) {
+          if (player.status === 'PENDING') {
+            player.basePrice = changedBasePrices[player.pool];
+          }
+        }
       }
+    }
 
-      saveState();
-      io.emit('state:full', getPublicState());
-      res.json({ message: 'League config saved', publicState: getPublicState() });
-    });
+    saveState();
+    io.emit('state:full', getPublicState());
+    res.json({ message: 'League config saved', publicState: getPublicState() });
+  });
 
   // Reset auction (clears player statuses + team budgets/rosters)
   router.post('/reset-auction', authenticate, requireAdmin, (req, res) => {

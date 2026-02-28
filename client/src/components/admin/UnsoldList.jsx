@@ -41,7 +41,7 @@ export default function UnsoldList() {
         const isEditing = editing?.playerId === player.id;
         return (
           <Paper key={player.id} variant="outlined" sx={{ p: 1.25 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 1 }}>
               <Box>
                 <Typography component="span" fontWeight={600} fontSize="0.9rem">{player.name}</Typography>
                 <Typography component="span" color="text.disabled" fontSize="0.8rem" ml={1}>

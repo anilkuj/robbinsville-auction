@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import Button from '@mui/material/Button';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -13,6 +15,25 @@ import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js'
 
 export default function DashboardView({ state }) {
   const [rightWidth, setRightWidth] = useState(380);
+  const exportRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!exportRef.current) return;
+    setIsExporting(true);
+    try {
+      const canvas = await html2canvas(exportRef.current, { backgroundColor: '#0a0f1e' });
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `Rosters-Export-${Date.now()}.png`;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export image', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const startDragRight = useCallback((e) => {
     e.preventDefault();
@@ -63,22 +84,36 @@ export default function DashboardView({ state }) {
       )}
 
       {/* Main: teams grid + drag + remaining pane */}
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, flex: 1, overflow: 'hidden' }}>
 
         {/* Teams grid */}
-        <Box sx={{ flex: 1, overflowY: 'auto', p: 2 }}>
-          <BudgetChart teams={teams} startingBudget={startingBudget} />
+        <Box sx={{ flex: 1, overflowY: 'auto', p: 2, pr: { xs: 'calc(16px + 48px)', lg: 2 } }}>
+          <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={handleExport}
+              disabled={isExporting}
+              sx={{ textTransform: 'none', fontWeight: 600, bgcolor: 'background.paper' }}
+            >
+              {isExporting ? 'Exporting...' : 'Export Dashboard to Image'}
+            </Button>
+          </Box>
 
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 2 }}>
-            {teamList.map(team => (
-              <TeamCard
-                key={team.id}
-                team={team}
-                startingBudget={startingBudget}
-                squadSize={squadSize}
-                isLeading={state.currentBid?.teamId === team.id}
-              />
-            ))}
+          <Box ref={exportRef} sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
+            <BudgetChart teams={teams} startingBudget={startingBudget} />
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(320px, 1fr))' }, gap: 2 }}>
+              {teamList.map(team => (
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  startingBudget={startingBudget}
+                  squadSize={squadSize}
+                  isLeading={state.currentBid?.teamId === team.id}
+                />
+              ))}
+            </Box>
           </Box>
           {teamList.length === 0 && (
             <Typography color="text.disabled" sx={{ textAlign: 'center', p: 6 }}>
@@ -88,12 +123,10 @@ export default function DashboardView({ state }) {
         </Box>
 
         {/* Drag handle */}
-        <div
+        <Box
           onMouseDown={startDragRight}
           title="Drag to resize"
-          style={{ width: '5px', flexShrink: 0, cursor: 'col-resize', background: '#1e293b', transition: 'background 0.15s', zIndex: 10 }}
-          onMouseEnter={e => e.currentTarget.style.background = '#334155'}
-          onMouseLeave={e => e.currentTarget.style.background = '#1e293b'}
+          sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
         />
 
         {/* Remaining players pane */}
@@ -111,7 +144,7 @@ export default function DashboardView({ state }) {
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
 export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
-  const [isOpen, setIsOpen] = React.useState(true);
+  const [isOpen, setIsOpen] = React.useState(() => window.innerWidth >= 1200);
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
   const avgKey = getAvgPointsKey(players);
@@ -124,11 +157,11 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
 
   if (!isOpen) {
     return (
-      <Box sx={{ width: 48, flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1 }}>
-        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane">
+      <Box sx={{ width: 48, height: '100%', flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, position: 'absolute', top: 0, right: 0, zIndex: 1200 }}>
+        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane" sx={{ mb: 1 }}>
           <ChevronLeftIcon />
         </IconButton>
-        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', mt: 2, color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
+        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
           REMAINING ({pending.length})
         </Typography>
       </Box>
@@ -137,7 +170,8 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
 
   return (
     <Box sx={{
-      width,
+      width: { xs: 300, sm: 340, lg: width },
+      height: '100%',
       flexShrink: 0,
       borderLeft: '1px solid',
       borderColor: 'divider',
@@ -145,6 +179,11 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
+      position: { xs: 'absolute', lg: 'relative' },
+      top: 0,
+      right: 0,
+      zIndex: 1200,
+      boxShadow: { xs: '-4px 0 16px rgba(0,0,0,0.5)', lg: 'none' }
     }}>
       <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -163,7 +202,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
           orderedPools.map(poolId => {
             const poolPlayers = byPool[poolId];
             const clr = poolColor(poolId);
-            const GRID = 'minmax(0,1fr) auto auto';
+            const GRID = 'minmax(0,1fr) 50px 60px';
             return (
               <div key={poolId}>
                 <div style={{ padding: '0.45rem 1rem', background: clr.bg, borderTop: `2px solid ${clr.border}`, borderBottom: `1px solid ${clr.border}50`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
@@ -171,7 +210,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
                   <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
-                  <DColHead label="Player" first /><DColHead label="Pool" /><DColHead label="Base" right />
+                  <DColHead label="Player" first /><DColHead label="Pool" center /><DColHead label="Base" right />
                 </div>
                 {sortPlayersByPoints(poolPlayers, avgKey).map((player, rowIdx) => {
                   const isOnBlock = player.id === currentPlayerId;
@@ -251,17 +290,23 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
             ))}
           </Box>
           <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
-            {roster.map((r, i) => (
-              <Box key={i} sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default' }}>
-                <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1, alignItems: 'center' }}>
-                  <Typography variant="body2" noWrap>{r.playerName}</Typography>
-                  <Chip label={r.pool} size="small" sx={{ height: 18, fontSize: '0.62rem', bgcolor: `${themePoolColor(r.pool)}20`, color: themePoolColor(r.pool) }} />
-                  <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {r.price.toLocaleString()}
-                  </Typography>
+            {roster.map((r, i) => {
+              const isOwner = team.ownerPlayerId === r.playerId;
+              return (
+                <Box key={i} sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default' }}>
+                  <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 1, alignItems: 'center' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden' }}>
+                      <Typography variant="body2" noWrap>{r.playerName}</Typography>
+                      {isOwner && <Chip label="★ OWNER" size="small" sx={{ height: 16, fontSize: '0.55rem', bgcolor: 'secondary.dark', color: 'white', fontWeight: 800, flexShrink: 0 }} />}
+                    </Box>
+                    <Chip label={r.pool} size="small" sx={{ height: 18, fontSize: '0.62rem', bgcolor: `${themePoolColor(r.pool)}20`, color: themePoolColor(r.pool) }} />
+                    <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {r.price.toLocaleString()}
+                    </Typography>
+                  </Box>
                 </Box>
-              </Box>
-            ))}
+              );
+            })}
           </Box>
         </Box>
       ) : (

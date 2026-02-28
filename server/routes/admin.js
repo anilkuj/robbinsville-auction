@@ -427,94 +427,104 @@ function createAdminRouter(io) {
 
   // Load test data — 3 teams × 33 players (pools A/B/C) — requires admin password confirmation
   router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
-    const { password, storagePreference } = req.body;
+    try {
+      const { password, storagePreference } = req.body;
 
-    if (!password || password !== config.admin.password) {
-      return res.status(401).json({ error: 'Invalid admin password' });
-    }
-
-    const state = getState();
-
-    if (storagePreference) {
-      state.settings = state.settings || {};
-      state.settings.storagePreference = storagePreference;
-    }
-
-    if (state.phase !== 'SETUP') {
-      return res.status(400).json({ error: 'Can only load test data in SETUP phase. Reset the auction first.' });
-    }
-
-    const TEST_PLAYERS = {
-      A: ['AB de Villiers', 'Babar Azam', 'Ben Stokes', 'Jasprit Bumrah', 'Joe Root',
-        'MS Dhoni', 'Pat Cummins', 'Rashid Khan', 'Rohit Sharma', 'Steve Smith', 'Virat Kohli'],
-      B: ['Andre Russell', 'David Warner', 'Glenn Maxwell', 'Hardik Pandya', 'Kane Williamson',
-        'KL Rahul', 'Mitchell Starc', 'Ravindra Jadeja', 'Rishabh Pant', 'Suryakumar Yadav', 'Trent Boult'],
-      C: ['Avesh Khan', 'Bhuvneshwar Kumar', 'Deepak Chahar', 'Faf du Plessis', 'Ishan Kishan',
-        'Kuldeep Yadav', 'Quinton de Kock', 'Shardul Thakur', 'Shubman Gill', 'Washington Sundar', 'Yuzvendra Chahal'],
-    };
-    const BASE_PRICES = { A: 3000, B: 2000, C: 1000 };
-
-    // Set league config
-    state.leagueConfig = {
-      numTeams: 3,
-      squadSize: 11,
-      startingBudget: 30000,
-      minBid: 500,
-      pools: [
-        { id: 'A', label: 'A', basePrice: 3000, count: 11 },
-        { id: 'B', label: 'B', basePrice: 2000, count: 11 },
-        { id: 'C', label: 'C', basePrice: 1000, count: 11 },
-      ],
-    };
-
-    // Set teams
-    state.teams = {
-      team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 30000, roster: [] },
-      team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 30000, roster: [] },
-      team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 30000, roster: [] },
-    };
-
-    // Build players sorted by pool order then name
-    const players = [];
-    for (const pool of ['A', 'B', 'C']) {
-      for (const name of TEST_PLAYERS[pool]) {
-        players.push({
-          id: uuidv4(),
-          name,
-          pool,
-          basePrice: BASE_PRICES[pool],
-          status: 'PENDING',
-          soldTo: null,
-          soldFor: null,
-          sortOrder: 0,
-        });
+      if (!password || password !== config.admin.password) {
+        return res.status(401).json({ error: 'Invalid admin password' });
       }
+
+      const state = getState();
+
+      if (storagePreference) {
+        state.settings = state.settings || {};
+        state.settings.storagePreference = storagePreference;
+      }
+
+      state.phase = 'SETUP';
+
+      const TEST_PLAYERS = {
+        A: ['AB de Villiers', 'Babar Azam', 'Ben Stokes', 'Jasprit Bumrah', 'Joe Root', 'MS Dhoni'],
+        B: ['Andre Russell', 'David Warner', 'Glenn Maxwell', 'Hardik Pandya', 'Kane Williamson',
+          'KL Rahul', 'Mitchell Starc', 'Ravindra Jadeja', 'Rishabh Pant', 'Suryakumar Yadav', 'Trent Boult',
+          'Avesh Khan', 'Bhuvneshwar Kumar', 'Deepak Chahar', 'Faf du Plessis', 'Ishan Kishan',
+          'Kuldeep Yadav', 'Quinton de Kock', 'Shardul Thakur', 'Shubman Gill', 'Washington Sundar', 'Yuzvendra Chahal',
+          'Chris Gayle', 'Lasith Malinga', 'Shane Watson', 'Kieron Pollard', 'Dwayne Bravo'],
+      };
+      const BASE_PRICES = { A: 3000, B: 1000 };
+
+      // Set league config
+      state.leagueConfig = {
+        numTeams: 3,
+        squadSize: 12,
+        startingBudget: 45000,
+        minBid: 100,
+        pools: [
+          { id: 'A', label: 'A', basePrice: 3000, count: 9 }, // 6 regular + 3 owners
+          { id: 'B', label: 'B', basePrice: 1000, count: 27 },
+        ],
+      };
+
+      const owner1Id = uuidv4();
+      const owner2Id = uuidv4();
+      const owner3Id = uuidv4();
+
+      // Set teams
+      state.teams = {
+        team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner1Id },
+        team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner2Id },
+        team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner3Id },
+      };
+
+      // Build players sorted by pool order then name
+      const players = [
+        { id: owner1Id, name: 'Owner Alpha', pool: 'A', basePrice: 0, status: 'PENDING', soldTo: null, soldFor: null, sortOrder: 0, extra: { type: 'owner', role: 'BAT' } },
+        { id: owner2Id, name: 'Owner Beta', pool: 'A', basePrice: 0, status: 'PENDING', soldTo: null, soldFor: null, sortOrder: 0, extra: { type: 'owner', role: 'BOWL' } },
+        { id: owner3Id, name: 'Owner Gamma', pool: 'A', basePrice: 0, status: 'PENDING', soldTo: null, soldFor: null, sortOrder: 0, extra: { type: 'owner', role: 'ALL' } },
+      ];
+      for (const pool of ['A', 'B']) {
+        for (const name of TEST_PLAYERS[pool]) {
+          players.push({
+            id: uuidv4(),
+            name,
+            pool,
+            basePrice: BASE_PRICES[pool],
+            status: 'PENDING',
+            soldTo: null,
+            soldFor: null,
+            sortOrder: 0,
+          });
+        }
+      }
+      players.sort((a, b) => {
+        const poolOrder = ['A', 'B'];
+        const pi = poolOrder.indexOf(a.pool) - poolOrder.indexOf(b.pool);
+        if (pi !== 0) return pi;
+        return a.name.localeCompare(b.name);
+      });
+      players.forEach((p, i) => { p.sortOrder = i; });
+
+      state.players = players;
+      state.currentPlayerIndex = null;
+      state.currentBid = { amount: 0, teamId: null, history: [] };
+      state.timerEndsAt = null;
+      state.timerPaused = false;
+      state.timerRemainingOnPause = 0;
+      state.unsoldPlayers = [];
+
+      clearAuctionTimer();
+      saveState();
+      io.emit('state:full', getPublicState());
+      res.json({
+        message: 'Test data loaded successfully',
+        teams: 3,
+        players: players.length,
+        publicState: getPublicState(),
+      });
+    } catch (e) {
+      console.error('LOAD TEST ERROR:', e);
+      res.status(500).json({ error: e.message });
     }
-    players.sort((a, b) => {
-      const poolOrder = ['A', 'B', 'C'];
-      const pi = poolOrder.indexOf(a.pool) - poolOrder.indexOf(b.pool);
-      if (pi !== 0) return pi;
-      return a.name.localeCompare(b.name);
-    });
-    players.forEach((p, i) => { p.sortOrder = i; });
-
-    state.players = players;
-    state.currentPlayerIndex = null;
-    state.currentBid = { amount: 0, teamId: null, history: [] };
-    state.timerEndsAt = null;
-    state.timerPaused = false;
-    state.timerRemainingOnPause = 0;
-    state.unsoldPlayers = [];
-
-    clearAuctionTimer();
-    saveState();
-    io.emit('state:full', getPublicState());
-    res.json({
-      message: 'Test data loaded successfully',
-      teams: 3,
-      players: players.length,
-      publicState: getPublicState(),
-    });
   });
 
   // Rollback last sold player — returns them to PENDING, refunds team budget
@@ -652,6 +662,48 @@ function createAdminRouter(io) {
     saveState();
     io.emit('state:full', getPublicState());
     res.json({ message: 'Full reset complete — all data cleared', publicState: getPublicState() });
+  });
+
+  // Mock Auction Simulator (Test Only) -> programmatically acts out a bidding war
+  router.post('/mock-simulate', authenticate, requireAdmin, async (req, res) => {
+    try {
+      const state = getState();
+      const { startPlayer, processSold, processUnsold } = require('../auction');
+
+      // Assume "Load Test Data" and "Reset Auction" are already done manually beforehand.
+      state.phase = 'LIVE';
+      state.lastSoldPlayerId = null;
+
+      startPlayer(io);
+      await new Promise(r => setTimeout(r, 100)); // allow state push
+
+      const p = state.players[0]; // first player
+      let curBase = parseInt(p.basePrice) || 1000;
+
+      // Bid 1 (Team 1)
+      state.currentBid = { amount: curBase, teamId: 'team_1', history: [{ amount: curBase, teamId: 'team_1', time: Date.now() }] };
+      io.emit('auction:bidAccepted', state.currentBid);
+
+      // Bid 2 (Team 2)
+      curBase += 500;
+      state.currentBid = { amount: curBase, teamId: 'team_2', history: [...state.currentBid.history, { amount: curBase, teamId: 'team_2', time: Date.now() }] };
+      io.emit('auction:bidAccepted', state.currentBid);
+
+      // Bid 3 (Team 1)
+      curBase += 1000;
+      state.currentBid = { amount: curBase, teamId: 'team_1', history: [...state.currentBid.history, { amount: curBase, teamId: 'team_1', time: Date.now() }] };
+      io.emit('auction:bidAccepted', state.currentBid);
+
+      await new Promise(r => setTimeout(r, 100));
+
+      // Sell
+      processSold(io);
+
+      res.json({ message: 'Simulation complete', player: state.players[0] });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message });
+    }
   });
 
   return router;

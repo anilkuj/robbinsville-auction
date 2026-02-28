@@ -78,10 +78,10 @@ export default function AdminPage() {
         </Toolbar>
       </AppBar>
 
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, flex: 1, overflow: 'hidden' }}>
         {/* Live auction preview */}
         {(phase === 'LIVE' || phase === 'PAUSED') && player && (
-          <Paper square sx={{ width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', p: 1.5, display: 'flex', flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
+          <Paper square sx={{ display: { xs: 'none', md: 'flex' }, width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', p: 1.5, flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
             <Typography variant="overline" color="text.disabled">On Block</Typography>
             <PlayerCard player={player} />
             <CountdownTimer
@@ -98,9 +98,9 @@ export default function AdminPage() {
         )}
 
         {/* Main panel */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', pr: { xs: '48px', lg: 0 } }}>
           <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto">
+            <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
               {TABS.map(t => <Tab key={t} label={t} value={t} sx={{ fontSize: '0.85rem', minHeight: 48 }} />)}
             </Tabs>
           </Paper>
@@ -108,7 +108,7 @@ export default function AdminPage() {
           {tab === 'Dashboard' ? (
             <DashboardView state={auctionState} />
           ) : (
-            <Box sx={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
                 {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
@@ -681,8 +681,10 @@ function LeagueSetupTab({ auctionState }) {
 // ─── Auction Controls Tab ─────────────────────────────────────────────────────
 
 function AuctionControlsTab({ auctionState, adminAction }) {
-  const { phase, players, teams } = auctionState;
+  const { phase, players, currentPlayerIndex, currentBid, teams } = auctionState;
 
+  const isSetup = phase === 'SETUP';
+  const player = players?.[currentPlayerIndex] ?? null;
   const pending = players.filter(p => p.status === 'PENDING').length;
   const sold = players.filter(p => p.status === 'SOLD').length;
   const unsold = players.filter(p => p.status === 'UNSOLD').length;
@@ -694,7 +696,6 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   const [showRollbackModal, setShowRollbackModal] = useState(false);
   const [copiedWA, setCopiedWA] = useState(false);
 
-  const isSetup = phase === 'SETUP';
   const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
 
   async function downloadResults() {
@@ -751,18 +752,32 @@ function AuctionControlsTab({ auctionState, adminAction }) {
     }
   }
 
+
+
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, maxWidth: 800 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
 
-      {/* Modals */}
-      {showLoadTestModal && <LoadTestDataModal hasExistingData={hasExistingData} isSetup={isSetup} onClose={() => setShowLoadTestModal(false)} />}
-      {showResetModal && <ResetAuctionModal onClose={() => setShowResetModal(false)} />}
-      {showFullResetModal && <FullResetModal onClose={() => setShowFullResetModal(false)} />}
-      {importData && <ImportStateModal importedState={importData} onClose={() => setImportData(null)} />}
-      {showRollbackModal && <RollbackModal auctionState={auctionState} onClose={() => setShowRollbackModal(false)} />}
+      {/* 
+        On mobile screens, the left side live view is hidden. 
+        Render a compact version of it here at the top of the controls tab. 
+      */}
+      {(phase === 'LIVE' || phase === 'PAUSED') && player && (
+        <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 1.5, mb: 1 }}>
+          <Typography variant="overline" color="text.disabled">On Block</Typography>
+          <PlayerCard player={player} />
+          <CountdownTimer
+            timerEndsAt={auctionState.timerEndsAt}
+            timerPaused={auctionState.timerPaused}
+            timerRemainingOnPause={auctionState.timerRemainingOnPause}
+            timerSeconds={auctionState.settings?.timerSeconds ?? 30}
+            endMode={auctionState.settings?.endMode ?? 'timer'}
+          />
+          <BidDisplay currentBid={currentBid} teams={teams} player={player} />
+        </Box>
+      )}
 
-      {/* Stats */}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+      {/* Stats row */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: { xs: 1, sm: 2 } }}>
         {[
           { label: 'Pending', val: pending, color: 'warning.main' },
           { label: 'Sold', val: sold, color: 'success.main' },
@@ -825,9 +840,8 @@ function AuctionControlsTab({ auctionState, adminAction }) {
               variant="contained"
               color="info"
               size="small"
-              disabled={!isSetup}
               onClick={() => setShowLoadTestModal(true)}
-              title={!isSetup ? 'Reset the auction first to load test data' : ''}
+              title="Replace current setup with sample data"
             >
               🧪 Load Test Data
             </Button>
@@ -849,6 +863,12 @@ function AuctionControlsTab({ auctionState, adminAction }) {
           </Box>
         </Box>
       </Box>
+
+      {showLoadTestModal && <LoadTestDataModal hasExistingData={hasExistingData} isSetup={isSetup} onClose={() => setShowLoadTestModal(false)} />}
+      {showFullResetModal && <FullResetModal onClose={() => setShowFullResetModal(false)} />}
+      {showResetModal && <ResetAuctionModal onClose={() => setShowResetModal(false)} />}
+      {importData && <ImportStateModal importedState={importData} onClose={() => setImportData(null)} />}
+      {showRollbackModal && <RollbackModal auctionState={auctionState} onClose={() => setShowRollbackModal(false)} />}
     </Box>
   );
 }
@@ -1244,12 +1264,11 @@ function LoadTestDataModal({ hasExistingData, isSetup, onClose }) {
           <>
             <Typography variant="body2" color="text.secondary">This will populate the auction with sample data for testing:</Typography>
             <Paper variant="outlined" sx={{ p: 1.5, fontSize: '0.82rem' }}>
-              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>3 Teams</Box> — Team Alpha, Beta, Gamma (30,000 pts each)</Typography>
-              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>33 Players</Box> across 3 pools:</Typography>
+              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>3 Teams</Box> — Team Alpha, Beta, Gamma (45,000 pts each)</Typography>
+              <Typography fontSize="0.82rem" color="text.secondary" mb={0.5}><Box component="span" color="primary.main" fontWeight={700}>36 Players</Box> across 2 pools:</Typography>
               <Box sx={{ pl: 1.5, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
-                <Typography fontSize="0.82rem" color="text.secondary">Pool A — 11 players, base price <Box component="span" color="success.main">3,000 pts</Box></Typography>
-                <Typography fontSize="0.82rem" color="text.secondary">Pool B — 11 players, base price <Box component="span" color="success.main">2,000 pts</Box></Typography>
-                <Typography fontSize="0.82rem" color="text.secondary">Pool C — 11 players, base price <Box component="span" color="success.main">1,000 pts</Box></Typography>
+                <Typography fontSize="0.82rem" color="text.secondary">Pool A — 6 players (+3 owners), base price <Box component="span" color="success.main">3,000 pts</Box></Typography>
+                <Typography fontSize="0.82rem" color="text.secondary">Pool B — 27 players, base price <Box component="span" color="success.main">1,000 pts</Box></Typography>
               </Box>
             </Paper>
             {hasExistingData && <Alert severity="warning">⚠ Existing teams and players will be replaced.</Alert>}

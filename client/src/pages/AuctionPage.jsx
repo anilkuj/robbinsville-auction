@@ -76,7 +76,7 @@ export default function AuctionPage() {
   const roster = myTeam?.roster ?? [];
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', userSelect: 'none' }}>
+    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', userSelect: 'none' }}>
 
       {/* Left sidebar */}
       <Box style={{ display: 'none' }} className="desktop-sidebar">
@@ -92,10 +92,10 @@ export default function AuctionPage() {
       />
 
       {/* Main content + right panel wrapper */}
-      <Box sx={{ flex: 1, display: 'flex', minHeight: '100vh', overflow: 'hidden' }}>
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', overflow: 'hidden' }}>
 
         {/* Center content */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, pr: { xs: '48px', lg: 0 } }}>
           <MobileHeader user={user} auctionState={auctionState} connected={connected} />
 
           {toast && (
@@ -203,31 +203,27 @@ export default function AuctionPage() {
         </Box>
 
         {/* Right drag handle */}
-        <div
-          className="desktop-right-panel drag-handle"
-          style={{ display: 'none' }}
+        <Box
+          sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
           onMouseDown={startDragRight}
           title="Drag to resize"
         />
 
         {/* Right panel */}
-        <div style={{ display: 'none' }} className="desktop-right-panel">
+        <Box sx={{ display: 'flex', width: { xs: '100%', lg: rightWidth }, flexShrink: 0 }}>
           <RemainingPlayersPanel
             players={auctionState?.players}
             pools={auctionState?.leagueConfig?.pools}
             currentPlayerId={player?.id ?? null}
             width={rightWidth}
           />
-        </div>
+        </Box>
       </Box>
 
       <style>{`
         @media (min-width: 768px) {
           .desktop-sidebar { display: flex !important; }
           .mobile-roster { display: none !important; }
-        }
-        @media (min-width: 1100px) {
-          .desktop-right-panel { display: flex !important; }
         }
         .drag-handle {
           width: 5px !important;
@@ -276,7 +272,7 @@ function PlayerExtraData({ player }) {
 // ── Right panel ────────────────────────────────────────────────────────────────
 
 function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(() => window.innerWidth >= 1200);
 
   if (!players || !pools) return null;
 
@@ -305,11 +301,11 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
 
   if (!isOpen) {
     return (
-      <Box sx={{ width: 48, flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, height: '100vh', position: 'sticky', top: 0 }}>
-        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane">
+      <Box sx={{ width: 48, height: '100vh', flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, position: 'fixed', top: 0, right: 0, zIndex: 1200 }}>
+        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane" sx={{ mb: 1 }}>
           <ChevronLeftIcon />
         </IconButton>
-        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', mt: 2, color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
+        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
           REMAINING ({pending.length})
         </Typography>
       </Box>
@@ -318,7 +314,8 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
 
   return (
     <Box sx={{
-      width,
+      width: { xs: 300, sm: 340, lg: width },
+      height: '100vh',
       flexShrink: 0,
       borderLeft: '1px solid',
       borderColor: 'divider',
@@ -326,9 +323,11 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      height: '100vh',
-      position: 'sticky',
+      position: 'fixed',
       top: 0,
+      right: 0,
+      zIndex: 1200,
+      boxShadow: { xs: '-4px 0 16px rgba(0,0,0,0.5)', lg: 'none' }
     }}>
       <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -347,6 +346,7 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
           orderedPools.map(poolId => {
             const poolPlayers = byPool[poolId];
             const clr = poolColor(poolId);
+            const GRID = 'minmax(0,1fr) 50px 60px';
             return (
               <div key={poolId}>
                 <div style={{
@@ -362,7 +362,7 @@ function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 })
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
                   <PColHead label="Player" first />
-                  <PColHead label="Pool" />
+                  <PColHead label="Pool" center />
                   <PColHead label="Base" right />
                 </div>
                 {sortPlayersByPoints(poolPlayers, avgKey).map((p, rowIdx) => {

@@ -32,6 +32,15 @@ npm run test --prefix server    # run Vitest unit tests for the server
 npm run test --prefix client    # run Vitest unit tests for the client
 ```
 
+### Mock Auction Simulation
+```bash
+# Simulates full auction from backup_state.json (resets state first)
+node server/mock_perfect_auction.js
+
+# Simulates remaining auction from current live server state
+node server/mock_live_smart_auction.js
+```
+
 ## Architecture
 
 ### Repository Structure

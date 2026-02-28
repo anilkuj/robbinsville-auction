@@ -112,7 +112,37 @@ Total: 180 players = 10 teams × 18 players ✓
 6. (Optional) **Upstash Redis**: Add `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` in your environment variables for stateless deployment.
 
 ### Render
-Same env vars. Set build + start commands as above.
+1. Push to GitHub (ensure `render.yaml` is present).
+2. Create new Blueprint at [dashboard.render.com/blueprints](https://dashboard.render.com/blueprints).
+3. Connect repo. It will automatically use the optimized build (`npm run install:all && npm run build`).
+4. Set `JWT_SECRET` and `ADMIN_PASSWORD` in Environment variables (or let Render generate them).
+5. For persistence, use **Upstash Redis** (`UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN`).
+
+---
+
+## Mock Auction Simulation
+
+You can simulate a full auction using pre-loaded data to verify the system's behavior.
+
+### Process
+1. Ensure the server is running (`npm run dev:server`).
+2. Run one of the mock scripts from the `server` directory:
+
+```bash
+# Option A: Create a 'perfect' state from backup_state.json
+# (Simulates 5000 iterations to ensure all players sold and budgets balance)
+node server/mock_perfect_auction.js
+
+# Option B: Simulate on top of your current live state
+node server/mock_live_smart_auction.js
+```
+
+### Requirements
+- The scripts expect the server at `http://localhost:3001`.
+- `ADMIN_PASSWORD` should be set in environment variables (defaults to `admin123`).
+- `server/backup_state.json` must be present for the perfect auction script.
+
+> ⚠️ **Warning:** These scripts will **overwrite** your current server state via the `/api/admin/import-state` endpoint.
 
 > ⚠️ **Note:** `state.json` is stored on disk and is ephemeral on free tiers.
 > Use **Export State JSON** from the admin panel to back up between sessions.

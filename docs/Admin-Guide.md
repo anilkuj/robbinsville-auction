@@ -41,3 +41,13 @@ Auctions are chaotic. You have tools to fix errors instantly.
 *   **Edit Sale Price:** In the **Player Data** tab, find any previously sold player and click the ✏️ Edit icon. You can change their final sale price. The app will automatically refund the team's budget, deduct the new price, and recalculate owner pool averages instantly.
 *   **Re-Auction:** In the **Player Data** or **Unsold Players** tab, click the ↺ icon next to a player to return them to the `PENDING` queue. If they were already sold, their previous team receives a full refund and the player is removed from their roster.
 *   **System Restores:** If you press one of the reset buttons (Load Test Data, Reset Auction, Restore Backup), the app will prompt you for a **Storage Preference**, which defaults to `Force Local JSON` for safe disk writes.
+44: 
+45: ## 5. Simulation & Testing
+46: You can run a mock auction to verify your league settings and player pools before the live event.
+47: 
+48: 1. Ensure your server is running.
+49: 2. From the project root, run:
+50:    ```bash
+51:    node server/mock_perfect_auction.js
+52:    ```
+53: This script will reset the state, load `backup_state.json`, and run 5,000 simulations to find a "perfect" version where every team follows budget rules and all players are sold. The results are pushed directly to your live server.

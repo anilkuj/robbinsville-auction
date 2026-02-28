@@ -1,6 +1,7 @@
 services:
   - type: web
     name: robbinsville-auction
+    plan: free
     env: node
     buildCommand: "npm run install:all && npm run build"
     startCommand: "npm start"

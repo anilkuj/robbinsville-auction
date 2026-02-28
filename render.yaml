@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: robbinsville-auction
+    env: node
+    buildCommand: "npm run install:all && npm run build"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      # Uncomment and fill these if you are using Upstash Redis for state persistence
+      # - key: UPSTASH_REDIS_REST_URL
+      #   sync: false
+      # - key: UPSTASH_REDIS_REST_TOKEN
+      #   sync: false

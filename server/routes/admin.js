@@ -25,54 +25,71 @@ function createAdminRouter(io) {
       const csvText = req.file.buffer.toString('utf8');
       const records = parse(csvText, { columns: true, skip_empty_lines: true, trim: true });
 
-      const state = getState();
-      const { pools, numTeams, squadSize } = state.leagueConfig;
-      const expectedTotal = numTeams * squadSize;
-
-      if (records.length !== expectedTotal) {
-        return res.status(400).json({
-          error: `CSV has ${records.length} players, expected ${expectedTotal} (${numTeams} teams × ${squadSize} players)`,
-        });
+      if (records.length === 0) {
+        return res.status(400).json({ error: 'CSV file is empty' });
       }
 
-      // Validate pool counts
-      const poolMap = {};
-      pools.forEach(p => { poolMap[p.id] = { ...p, actual: 0 }; });
+      const state = getState();
+
+      // Step 1: Detect unique pools and their counts from CSV
+      const detectedPoolsMap = {};
+      const playersData = [];
 
       for (const row of records) {
         if (!row.name || !row.name.trim()) {
           return res.status(400).json({ error: 'Each row must have a "name" column' });
         }
-        const pool = row.pool?.trim().toUpperCase();
-        if (!poolMap[pool]) {
-          return res.status(400).json({ error: `Unknown pool "${row.pool}" in CSV. Valid pools: ${Object.keys(poolMap).join(', ')}` });
+
+        const poolId = (row.pool || 'UNASSIGNED').trim().toUpperCase();
+        const basePrice = parseInt(row.basePrice) || 0;
+
+        if (!detectedPoolsMap[poolId]) {
+          detectedPoolsMap[poolId] = {
+            id: poolId,
+            label: poolId,
+            basePrice: basePrice, // Use the first basePrice encountered for this pool if valid
+            count: 0
+          };
         }
-        poolMap[pool].actual++;
+        detectedPoolsMap[poolId].count++;
+        playersData.push({
+          name: row.name.trim(),
+          pool: poolId,
+          basePrice: basePrice,
+          row: row
+        });
       }
 
-      for (const pool of pools) {
-        if (poolMap[pool.id].actual !== pool.count) {
-          return res.status(400).json({
-            error: `Pool ${pool.id}: expected ${pool.count} players, found ${poolMap[pool.id].actual}`,
-          });
-        }
+      const newPools = Object.values(detectedPoolsMap);
+      const totalPlayers = playersData.length;
+      const { numTeams, squadSize } = state.leagueConfig;
+      const expectedTotal = numTeams * squadSize;
+
+      if (totalPlayers !== expectedTotal) {
+        return res.status(400).json({
+          error: `CSV has ${totalPlayers} players, expected ${expectedTotal} (${numTeams} teams × ${squadSize} players). Please update League Setup first if you want to change the total count.`,
+        });
       }
 
-      // Build players array sorted by pool order then name
-      const poolOrder = pools.map(p => p.id);
-      const KNOWN_COLS = new Set(['name', 'pool']);
-      const players = records.map((row, idx) => {
+      // Step 2: Override leagueConfig.pools
+      state.leagueConfig.pools = newPools;
+
+      // Step 3: Build players array
+      const poolOrder = newPools.map(p => p.id);
+      const KNOWN_COLS = new Set(['name', 'pool', 'baseprice']);
+
+      const players = playersData.map((pData, idx) => {
         const extra = {};
-        for (const [key, val] of Object.entries(row)) {
+        for (const [key, val] of Object.entries(pData.row)) {
           if (!KNOWN_COLS.has(key.toLowerCase()) && val?.trim()) {
             extra[key] = val.trim();
           }
         }
         return {
           id: uuidv4(),
-          name: row.name.trim(),
-          pool: row.pool.trim().toUpperCase(),
-          basePrice: poolMap[row.pool.trim().toUpperCase()].basePrice,
+          name: pData.name,
+          pool: pData.pool,
+          basePrice: pData.basePrice,
           status: 'PENDING',
           soldTo: null,
           soldFor: null,
@@ -81,6 +98,7 @@ function createAdminRouter(io) {
         };
       });
 
+      // Sort by pool order then name
       players.sort((a, b) => {
         const ai = poolOrder.indexOf(a.pool);
         const bi = poolOrder.indexOf(b.pool);
@@ -101,7 +119,11 @@ function createAdminRouter(io) {
       clearAuctionTimer();
       saveState();
       io.emit('state:full', getPublicState());
-      res.json({ message: `${players.length} players imported successfully`, count: players.length });
+      res.json({
+        message: `${players.length} players imported successfully. ${newPools.length} pools were updated from the file.`,
+        count: players.length,
+        pools: newPools
+      });
     } catch (err) {
       console.error('CSV import error:', err);
       res.status(500).json({ error: 'Failed to parse CSV: ' + err.message });

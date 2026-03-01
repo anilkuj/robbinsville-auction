@@ -103,6 +103,17 @@ export default function AuctionControls() {
     }
   }
 
+  const isFirstPlayer = isSetup && (auctionState.players || []).every(p => p.status === 'PENDING');
+
+  function handleNextPlayer() {
+    if (isFirstPlayer) {
+      if (!window.confirm('⚠ WAIT! Before starting the auction for the first player, please double-check that all Base Prices and Team Owner Info are correct. Proceed?')) {
+        return;
+      }
+    }
+    adminAction('admin:nextPlayer');
+  }
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
 
@@ -132,7 +143,7 @@ export default function AuctionControls() {
 
       {/* Phase action buttons */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        <Button variant="contained" color="success" disabled={!isSetup || ownerBlocked} onClick={() => adminAction('admin:nextPlayer')}>
+        <Button variant="contained" color="success" disabled={!isSetup || ownerBlocked} onClick={handleNextPlayer}>
           ▶ Next Player
         </Button>
 

@@ -70,14 +70,20 @@ export default function PlayerImport({ onImported }) {
           {loading ? 'Uploading…' : 'Drop CSV here or click to select'}
         </Typography>
         <Typography color="text.disabled" fontSize="0.75rem" mt={0.5}>
-          Format: name, pool (header row required)
+          Format: name, pool, basePrice (header row required)
         </Typography>
         <input
           ref={inputRef}
           type="file"
           accept=".csv"
           style={{ display: 'none' }}
-          onChange={e => uploadFile(e.target.files[0])}
+          onChange={e => {
+            const file = e.target.files[0];
+            if (file && window.confirm('WARNING: This operation will wipe out all current players AND override your existing Pool configurations with data from the file. Do you want to continue?')) {
+              uploadFile(file);
+            }
+            e.target.value = ''; // Reset input
+          }}
         />
       </Box>
 

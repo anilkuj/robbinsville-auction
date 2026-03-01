@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>RPL Team Owner Guide (Print)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+
+    /* Each slide is a full page */
+    .slide {
+      width: 100vw;
+      height: 100vh;
+      padding: 2.5rem 3rem;
+      display: flex;
+      flex-direction: column;
+      page-break-after: always;
+      break-after: page;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Slide number watermark */
+    .slide::after {
+      content: attr(data-num);
+      position: absolute;
+      bottom: 1rem; right: 1.5rem;
+      font-size: 0.7rem; color: #334155;
+      font-weight: 600;
+    }
+
+    /* Top accent bar */
+    .slide::before {
+      content: '🏏  RPL Team Owner Guide';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      background: #1e293b;
+      border-bottom: 1px solid #334155;
+      padding: 0.5rem 1.5rem;
+      font-size: 0.72rem; font-weight: 700; color: #22c55e;
+      letter-spacing: 0.06em;
+    }
+
+    .slide-inner {
+      margin-top: 2rem;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    /* ── Typography ── */
+    .slide-tag {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; margin-bottom: 0.4rem;
+    }
+    .slide h1 { font-size: 2.4rem; font-weight: 800; line-height: 1.1; margin-bottom: 0.4rem; }
+    .slide h2 { font-size: 1.45rem; font-weight: 700; margin-bottom: 1rem; }
+    .slide p  { color: #94a3b8; line-height: 1.65; margin-bottom: 0.6rem; font-size: 0.9rem; }
+    .slide p strong { color: #f1f5f9; }
+
+    /* ── Accent colours ── */
+    .accent-green  { color: #22c55e; }
+    .accent-blue   { color: #3b82f6; }
+    .accent-yellow { color: #f59e0b; }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.4rem; }
+    .step {
+      display: flex; gap: 0.9rem; align-items: flex-start;
+      background: #1e293b; border-radius: 8px; padding: 0.75rem 0.9rem;
+      border-left: 3px solid #22c55e;
+    }
+    .step-num {
+      background: #22c55e; color: #0f172a;
+      font-weight: 800; font-size: 0.75rem;
+      border-radius: 50%; width: 22px; height: 22px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; margin-top: 1px;
+    }
+    .step-body strong { color: #f1f5f9; font-size: 0.88rem; display: block; margin-bottom: 1px; }
+    .step-body span   { color: #64748b; font-size: 0.8rem; }
+
+    /* ── Cards ── */
+    .cards   { display: grid; gap: 0.65rem; margin-top: 0.4rem; }
+    .cards-2 { grid-template-columns: 1fr 1fr; }
+    .cards-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .card {
+      background: #1e293b; border-radius: 9px; padding: 0.85rem;
+      border: 1px solid #334155;
+    }
+    .card-icon { font-size: 1.3rem; margin-bottom: 0.3rem; }
+    .card h3   { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.25rem; }
+    .card p    { font-size: 0.76rem; color: #64748b; margin: 0; }
+
+    /* ── Mockup ── */
+    .mockup {
+      background: #1e293b; border: 1px solid #334155;
+      border-radius: 9px; padding: 0.85rem;
+      font-family: monospace; font-size: 0.77rem;
+      color: #94a3b8; margin-top: 0.6rem; line-height: 1.75;
+    }
+    .mockup .label { color: #475569; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.4rem; }
+    .mockup .hi  { color: #f1f5f9; }
+    .mockup .grn { color: #22c55e; }
+    .mockup .ylw { color: #f59e0b; }
+    .mockup hr   { border: none; border-top: 1px solid #334155; margin: 0.35rem 0; }
+
+    /* ── Tip / Warn ── */
+    .tip {
+      background: #0c1a2e; border: 1px solid #1d4ed8;
+      border-radius: 7px; padding: 0.6rem 0.9rem;
+      color: #93c5fd; font-size: 0.78rem; margin-top: 0.65rem;
+    }
+
+    /* ── Title slide ── */
+    .title-slide .slide-inner { justify-content: center; align-items: center; text-align: center; }
+    .title-slide h1 { font-size: 2.8rem; }
+    .title-slide .sub { color: #64748b; font-size: 0.95rem; margin-top: 0.4rem; }
+    .title-slide .divider { width: 56px; height: 3px; background: #22c55e; margin: 1.25rem auto; border-radius: 2px; }
+
+    @media print {
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<div class="slide title-slide" data-num="1 / 5">
+  <div class="slide-inner">
+    <div style="font-size:3rem; margin-bottom:0.75rem;">🏏</div>
+    <div class="slide-tag accent-green">Team Owner Guide</div>
+    <h1>Live Auction Experience</h1>
+    <p class="sub">How to log in, bid strategically,<br>and build your championship squad</p>
+    <div class="divider"></div>
+    <div class="cards cards-3" style="max-width:440px;">
+      <div class="card" style="text-align:center;"><div class="card-icon">🔑</div><h3>Login</h3><p>Access your team</p></div>
+      <div class="card" style="text-align:center;"><div class="card-icon">⚡</div><h3>Bid</h3><p>Real-time action</p></div>
+      <div class="card" style="text-align:center;"><div class="card-icon">📋</div><h3>Squad</h3><p>Track progress</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 2: Getting Started -->
+<div class="slide" data-num="2 / 5">
+  <div class="slide-inner">
+    <div class="slide-tag accent-green">Phase 1</div>
+    <h2>Getting Started</h2>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+      <div class="steps">
+        <div class="step"><div class="step-num">1</div><div class="step-body"><strong>Access the App</strong><span>Navigate to the link provided by the Admin.</span></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Select Your Team</strong><span>Pick your team name from the dropdown.</span></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Enter Password</strong><span>Use the unique key given to you by the Admin.</span></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-body"><strong>Keep it Private</strong><span>Your password allows anyone to spend your budget!</span></div></div>
+      </div>
+      <div class="mockup">
+        <div class="label">Login Screen</div>
+        <span class="hi">Username:</span> [Select Team Name]<br>
+        <span class="hi">Password:</span> [********]<br><br>
+        <div style="background:#22c55e; color:#0f172a; padding: 6px; text-align:center; border-radius:4px; font-weight:bold;">Sign In</div>
+      </div>
+    </div>
+    <div class="tip">💡 Pro Tip: Open the dashboard link on a separate device to see all teams' budgets and rosters simultaneously.</div>
+  </div>
+</div>
+
+<!-- Slide 3: The Bidding Interface -->
+<div class="slide" data-num="3 / 5">
+  <div class="slide-inner">
+    <div class="slide-tag accent-green">Phase 2</div>
+    <h2>Bidding & Real-Time Sync</h2>
+    <div style="display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem;">
+      <div class="cards cards-2">
+        <div class="card"><div class="card-icon">👤</div><h3>Player Card</h3><p>Shows current player, their pool (A1, B, etc.) and base price.</p></div>
+        <div class="card"><div class="card-icon">⏱️</div><h3>The Timer</h3><p>Counts down to the sale. Every new bid adds a small "bump" (e.g., +10s).</p></div>
+        <div class="card" style="border-color:#22c55e;"><div class="card-icon">⚡</div><h3>Standard Bid</h3><p>Tap the large Green button to raise the bid by the global increment (e.g., +500 pts).</p></div>
+        <div class="card" style="border-color:#3b82f6;"><div class="card-icon">🔢</div><h3>Custom Bid</h3><p>Enter any amount higher than the lead to jump the price strategically.</p></div>
+      </div>
+      <div class="mockup">
+        <div class="label">Live Auction View</div>
+        <span class="hi">Virat Kohli</span> <span class="ylw">[A1]</span><br>
+        Base: <span class="grn">4,500 pts</span><hr>
+        Current Bid: <span class="grn">7,000 pts</span><br>
+        Leading: <span class="hi">Team Alpha</span><br>
+        Timer: <span class="ylw">12s</span><hr>
+        <div style="background:#22c55e; color:#0f172a; padding: 8px; text-align:center; border-radius:4px; font-weight:bold; margin-bottom:8px;">BID 7,500 pts</div>
+        <div style="background:#1e293b; border:1px solid #334155; padding: 4px; text-align:center; border-radius:4px;">Custom Amount...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Slide 4: Budget & Planning -->
+<div class="slide" data-num="4 / 5">
+  <div class="slide-inner">
+    <div class="slide-tag accent-green">Phase 3</div>
+    <h2>Budget & Squad Rules</h2>
+    <p>The app enforces mathematical fairness. You can never "overshoot" your budget.</p>
+    <div class="cards cards-2">
+      <div class="card">
+        <h3 class="accent-green">The Reserve Rule</h3>
+        <p>You must keep enough points to pay the <strong>Minimum Bid</strong> for all remaining squad slots.</p>
+        <div class="mockup" style="font-size:0.7rem;">
+          <div class="label">Budget Logic</div>
+          Remaining Slots: <span class="hi">5</span><br>
+          Min Bid: <span class="hi">1,000 pts</span><br>
+          Reserved: <span class="ylw">4,000 pts</span> (for slots 2-5)<br>
+          Max Allowable Bid: <span class="grn">Budget - 4,000</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="accent-green">Squad Builder</h3>
+        <p>Use the sidebar to track your roster. It displays:</p>
+        <div class="steps" style="gap:0.3rem;">
+          <div style="font-size:0.8rem; color:#94a3b8;">✔ Every player purchased</div>
+          <div style="font-size:0.8rem; color:#94a3b8;">✔ Cost of each player</div>
+          <div style="font-size:0.8rem; color:#94a3b8;">✔ Total points spent</div>
+        </div>
+      </div>
+    </div>
+    <div class="tip" style="background:#1c0a00; border-color:#92400e; color:#fcd34d;">⚠️ If your Bid button is grayed out, it means you don't have enough budget left while still obeying the Reserve Rule.</div>
+  </div>
+</div>
+
+<!-- Slide 5: Pro Tips -->
+<div class="slide" data-num="5 / 5">
+  <div class="slide-inner">
+    <div class="slide-tag accent-green">Phase 4</div>
+    <h2>Auction Tips</h2>
+    <div class="cards cards-3">
+      <div class="card"><div class="card-icon">📞</div><h3>Shout Errors</h3><p>If you tap by accident, tell the Admin immediately. They can pause or rollback.</p></div>
+      <div class="card"><div class="card-icon">📈</div><h3>Watch Pools</h3><p>Keep track of how many players are left in each pool to gauge scarcity.</p></div>
+      <div class="card"><div class="card-icon">🚀</div><h3>Jump Bids</h3><p>Use custom bid amounts to intimidate rivals on high-value players.</p></div>
+    </div>
+    <div class="mockup" style="margin-top:2rem;">
+      <div class="label">Summary</div>
+      1. Log in early.<br>
+      2. Watch your budget/squad count in the header.<br>
+      3. Use the Bid button for speed, Custom for strategy.<br>
+      4. Support your rivals—just kidding, good luck!
+    </div>
+    <div style="margin-top:auto; padding-top:1rem; border-top:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center;">
+       <span style="color:#475569; font-size:0.72rem;">🏏 Robbinsville Premier League Auction</span>
+       <span style="color:#334155; font-size:0.72rem;">Designed for Champions</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

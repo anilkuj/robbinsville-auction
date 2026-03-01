@@ -296,6 +296,7 @@ function createAdminRouter(io) {
         roster: existing?.roster || [],
         ownerIsPlayer: teamData.ownerIsPlayer || false,
         ownerPlayerId: teamData.ownerPlayerId || null,
+        ownerName: teamData.ownerName || null,
       };
     }
     state.teams = newTeams;

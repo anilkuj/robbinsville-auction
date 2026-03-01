@@ -4,7 +4,6 @@ import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import AuctionControls from '../components/admin/AuctionControls.jsx';
 import PlayerImport from '../components/admin/PlayerImport.jsx';
-import TeamRosterTable from '../components/admin/TeamRosterTable.jsx';
 import UnsoldList from '../components/admin/UnsoldList.jsx';
 import PlayerCard from '../components/auction/PlayerCard.jsx';
 import BidDisplay from '../components/auction/BidDisplay.jsx';
@@ -40,7 +39,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 
-const TABS = ['League Setup', 'Auction Controls', 'Teams & Rosters', 'Player Data', 'Settings', 'Dashboard'];
+const TABS = ['League Setup', 'Auction Controls', 'Player Data', 'Settings', 'Dashboard'];
 
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
@@ -112,7 +111,6 @@ export default function AdminPage() {
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
                 {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
-                {tab === 'Teams & Rosters' && <TeamsTab auctionState={auctionState} />}
                 {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
                 {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
               </Box>
@@ -168,10 +166,10 @@ function LeagueSetupTab({ auctionState }) {
 
   useEffect(() => {
     setCfg(JSON.parse(JSON.stringify(leagueConfig)));
-    if (Object.keys(auctionState.teams).length > 0) {
+    if (auctionState.teams && Object.keys(auctionState.teams).length > 0) {
       setTeams(JSON.parse(JSON.stringify(auctionState.teams)));
     }
-  }, [leagueConfig]);
+  }, [leagueConfig, auctionState.teams]);
 
   const required = parseInt(cfg.numTeams) * parseInt(cfg.squadSize);
   const poolTotal = cfg.pools.reduce((s, p) => s + (parseInt(p.count) || 0), 0);
@@ -222,6 +220,7 @@ function LeagueSetupTab({ auctionState }) {
   function updateTeam(id, field, val) {
     setTeams(prev => {
       const updated = { ...prev[id], [field]: val };
+      if (field === 'ownerIsPlayer' && val) updated.ownerName = '';
       if (field === 'ownerIsPlayer' && !val) updated.ownerPlayerId = null;
       return { ...prev, [id]: updated };
     });
@@ -466,7 +465,15 @@ function LeagueSetupTab({ auctionState }) {
                       sx={{ m: 0 }}
                     />
 
-                    {team.ownerIsPlayer && (() => {
+                    {!team.ownerIsPlayer ? (
+                      <input
+                        style={{ ...inputSm, flex: 1, maxWidth: 260 }}
+                        placeholder="Owner name"
+                        value={team.ownerName || ''}
+                        disabled={!isSetup}
+                        onChange={e => updateTeam(id, 'ownerName', e.target.value)}
+                      />
+                    ) : (() => {
                       const takenIds = new Set(
                         Object.entries(teams)
                           .filter(([tid]) => tid !== id)
@@ -505,6 +512,11 @@ function LeagueSetupTab({ auctionState }) {
                     {team.ownerIsPlayer && team.ownerPlayerId && (
                       <Typography variant="caption" color="primary.main" display="block">
                         Owner: {ownerPlayers.find(p => p.id === team.ownerPlayerId)?.name || 'Unknown'}
+                      </Typography>
+                    )}
+                    {!team.ownerIsPlayer && team.ownerName && (
+                      <Typography variant="caption" color="primary.main" display="block">
+                        Owner: {team.ownerName}
                       </Typography>
                     )}
                   </Box>
@@ -873,18 +885,6 @@ function AuctionControlsTab({ auctionState, adminAction }) {
   );
 }
 
-// ─── Teams Tab ────────────────────────────────────────────────────────────────
-
-function TeamsTab({ auctionState }) {
-  if (!auctionState) return null;
-  const { teams, leagueConfig } = auctionState;
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 800 }}>
-      <SectionTitle>All Teams</SectionTitle>
-      <TeamRosterTable teams={teams} leagueConfig={leagueConfig} />
-    </Box>
-  );
-}
 
 // ─── Player Data Tab ──────────────────────────────────────────────────────────
 

@@ -33,7 +33,12 @@ export default function TeamRosterTable({ teams, leagueConfig }) {
               onClick={() => setExpanded(isExpanded ? null : team.id)}
               sx={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 2, px: 2, py: 1.25, alignItems: 'center', '&:hover': { bgcolor: 'action.hover' } }}
             >
-              <Typography fontWeight={600}>{team.name}</Typography>
+              <Box>
+                <Typography fontWeight={600}>{team.name}</Typography>
+                {!team.ownerIsPlayer && team.ownerName && (
+                  <Typography variant="caption" color="text.secondary">Owner: {team.ownerName}</Typography>
+                )}
+              </Box>
 
               <Box sx={{ width: 80 }}>
                 <LinearProgress variant="determinate" value={Math.max(0, Math.min(100, pctBudget * 100))} color={progressColor} sx={{ height: 6, borderRadius: 1 }} />

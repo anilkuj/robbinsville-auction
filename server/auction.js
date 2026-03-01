@@ -107,6 +107,7 @@ function getPublicState() {
       roster: team.roster,
       ownerIsPlayer: team.ownerIsPlayer || false,
       ownerPlayerId: team.ownerPlayerId || null,
+      ownerName: team.ownerName || null,
     };
   }
   return { ...state, teams };

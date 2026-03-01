@@ -121,13 +121,15 @@ export default function DashboardView({ state }) {
 
             if (r1) {
               const isOwner = team1.ownerPlayerId === r1.playerId;
-              rowData[0] = r1.playerName + (isOwner ? ' (★ OWNER)' : '');
+              const ownerName = !team1.ownerIsPlayer && team1.ownerName ? ` (${team1.ownerName})` : '';
+              rowData[0] = r1.playerName + (isOwner ? ' (★ OWNER)' : ownerName);
               rowData[1] = r1.pool;
               rowData[2] = r1.price;
             }
             if (r2) {
               const isOwner2 = team2.ownerPlayerId === r2.playerId;
-              rowData[4] = r2.playerName + (isOwner2 ? ' (★ OWNER)' : '');
+              const ownerName2 = !team2.ownerIsPlayer && team2.ownerName ? ` (${team2.ownerName})` : '';
+              rowData[4] = r2.playerName + (isOwner2 ? ' (★ OWNER)' : ownerName2);
               rowData[5] = r2.pool;
               rowData[6] = r2.price;
             }
@@ -430,8 +432,10 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden' }}>
                       <Typography variant="body2" noWrap>{r.playerName}</Typography>
                       {isOwner && <Chip label="★ OWNER" size="small" sx={{ height: 16, fontSize: '0.55rem', bgcolor: 'secondary.dark', color: 'white', fontWeight: 800, flexShrink: 0 }} />}
+                      {!team.ownerIsPlayer && team.ownerName && (
+                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', ml: 0.5 }}>({team.ownerName})</Typography>
+                      )}
                     </Box>
-                    <Chip label={r.pool} size="small" sx={{ height: 18, fontSize: '0.62rem', bgcolor: `${themePoolColor(r.pool)}20`, color: themePoolColor(r.pool) }} />
                     <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {r.price.toLocaleString()}
                     </Typography>

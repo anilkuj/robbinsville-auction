@@ -112,8 +112,16 @@ function createAdminRouter(io) {
     }
 
     try {
-      const csvText = req.file.buffer.toString('utf8');
-      const records = parse(csvText, { columns: true, skip_empty_lines: true, trim: true });
+      const records = parse(req.file.buffer, {
+        columns: header => header.map(h => {
+          const n = h.trim().toLowerCase().replace(/\s/g, '');
+          if (n === 'baseprice' || n === 'price') return 'basePrice';
+          return n;
+        }),
+        skip_empty_lines: true,
+        trim: true,
+        bom: true
+      });
 
       if (records.length === 0) {
         return res.status(400).json({ error: 'CSV file is empty' });

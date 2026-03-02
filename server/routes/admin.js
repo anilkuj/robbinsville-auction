@@ -6,7 +6,7 @@ const authenticate = require('../middleware/authenticate');
 const requireAdmin = require('../middleware/requireAdmin');
 const { getState, DEFAULT_POOLS } = require('../state');
 const { saveState } = require('../persistence');
-const { getPublicState, clearAuctionTimer, syncOwnerAverages } = require('../auction');
+const { getPublicState, clearAuctionTimer, syncOwnerAverages, syncPoolCounts } = require('../auction');
 const config = require('../config');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -99,6 +99,9 @@ function createAdminRouter(io) {
     for (const poolId of affectedPools) {
       syncOwnerAverages(state, poolId);
     }
+
+    // Recalculate pool counts to keep League Setup in sync
+    syncPoolCounts(state);
 
     saveState();
     io.emit('state:full', getPublicState());

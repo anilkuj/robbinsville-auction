@@ -94,6 +94,20 @@ function syncOwnerAverages(state, poolId) {
   }
 }
 
+// Ensure the count in leagueConfig.pools matches the actual number of players in each pool.
+function syncPoolCounts(state) {
+  const counts = {};
+  for (const p of state.players) {
+    counts[p.pool] = (counts[p.pool] || 0) + 1;
+  }
+
+  if (state.leagueConfig && state.leagueConfig.pools) {
+    for (const pool of state.leagueConfig.pools) {
+      pool.count = counts[pool.id] || 0;
+    }
+  }
+}
+
 // ── Public state ──────────────────────────────────────────────────────────────
 
 function getPublicState() {
@@ -358,4 +372,5 @@ module.exports = {
   handleTimerExpiry,
   isOwner,
   syncOwnerAverages,
+  syncPoolCounts,
 };

@@ -1215,7 +1215,7 @@ function PlayerDataTab({ auctionState, adminAction }) {
                   onMouseEnter={e => !isEditing && (e.currentTarget.style.background = '#162032')}
                   onMouseLeave={e => !isEditing && (e.currentTarget.style.background = rowBg)}
                 >
-                  <TD first style={{ color: '#475569' }}>{p.sortOrder + 1}</TD>
+                  <TD first style={{ color: '#475569' }}>{i + 1}</TD>
                   <TD style={{ color: '#f1f5f9', fontWeight: 500, ...cellStyle('name') }}>
                     {isEditing ? (
                       <input

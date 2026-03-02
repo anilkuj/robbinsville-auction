@@ -29,6 +29,12 @@ if (!isProd) {
 }
 app.use(express.json({ limit: '10mb' }));
 
+// Request logger
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes(io));
@@ -38,6 +44,12 @@ app.use('/api/public', publicRoutes);
 app.get('/api/health', (req, res) => {
   const state = getState();
   res.json({ status: 'ok', phase: state.phase, players: state.players.length });
+});
+
+// Fallback 404 logger for /api
+app.use('/api', (req, res) => {
+  console.log(`[404] No match found for: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ error: `Route ${req.method} ${req.originalUrl} not found` });
 });
 
 // Serve static client in production

@@ -11,9 +11,99 @@ const config = require('../config');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
+function isOwner(player) {
+  if (!player.extra) return false;
+  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
+  return typeKey && String(player.extra[typeKey]).toLowerCase() === 'owner';
+}
+
 // Factory: accepts `io` so HTTP routes can broadcast socket events after mutations
 function createAdminRouter(io) {
   const router = express.Router();
+
+  router.use((req, res, next) => {
+    console.log(`[AdminRouter] ${req.method} ${req.url}`);
+    next();
+  });
+
+  // Bulk update players (used for inline editing)
+  router.post('/save-players', authenticate, requireAdmin, (req, res) => {
+    console.log('[AdminRouter] Received save-players request');
+    const { updates } = req.body; // Array of { id, ...fields }
+    if (!updates || !Array.isArray(updates)) {
+      return res.status(400).json({ error: 'updates array is required' });
+    }
+
+    const state = getState();
+    const affectedPools = new Set();
+    const affectedTeams = new Set();
+
+    for (const update of updates) {
+      const player = state.players.find(p => p.id === update.id);
+      if (!player) continue;
+
+      const oldPool = player.pool;
+      const oldSoldFor = player.soldFor;
+      const oldStatus = player.status;
+      const oldSoldTo = player.soldTo;
+
+      // Update basic fields
+      if (update.name !== undefined) player.name = update.name;
+      if (update.pool !== undefined) {
+        player.pool = update.pool;
+        affectedPools.add(oldPool);
+        affectedPools.add(player.pool);
+      }
+      if (update.basePrice !== undefined) player.basePrice = parseInt(update.basePrice) || 0;
+      if (update.status !== undefined) player.status = update.status;
+      if (update.soldFor !== undefined) player.soldFor = parseInt(update.soldFor) || 0;
+      if (update.extra !== undefined) player.extra = { ...player.extra, ...update.extra };
+
+      // Synchronization logic for SOLD players
+      if (player.status === 'SOLD' && player.soldTo) {
+        const team = state.teams[player.soldTo];
+        if (team) {
+          affectedTeams.add(player.soldTo);
+          // Find roster entry
+          const rosterEntry = team.roster.find(r => r.playerId === player.id);
+          if (rosterEntry) {
+            rosterEntry.playerName = player.name;
+            rosterEntry.pool = player.pool;
+
+            // Budget adjustment (only for non-owner players)
+            if (!isOwner(player)) {
+              const diff = (player.soldFor || 0) - (oldSoldFor || 0);
+              team.budget -= diff;
+              rosterEntry.price = player.soldFor;
+              affectedPools.add(player.pool);
+            }
+          }
+        }
+      }
+
+      // If status changed from SOLD to something else, remove from roster and refund budget
+      if (oldStatus === 'SOLD' && player.status !== 'SOLD' && oldSoldTo) {
+        const team = state.teams[oldSoldTo];
+        if (team) {
+          const idx = team.roster.findIndex(r => r.playerId === player.id);
+          if (idx !== -1) team.roster.splice(idx, 1);
+          if (!isOwner(player)) {
+            team.budget += (oldSoldFor || 0);
+          }
+          affectedPools.add(oldPool);
+        }
+      }
+    }
+
+    // Recalculate owner averages for all affected pools
+    for (const poolId of affectedPools) {
+      syncOwnerAverages(state, poolId);
+    }
+
+    saveState();
+    io.emit('state:full', getPublicState());
+    res.json({ message: 'Players updated successfully', publicState: getPublicState() });
+  });
 
   // Import players from CSV
   router.post('/import-players', authenticate, requireAdmin, upload.single('file'), (req, res) => {
@@ -448,7 +538,7 @@ function createAdminRouter(io) {
     res.json({ message: 'Passwords updated successfully' });
   });
 
-  // Load test data — 3 teams × 33 players (pools A/B/C) — requires admin password confirmation
+  // Load test data
   router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
     try {
       const { password, storagePreference } = req.body;

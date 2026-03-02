@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import AuctionControls from '../components/admin/AuctionControls.jsx';
@@ -904,6 +906,9 @@ function PlayerDataTab({ auctionState, adminAction }) {
   const [sortCol, setSortCol] = useState(initialSortCol);
   const [sortDir, setSortDir] = useState('desc');
   const [editPlayer, setEditPlayer] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedPlayers, setEditedPlayers] = useState({}); // id -> { field: val }
+  const [saving, setSaving] = useState(false);
 
   // keep default sort in sync if players array completely changes
   useEffect(() => {
@@ -912,6 +917,26 @@ function PlayerDataTab({ auctionState, adminAction }) {
       setSortDir('desc');
     }
   }, [initialSortCol]);
+
+  const handleExportCSV = () => {
+    try {
+      const headers = ['name', 'pool', 'basePrice', ...extraKeys];
+      const rows = players.map(p => {
+        return [
+          p.name,
+          p.pool,
+          p.basePrice,
+          ...extraKeys.map(k => p.extra?.[k] ?? '')
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
+      });
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8' });
+      saveAs(blob, `players-export-${Date.now()}.csv`);
+    } catch (err) {
+      console.error('Export failed', err);
+      alert('Export failed');
+    }
+  };
 
   if (players.length === 0) {
     return (
@@ -935,6 +960,51 @@ function PlayerDataTab({ auctionState, adminAction }) {
     PENDING: { color: '#f59e0b', bg: '#451a03', label: 'Pending' },
     SOLD: { color: '#22c55e', bg: '#14532d', label: 'Sold' },
     UNSOLD: { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
+  };
+
+  const toggleEdit = () => {
+    if (isEditing) {
+      setEditedPlayers({});
+    }
+    setIsEditing(!isEditing);
+  };
+
+  const handleFieldChange = (playerId, field, value) => {
+    setEditedPlayers(prev => {
+      const current = prev[playerId] || {};
+      return { ...prev, [playerId]: { ...current, [field]: value } };
+    });
+  };
+
+  const handleExtraFieldChange = (playerId, key, value) => {
+    setEditedPlayers(prev => {
+      const pUpdate = prev[playerId] || {};
+      const playerExtra = players.find(p => p.id === playerId)?.extra || {};
+      const currentExtra = pUpdate.extra || playerExtra;
+      return {
+        ...prev,
+        [playerId]: { ...pUpdate, extra: { ...currentExtra, [key]: value } }
+      };
+    });
+  };
+
+  const handleSave = async () => {
+    const updates = Object.entries(editedPlayers).map(([id, fields]) => ({ id, ...fields }));
+    if (updates.length === 0) {
+      setIsEditing(false);
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await axios.post('/api/admin/save-players', { updates });
+      setEditedPlayers({});
+      setIsEditing(false);
+    } catch (err) {
+      alert('Failed to save changes: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const poolClr = (poolId) => {
@@ -1023,6 +1093,7 @@ function PlayerDataTab({ auctionState, adminAction }) {
             value={search}
             onChange={e => setSearch(e.target.value)}
             sx={{ width: 150 }}
+            disabled={isEditing}
           />
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             {['ALL', 'PENDING', 'SOLD', 'UNSOLD'].map(f => {
@@ -1034,18 +1105,65 @@ function PlayerDataTab({ auctionState, adminAction }) {
                   key={f}
                   label={`${f === 'ALL' ? 'All' : statusCfg[f].label} (${count})`}
                   size="small"
-                  onClick={() => setStatusFilter(f)}
+                  onClick={() => !isEditing && setStatusFilter(f)}
                   variant={active ? 'filled' : 'outlined'}
+                  disabled={isEditing}
                   sx={{
                     fontSize: '0.72rem',
                     bgcolor: active ? `${cfg.color}20` : 'transparent',
                     color: active ? cfg.color : 'text.disabled',
                     borderColor: active ? cfg.color : 'divider',
-                    cursor: 'pointer',
+                    cursor: isEditing ? 'default' : 'pointer',
                   }}
                 />
               );
             })}
+          </Box>
+          <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+            {!isEditing ? (
+              <>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={toggleEdit}
+                  sx={{ fontWeight: 600, textTransform: 'none' }}
+                >
+                  ✏ Edit Mode
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  onClick={handleExportCSV}
+                  sx={{ fontWeight: 600, textTransform: 'none' }}
+                >
+                  📊 Export CSV
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  onClick={handleSave}
+                  disabled={saving}
+                  sx={{ fontWeight: 600, textTransform: 'none' }}
+                >
+                  {saving ? 'Saving...' : '💾 Save Changes'}
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  size="small"
+                  onClick={toggleEdit}
+                  disabled={saving}
+                  sx={{ fontWeight: 600, textTransform: 'none' }}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
           </Box>
         </Box>
       </Box>
@@ -1069,44 +1187,131 @@ function PlayerDataTab({ auctionState, adminAction }) {
           <tbody>
             {filtered.map((p, i) => {
               const owner = playerIsOwner(p);
-              const sc = statusCfg[p.status] || statusCfg.PENDING;
-              const pc = poolClr(p.pool);
+              const changes = editedPlayers[p.id] || {};
+              const sc = statusCfg[changes.status !== undefined ? changes.status : p.status] || statusCfg.PENDING;
+
+              const currentPoolId = changes.pool !== undefined ? changes.pool : p.pool;
+              const pc = poolClr(currentPoolId);
+
               const soldTeam = p.soldTo ? teams[p.soldTo] : null;
               const rowBg = i % 2 === 0 ? '#0f172a' : '#0a111e';
+
+              const isChanged = (field) => {
+                if (field === 'extra') return !!changes.extra;
+                return changes[field] !== undefined && String(changes[field]) !== String(p[field]);
+              };
+              const isExtraChanged = (key) => changes.extra && changes.extra[key] !== undefined && String(changes.extra[key]) !== String(p.extra?.[key] ?? '');
+
+              const cellStyle = (field) => ({
+                background: isChanged(field) ? '#422006' : 'transparent',
+                border: isChanged(field) ? '1px solid #f59e0b40' : 'none',
+                borderRadius: 4,
+                width: '100%',
+                boxSizing: 'border-box'
+              });
+
               return (
                 <tr key={p.id} style={{ background: rowBg, transition: 'background 0.1s' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#162032'}
-                  onMouseLeave={e => e.currentTarget.style.background = rowBg}
+                  onMouseEnter={e => !isEditing && (e.currentTarget.style.background = '#162032')}
+                  onMouseLeave={e => !isEditing && (e.currentTarget.style.background = rowBg)}
                 >
                   <TD first style={{ color: '#475569' }}>{p.sortOrder + 1}</TD>
-                  <TD style={{ color: '#f1f5f9', fontWeight: 500 }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      {p.name}
-                      {owner && (
-                        <span style={{ background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
-                      )}
-                    </span>
-                  </TD>
-                  <TD>
-                    <span style={{ background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`, borderRadius: 4, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{p.pool}</span>
-                  </TD>
-                  <TD center>
-                    <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
-                  </TD>
-                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
-                  <TD right style={{ whiteSpace: 'nowrap' }}>
-                    {owner && p.soldFor ? (
-                      <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
-                    ) : p.soldFor ? (
-                      <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
+                  <TD style={{ color: '#f1f5f9', fontWeight: 500, ...cellStyle('name') }}>
+                    {isEditing ? (
+                      <input
+                        style={{ background: 'transparent', border: 'none', color: 'inherit', width: '100%', padding: '0.1rem' }}
+                        value={changes.name !== undefined ? changes.name : p.name}
+                        onChange={e => handleFieldChange(p.id, 'name', e.target.value)}
+                      />
                     ) : (
-                      <span style={{ color: '#334155' }}>—</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                        {p.name}
+                        {owner && (
+                          <span style={{ background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
+                        )}
+                      </span>
                     )}
                   </TD>
-                  {extraKeys.map(k => <TD key={k} style={{ color: '#94a3b8' }}>{p.extra?.[k] ?? '—'}</TD>)}
-                  <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap' }}>{formatPts(p.basePrice)}</TD>
+                  <TD style={cellStyle('pool')}>
+                    {isEditing ? (
+                      <select
+                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                        value={currentPoolId}
+                        onChange={e => handleFieldChange(p.id, 'pool', e.target.value)}
+                      >
+                        {auctionState.leagueConfig.pools.map(pool => (
+                          <option key={pool.id} value={pool.id}>{pool.id}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`, borderRadius: 4, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{p.pool}</span>
+                    )}
+                  </TD>
+                  <TD center style={cellStyle('status')}>
+                    {isEditing ? (
+                      <select
+                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                        value={changes.status !== undefined ? changes.status : p.status}
+                        onChange={e => handleFieldChange(p.id, 'status', e.target.value)}
+                      >
+                        {['PENDING', 'SOLD', 'UNSOLD'].map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
+                    )}
+                  </TD>
+                  <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
+                  <TD right style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
+                    {isEditing && (changes.status === 'SOLD' || (!changes.status && p.status === 'SOLD')) ? (
+                      <input
+                        type="number"
+                        style={{ background: 'transparent', border: 'none', color: 'inherit', textAlign: 'right', width: '60px' }}
+                        value={changes.soldFor !== undefined ? changes.soldFor : (p.soldFor || 0)}
+                        onChange={e => handleFieldChange(p.id, 'soldFor', e.target.value)}
+                        disabled={owner} // owners price is avg-based
+                      />
+                    ) : (
+                      owner && p.soldFor ? (
+                        <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
+                      ) : p.soldFor ? (
+                        <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
+                      ) : (
+                        <span style={{ color: '#334155' }}>—</span>
+                      )
+                    )}
+                  </TD>
+                  {extraKeys.map(k => {
+                    const extraVal = changes.extra && changes.extra[k] !== undefined ? changes.extra[k] : (p.extra?.[k] ?? '');
+                    return (
+                      <TD key={k} style={{ color: '#94a3b8', ...cellStyle(`extra_${k}`) }}>
+                        {isEditing ? (
+                          <input
+                            style={{ background: 'transparent', border: 'none', color: 'inherit', width: '100%' }}
+                            value={extraVal}
+                            onChange={e => handleExtraFieldChange(p.id, k, e.target.value)}
+                          />
+                        ) : (
+                          extraVal || '—'
+                        )}
+                      </TD>
+                    );
+                  })}
+                  <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap', ...cellStyle('basePrice') }}>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        style={{ background: 'transparent', border: 'none', color: 'inherit', textAlign: 'right', width: '60px' }}
+                        value={changes.basePrice !== undefined ? changes.basePrice : p.basePrice}
+                        onChange={e => handleFieldChange(p.id, 'basePrice', e.target.value)}
+                      />
+                    ) : (
+                      formatPts(p.basePrice)
+                    )}
+                  </TD>
                   <TD center>
-                    {p.status === 'SOLD' && !owner && (
+                    {!isEditing && p.status === 'SOLD' && !owner && (
                       <button onClick={() => setEditPlayer(p)} style={{ background: 'none', border: '1px solid #334155', color: '#94a3b8', borderRadius: 4, padding: '0.2rem 0.5rem', fontSize: '0.7rem', cursor: 'pointer' }} title="Edit sold price">✏</button>
                     )}
                   </TD>
@@ -1116,7 +1321,7 @@ function PlayerDataTab({ auctionState, adminAction }) {
           </tbody>
         </table>
       </Box>
-    </Box>
+    </Box >
   );
 }
 

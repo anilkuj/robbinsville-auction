@@ -5,6 +5,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
+import Chip from '@mui/material/Chip';
 
 export default function RecentSoldPlayers({ players, currentPool, teams }) {
     if (!players || !currentPool || !teams) return null;
@@ -43,9 +44,24 @@ export default function RecentSoldPlayers({ players, currentPool, teams }) {
                             }}
                         >
                             <Box sx={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                                <Typography variant="body2" fontWeight={600} noWrap sx={{ color: 'text.primary' }}>
-                                    {p.name}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" fontWeight={600} noWrap sx={{ color: 'text.primary' }}>
+                                        {p.name}
+                                    </Typography>
+                                    {p.extra && (Object.values(p.extra).some(v => String(v).toLowerCase() === 'owner')) && (
+                                        <Chip
+                                            label="OWNER"
+                                            size="small"
+                                            sx={{
+                                                height: 16,
+                                                fontSize: '0.6rem',
+                                                fontWeight: 900,
+                                                bgcolor: 'secondary.main',
+                                                color: 'secondary.contrastText'
+                                            }}
+                                        />
+                                    )}
+                                </Box>
                                 <Typography variant="caption" color="text.secondary" noWrap>
                                     {teamName}
                                 </Typography>
@@ -60,6 +76,11 @@ export default function RecentSoldPlayers({ players, currentPool, teams }) {
                             <Box sx={{ textAlign: 'right' }}>
                                 <Typography variant="body2" fontWeight={700} sx={{ color: 'success.main', fontVariantNumeric: 'tabular-nums' }}>
                                     {formatPts(p.soldFor)}
+                                    {p.extra && (Object.values(p.extra).some(v => String(v).toLowerCase() === 'owner')) && (
+                                        <Typography component="span" variant="caption" sx={{ ml: 0.5, fontWeight: 500, fontStyle: 'italic', opacity: 0.8 }}>
+                                            (avg)
+                                        </Typography>
+                                    )}
                                 </Typography>
                             </Box>
                         </ListItem>

@@ -54,7 +54,7 @@ export default function HostSidebar({ width = 300 }) {
 
                     const spent = startingBudget - effectiveRemaining;
                     const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
-                    const progressColor = spentPct > 80 ? 'error' : spentPct > 60 ? 'warning' : 'success';
+
 
                     return (
                         <Paper
@@ -76,12 +76,10 @@ export default function HostSidebar({ width = 300 }) {
                                 </Typography>
                             </Box>
 
-                            <LinearProgress
-                                variant="determinate"
-                                value={Math.min(100, spentPct)}
-                                color={progressColor}
-                                sx={{ height: 3, borderRadius: 2, bgcolor: 'background.default', mb: 0.5 }}
-                            />
+                            <Box sx={{ height: 6, display: 'flex', borderRadius: 3, overflow: 'hidden', bgcolor: 'background.default', mb: 0.5 }}>
+                                {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
+                                {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: 'success.main', opacity: 0.85 }} />}
+                            </Box>
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>

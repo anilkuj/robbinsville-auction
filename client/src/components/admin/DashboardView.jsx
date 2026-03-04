@@ -259,23 +259,21 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
           )}
         </Box>
 
-        {/* Drag handle */}
-        {!hideRemaining && (
-          <Box
-            onMouseDown={startDragRight}
-            title="Drag to resize"
-            sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
-          />
-        )}
-
-        {/* Remaining players pane */}
-        {!hideRemaining && (
-          <RemainingPlayersPane
-            players={players}
-            pools={leagueConfig?.pools ?? []}
-            currentPlayerId={currentPlayer?.id ?? null}
-            width={rightWidth}
-          />
+        {/* Drag handle and remaining players pane */}
+        {state.phase !== 'ENDED' && !hideRemaining && (
+          <>
+            <Box
+              onMouseDown={startDragRight}
+              title="Drag to resize"
+              sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+            />
+            <RemainingPlayersPane
+              players={players}
+              pools={leagueConfig?.pools ?? []}
+              currentPlayerId={currentPlayer?.id ?? null}
+              width={rightWidth}
+            />
+          </>
         )}
       </Box>
     </Box>

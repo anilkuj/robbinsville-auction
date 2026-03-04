@@ -9,6 +9,7 @@ import BidButton from '../components/auction/BidButton.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import PlayerExtraData from '../components/auction/PlayerExtraData.jsx';
 import RecentSoldPlayers from '../components/auction/RecentSoldPlayers.jsx';
+import PlayerStats from '../components/auction/PlayerStats.jsx';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -135,15 +136,25 @@ export default function AuctionPage() {
             </Paper>
           )}
 
-          <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider', mb: 2 }}>
-            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto">
+          <Paper square sx={{
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            mb: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
               <Tab label="Live Auction" />
               <Tab label="Player Data" />
               <Tab label="Dashboard" />
             </Tabs>
+            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+              <PlayerStats players={auctionState?.players} />
+            </Box>
           </Paper>
 
-          <Box sx={{ flex: 1, p: 2, maxWidth: currentTab === 0 ? 600 : '100%', mx: 'auto', width: '100%' }}>
+          <Box sx={{ flex: 1, p: 2, maxWidth: currentTab === 0 ? 1200 : '100%', mx: 'auto', width: '100%' }}>
 
             {currentTab === 1 && <PlayerDataTab auctionState={auctionState} readOnly />}
 
@@ -151,7 +162,7 @@ export default function AuctionPage() {
 
             {currentTab === 0 && (
               <>
-                <PhaseBar phase={phase} playerCount={auctionState?.players?.length} />
+                <PhaseBar phase={phase} />
 
                 {phase === 'ENDED' && (
                   <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
@@ -244,26 +255,29 @@ export default function AuctionPage() {
           </Box>
         </Box>
 
-        {/* Right drag handle */}
-        {isRightPaneOpen && (
-          <Box
-            sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
-            onMouseDown={startDragRight}
-            title="Drag to resize"
-          />
-        )}
+        {/* Right drag handle and panel */}
+        {phase !== 'ENDED' && (
+          <>
+            {isRightPaneOpen && (
+              <Box
+                sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+                onMouseDown={startDragRight}
+                title="Drag to resize"
+              />
+            )}
 
-        {/* Right panel */}
-        <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
-          <RemainingPlayersPanel
-            players={auctionState?.players}
-            pools={auctionState?.leagueConfig?.pools}
-            currentPlayerId={player?.id ?? null}
-            width={rightWidth}
-            isOpen={isRightPaneOpen}
-            setIsOpen={setIsRightPaneOpen}
-          />
-        </Box>
+            <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
+              <RemainingPlayersPanel
+                players={auctionState?.players}
+                pools={auctionState?.leagueConfig?.pools}
+                currentPlayerId={player?.id ?? null}
+                width={rightWidth}
+                isOpen={isRightPaneOpen}
+                setIsOpen={setIsRightPaneOpen}
+              />
+            </Box>
+          </>
+        )}
       </Box>
 
       <style>{`

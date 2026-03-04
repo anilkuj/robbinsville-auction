@@ -10,6 +10,7 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import RecentSoldPlayers from '../components/auction/RecentSoldPlayers.jsx';
+import PlayerStats from '../components/auction/PlayerStats.jsx';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -72,15 +73,25 @@ export default function HostPage() {
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 1.5, sm: 3, md: 4 }, display: 'flex', flexDirection: 'column' }}>
 
-                    <Box sx={{ maxWidth: currentTab === 0 ? 640 : '100%', mx: 'auto', width: '100%', mt: { md: 2 } }}>
+                    <Box sx={{ maxWidth: currentTab === 0 ? 1200 : '100%', mx: 'auto', width: '100%', mt: { md: 2 } }}>
 
                         {/* Tab Navigation */}
-                        <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider', mb: 2 }}>
-                            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto">
+                        <Paper square sx={{
+                            borderBottom: '1px solid',
+                            borderColor: 'divider',
+                            mb: 2,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                        }}>
+                            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
                                 <Tab label="Live Auction" />
                                 <Tab label="Player Data" />
                                 <Tab label="Dashboard" />
                             </Tabs>
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+                                <PlayerStats players={auctionState?.players} />
+                            </Box>
                         </Paper>
 
                         {/* Player Data Tab */}
@@ -170,26 +181,29 @@ export default function HostPage() {
                 </Box>
             </Box>
 
-            {/* Right drag handle */}
-            {isRightPaneOpen && (
-                <Box
-                    sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
-                    onMouseDown={startDragRight}
-                    title="Drag to resize"
-                />
-            )}
+            {/* Right drag handle and panel */}
+            {phase !== 'ENDED' && (
+                <>
+                    {isRightPaneOpen && (
+                        <Box
+                            sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+                            onMouseDown={startDragRight}
+                            title="Drag to resize"
+                        />
+                    )}
 
-            {/* Right panel */}
-            <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
-                <RemainingPlayersPanel
-                    players={auctionState?.players}
-                    pools={auctionState?.leagueConfig?.pools}
-                    currentPlayerId={player?.id ?? null}
-                    width={rightWidth}
-                    isOpen={isRightPaneOpen}
-                    setIsOpen={setIsRightPaneOpen}
-                />
-            </Box>
+                    <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
+                        <RemainingPlayersPanel
+                            players={auctionState?.players}
+                            pools={auctionState?.leagueConfig?.pools}
+                            currentPlayerId={player?.id ?? null}
+                            width={rightWidth}
+                            isOpen={isRightPaneOpen}
+                            setIsOpen={setIsRightPaneOpen}
+                        />
+                    </Box>
+                </>
+            )}
         </Box>
     );
 }

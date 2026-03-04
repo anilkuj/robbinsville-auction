@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 
-export default function ProtectedRoute({ children, adminOnly = false }) {
+export default function ProtectedRoute({ children, adminOnly = false, allowedRoles = [] }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -15,6 +15,11 @@ export default function ProtectedRoute({ children, adminOnly = false }) {
 
   if (!user) return <Navigate to={adminOnly ? '/login?admin=1' : '/login'} replace />;
   if (adminOnly && user.role !== 'admin') return <Navigate to="/auction" replace />;
+  if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
+    if (user.role === 'admin') return <Navigate to="/admin" replace />;
+    if (user.role === 'host') return <Navigate to="/host" replace />;
+    return <Navigate to="/auction" replace />;
+  }
 
   return children;
 }

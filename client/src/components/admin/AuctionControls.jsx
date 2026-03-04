@@ -10,6 +10,10 @@ import Alert from '@mui/material/Alert';
 import Collapse from '@mui/material/Collapse';
 import FormControl from '@mui/material/FormControl';
 import InputLabel from '@mui/material/InputLabel';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import ToggleButton from '@mui/material/ToggleButton';
@@ -24,12 +28,14 @@ export default function AuctionControls() {
   const [pendingConfirm, setPendingConfirm] = useState(null);
   const [pendingRandomize, setPendingRandomize] = useState(null);
 
-  // Manual sale state
   const [showManualSale, setShowManualSale] = useState(false);
   const [msPlayer, setMsPlayer] = useState('');
   const [msTeam, setMsTeam] = useState('');
   const [msAmount, setMsAmount] = useState('');
   const [msLocalError, setMsLocalError] = useState('');
+
+  // Hammer confirmation state
+  const [showHammerConfirm, setShowHammerConfirm] = useState(false);
 
   useEffect(() => {
     if (lastEvent?.type === 'sold') {
@@ -128,7 +134,7 @@ export default function AuctionControls() {
                 : 'No bids — mark unsold or accept to pass'}
             </Typography>
           </Box>
-          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => adminAction('admin:acceptBid')}>
+          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => setShowHammerConfirm(true)}>
             🔨 Hammer
           </Button>
         </Paper>
@@ -147,34 +153,37 @@ export default function AuctionControls() {
           ▶ Next Player
         </Button>
 
-        {isLive && !timerPaused && (
+        {isLive && !timerPaused && !awaitingHammer && (
           <Button variant="contained" color="warning" onClick={() => adminAction('admin:pauseTimer')}>
             ⏸ Pause
           </Button>
         )}
 
-        {isLive && timerPaused && (
+        {isLive && (timerPaused || awaitingHammer) && (
           <Button variant="contained" color="info" onClick={() => adminAction('admin:resumeTimer')}>
             ▶ Resume
           </Button>
         )}
 
-        {isLive && (
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={() => {
-              if (confirm('Are you sure you want to cancel the last bid received for this player?')) {
-                adminAction('admin:cancelLastBid');
-              }
-            }}
-          >
-            ⎌ Cancel Last Bid
-          </Button>
-        )}
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => {
+            const hist = auctionState?.currentBid?.history || [];
+            const promptMsg = hist.length === 0
+              ? 'There are no bids. Canceling this will pause the auction. Are you sure?'
+              : 'Are you sure you want to cancel the last bid received for this player?';
+
+            if (confirm(promptMsg)) {
+              adminAction('admin:cancelLastBid');
+            }
+          }}
+        >
+          ⎌ Cancel Last Bid
+        </Button>
 
         {isLive && isManual && !awaitingHammer && (
-          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => adminAction('admin:acceptBid')}>
+          <Button variant="contained" sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }} onClick={() => setShowHammerConfirm(true)}>
             🔨 Hammer
           </Button>
         )}
@@ -310,6 +319,39 @@ export default function AuctionControls() {
           </Collapse>
         </Paper>
       )}
+
+      {/* Hammer Confirmation Dialog */}
+      <Dialog open={showHammerConfirm} onClose={() => setShowHammerConfirm(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Confirm Hammer</DialogTitle>
+        <DialogContent sx={{ mt: 1 }}>
+          <Typography>
+            {auctionState.currentBid?.teamId ? (
+              <>
+                Are you sure you want to <strong>SELL</strong> this player to{' '}
+                <strong>{auctionState.teams?.[auctionState.currentBid.teamId]?.name || 'Unknown Team'}</strong>{' '}
+                for <strong>{auctionState.currentBid.amount.toLocaleString()} pts</strong>?
+              </>
+            ) : (
+              <>
+                No bids received. Are you sure you want to mark this player as <strong>UNSOLD</strong>?
+              </>
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowHammerConfirm(false)} color="inherit">Cancel</Button>
+          <Button
+            onClick={() => {
+              adminAction('admin:acceptBid');
+              setShowHammerConfirm(false);
+            }}
+            variant="contained"
+            sx={{ bgcolor: '#a855f7', '&:hover': { bgcolor: '#9333ea' } }}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

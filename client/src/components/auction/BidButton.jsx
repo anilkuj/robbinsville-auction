@@ -13,9 +13,8 @@ import DialogActions from '@mui/material/DialogActions';
 import Alert from '@mui/material/Alert';
 
 export default function BidButton() {
-  const { auctionState, placeBid, socket } = useAuction();
+  const { auctionState, placeBid, socket, preparedBid, setPreparedBid } = useAuction();
   const { user } = useAuth();
-  const [customAmount, setCustomAmount] = useState('');
   const [feedback, setFeedback] = useState(null);
   const [confirmBid, setConfirmBid] = useState(null);
   const [budgetWarn, setBudgetWarn] = useState(null);
@@ -38,7 +37,6 @@ export default function BidButton() {
   }, [feedback]);
 
   useEffect(() => {
-    setCustomAmount('');
     setConfirmBid(null);
     setBudgetWarn(null);
   }, [auctionState?.currentPlayerIndex]);
@@ -68,25 +66,24 @@ export default function BidButton() {
   else if (rosterFull) disabledReason = 'Squad full';
   else if (cantAfford) disabledReason = `Max: ${formatPts(maxBid)}`;
 
-  const parsedCustom = customAmount !== '' ? parseInt(customAmount) : null;
-  const effectiveBid = parsedCustom && parsedCustom >= minNextBid ? parsedCustom : minNextBid;
+  const effectiveBid = preparedBid !== null && preparedBid >= minNextBid ? preparedBid : minNextBid;
 
   const slotsAfterThis = Math.max(0, squadSize - team.roster.length - 1);
   const maxAffordable = team.budget - slotsAfterThis * minPlayerCost;
 
   let customError = null;
-  if (parsedCustom !== null) {
-    if (parsedCustom < minNextBid) customError = `Min bid is ${formatPts(minNextBid)}`;
-    else if (parsedCustom > maxAffordable) customError = `Max bid is ${formatPts(maxAffordable)} — must keep ${formatPts(slotsAfterThis * minPlayerCost)} for ${slotsAfterThis} remaining player${slotsAfterThis !== 1 ? 's' : ''}`;
-    else if (parsedCustom > maxBid) customError = `Max bid is ${formatPts(maxBid)}`;
+  if (preparedBid !== null) {
+    if (preparedBid < minNextBid) customError = `Min bid is ${formatPts(minNextBid)}`;
+    else if (preparedBid > maxAffordable) customError = `Max bid is ${formatPts(maxAffordable)} — must keep ${formatPts(slotsAfterThis * minPlayerCost)} for ${slotsAfterThis} remaining player${slotsAfterThis !== 1 ? 's' : ''}`;
+    else if (preparedBid > maxBid) customError = `Max bid is ${formatPts(maxBid)}`;
   }
 
   function handleIncrement(delta) {
-    const startVal = parsedCustom !== null ? parsedCustom : minNextBid;
+    const startVal = preparedBid !== null ? preparedBid : minNextBid;
     let newVal = startVal + delta;
     if (newVal < minNextBid) newVal = minNextBid;
     if (newVal > maxBid) newVal = maxBid;
-    setCustomAmount(String(newVal));
+    setPreparedBid(newVal);
   }
 
   function handleBidClick() {
@@ -108,7 +105,7 @@ export default function BidButton() {
     placeBid(player.id, amount);
     setConfirmBid(null);
     setBudgetWarn(null);
-    setCustomAmount('');
+    setPreparedBid(null);
     setFeedback({ type: 'ok', msg: `Bid ${formatPts(amount)} placed!` });
   }
 
@@ -122,7 +119,7 @@ export default function BidButton() {
                 variant="outlined"
                 sx={{ minWidth: 40, px: 0, height: 40 }}
                 onClick={() => handleIncrement(-100)}
-                disabled={disabled || (parsedCustom !== null ? parsedCustom : minNextBid) <= minNextBid}
+                disabled={disabled || (preparedBid !== null ? preparedBid : minNextBid) <= minNextBid}
               >
                 -
               </Button>
@@ -131,8 +128,11 @@ export default function BidButton() {
                 label="Custom amount"
                 size="small"
                 placeholder={String(minNextBid)}
-                value={customAmount}
-                onChange={e => setCustomAmount(e.target.value)}
+                value={preparedBid !== null ? String(preparedBid) : ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  setPreparedBid(val === '' ? null : parseInt(val, 10));
+                }}
                 error={!!customError}
                 inputProps={{ min: minNextBid, max: maxBid, step: 100 }}
                 fullWidth
@@ -145,7 +145,7 @@ export default function BidButton() {
                 variant="outlined"
                 sx={{ minWidth: 40, px: 0, height: 40 }}
                 onClick={() => handleIncrement(100)}
-                disabled={disabled || (parsedCustom !== null ? parsedCustom : minNextBid) >= maxBid}
+                disabled={disabled || (preparedBid !== null ? preparedBid : minNextBid) >= maxBid}
               >
                 +
               </Button>

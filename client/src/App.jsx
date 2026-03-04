@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import AuctionPage from './pages/AuctionPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
+import HostPage from './pages/HostPage.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
 import { audioSystem } from './utils/audioSystem.js';
 import { useAuction } from './contexts/AuctionContext.jsx';
@@ -54,6 +55,14 @@ export default function App() {
               element={
                 <ProtectedRoute adminOnly>
                   <AdminPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/host"
+              element={
+                <ProtectedRoute allowedRoles={['host', 'admin']}>
+                  <HostPage />
                 </ProtectedRoute>
               }
             />

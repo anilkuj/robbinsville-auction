@@ -45,7 +45,11 @@ function syncOwnerAverages(state, poolId) {
         if (owner.soldTo && state.teams[owner.soldTo]) {
           const team = state.teams[owner.soldTo];
           const idx = team.roster.findIndex(r => r.playerId === owner.id);
-          if (idx !== -1) team.roster.splice(idx, 1);
+          if (idx !== -1) {
+            // Refund the old price to the budget
+            team.budget += team.roster[idx].price;
+            team.roster.splice(idx, 1);
+          }
         }
         owner.status = 'PENDING';
         owner.soldTo = null;
@@ -75,6 +79,7 @@ function syncOwnerAverages(state, poolId) {
 
       if (team && !team.roster.find(r => r.playerId === owner.id)) {
         owner.soldTo = team.id;
+        team.budget -= avg; // Deduct the new price from budget
         team.roster.push({
           playerId: owner.id,
           playerName: owner.name,
@@ -85,10 +90,15 @@ function syncOwnerAverages(state, poolId) {
         });
       }
     } else {
-      // Already sold — update roster entry price only (no budget adjustment for owners).
+      // Already sold — update roster entry price and adjust budget for the difference.
       if (owner.soldTo && state.teams[owner.soldTo]) {
-        const entry = state.teams[owner.soldTo].roster.find(r => r.playerId === owner.id);
-        if (entry) entry.price = avg;
+        const team = state.teams[owner.soldTo];
+        const entry = team.roster.find(r => r.playerId === owner.id);
+        if (entry) {
+          const diff = avg - entry.price;
+          team.budget -= diff; // Deduct the difference (if avg increased, diff > 0, budget decreases. if avg decreased, diff < 0, budget increases)
+          entry.price = avg;
+        }
       }
     }
   }
@@ -346,7 +356,10 @@ function pauseTimer(io) {
 
 function resumeTimer(io) {
   const state = getState();
-  if (state.phase !== 'LIVE' || !state.timerPaused) return false;
+  if (state.phase !== 'LIVE') return false;
+
+  const isManualAwaiting = state.settings.endMode === 'manual' && !state.timerEndsAt && !state.timerPaused;
+  if (!state.timerPaused && !isManualAwaiting) return false;
 
   const remaining = state.timerRemainingOnPause || state.settings.timerSeconds * 1000;
   state.timerPaused = false;

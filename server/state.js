@@ -5,8 +5,8 @@ const DEFAULT_POOLS = [
   { id: 'B1', label: 'B1', basePrice: 3000, count: 10 },
   { id: 'B2', label: 'B2', basePrice: 2700, count: 10 },
   { id: 'B3', label: 'B3', basePrice: 2500, count: 10 },
-  { id: 'C',  label: 'C',  basePrice: 1500, count: 40 },
-  { id: 'D',  label: 'D',  basePrice: 1000, count: 80 },
+  { id: 'C', label: 'C', basePrice: 1500, count: 40 },
+  { id: 'D', label: 'D', basePrice: 1000, count: 80 },
 ];
 
 const state = {
@@ -18,7 +18,7 @@ const state = {
     minBid: 1000,
     pools: DEFAULT_POOLS,
   },
-  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '', requireBidConfirm: true, randomizePool: false },
+  settings: { timerSeconds: 30, bidIncrement: 500, timerBumpSeconds: 10, endMode: 'timer', dashboardPin: '', hostPin: '', requireBidConfirm: true, randomizePool: false },
   players: [],
   currentPlayerIndex: null,
   currentBid: { amount: 0, teamId: null, history: [] },

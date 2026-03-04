@@ -76,7 +76,9 @@ function registerAdminHandlers(io, socket) {
       socket.emit('admin:error', { message: 'Cannot resume: not in LIVE phase' });
       return;
     }
-    if (!state.timerPaused) {
+    const isManualAwaiting = state.settings.endMode === 'manual' && !state.timerEndsAt && !state.timerPaused;
+
+    if (!state.timerPaused && !isManualAwaiting) {
       socket.emit('admin:error', { message: 'Timer is not paused' });
       return;
     }
@@ -172,20 +174,46 @@ function registerAdminHandlers(io, socket) {
       return;
     }
 
-    const player = state.players[state.currentPlayerIndex];
-    if (player) {
-      player.status = 'PENDING';
+    if (!state.currentBid.history || state.currentBid.history.length === 0) {
+      socket.emit('admin:error', { message: 'No bids to cancel' });
+      return;
     }
 
-    state.phase = 'SETUP';
-    state.currentPlayerIndex = null;
-    state.currentBid = { amount: 0, teamId: null, history: [] };
-    state.timerEndsAt = null;
+    const player = state.players[state.currentPlayerIndex];
 
-    clearAuctionTimer();
+    // Pop the latest bid
+    state.currentBid.history.pop();
 
-    saveState();
-    io.emit('state:full', getPublicState());
+    if (state.currentBid.history.length === 0) {
+      // It was the only bid. Revert to no bids and pause.
+      state.currentBid.amount = player ? player.basePrice : 0;
+      state.currentBid.teamId = null;
+
+      // Force pause mode
+      state.timerPaused = true;
+      state.timerRemainingOnPause = state.settings.timerSeconds * 1000;
+      state.timerEndsAt = null;
+      clearAuctionTimer();
+
+      saveState();
+      io.emit('auction:paused', getPublicState());
+      io.emit('state:full', getPublicState());
+    } else {
+      // Revert to the previous highest bid
+      const prevBid = state.currentBid.history[state.currentBid.history.length - 1];
+      state.currentBid.amount = prevBid.amount;
+      state.currentBid.teamId = prevBid.teamId;
+
+      // Bump the timer so people have time to react to the rollback
+      if (!state.timerPaused && state.settings.endMode !== 'manual') {
+        const remaining = state.settings.timerSeconds * 1000;
+        state.timerEndsAt = Date.now() + remaining;
+        scheduleTimer(io, remaining);
+      }
+
+      saveState();
+      io.emit('state:full', getPublicState());
+    }
   });
 
   socket.on('admin:manualSale', (payload) => {

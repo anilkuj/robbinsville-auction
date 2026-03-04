@@ -20,6 +20,13 @@ export default function Sidebar({ width }) {
   const team = auctionState?.teams?.[user?.teamId];
   const squadSize = auctionState?.leagueConfig?.squadSize ?? 18;
   const roster = team?.roster ?? [];
+  const currentBid = auctionState?.currentBid;
+
+  const isLeading = currentBid?.teamId === user?.teamId;
+  const currentBidAmount = isLeading ? currentBid.amount : 0;
+  const preparedBid = auctionState?.preparedBid || useAuction().preparedBid;
+  const pendingSpend = isLeading ? currentBidAmount : (team && preparedBid > 0 ? preparedBid : 0);
+  const effectiveRemaining = team ? team.budget - pendingSpend : 0;
 
   return (
     <Paper
@@ -50,7 +57,16 @@ export default function Sidebar({ width }) {
           <Typography fontWeight={700} sx={{ mt: 0.25 }}>{team.name}</Typography>
 
           <Typography variant="overline" color="text.disabled" display="block" sx={{ mt: 1.5 }}>Budget Remaining</Typography>
-          <Typography fontWeight={800} color="success.main" fontSize="1.1rem">{formatPts(team.budget)}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+            <Typography fontWeight={800} color={pendingSpend > 0 ? 'warning.main' : 'success.main'} fontSize="1.1rem">
+              {formatPts(effectiveRemaining)}
+            </Typography>
+            {pendingSpend > 0 && (
+              <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                (-{formatPts(pendingSpend)})
+              </Typography>
+            )}
+          </Box>
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
             <Typography variant="caption" color="text.disabled">Squad</Typography>

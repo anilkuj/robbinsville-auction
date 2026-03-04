@@ -25,6 +25,18 @@ router.post('/login', (req, res) => {
 
   // Check teams
   const state = getState();
+
+  // Check host
+  if (username.toLowerCase() === 'host') {
+    if (!state.settings.hostPin || password === state.settings.hostPin) {
+      const token = jwt.sign(
+        { id: 'host', username: 'host', role: 'host', name: 'Host' },
+        config.jwtSecret,
+        { expiresIn: '24h' }
+      );
+      return res.json({ token, role: 'host', name: 'Host', id: 'host' });
+    }
+  }
   for (const [teamId, team] of Object.entries(state.teams)) {
     const nameMatch = team.name.toLowerCase() === username.toLowerCase();
     const idMatch = teamId === username;

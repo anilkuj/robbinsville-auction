@@ -11,6 +11,7 @@ export function AuctionProvider({ children }) {
   const [connected, setConnected] = useState(false);
   const [lastEvent, setLastEvent] = useState(null); // { type, data }
   const [adminError, setAdminError] = useState(null);
+  const [preparedBid, setPreparedBid] = useState(null);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -49,11 +50,13 @@ export function AuctionProvider({ children }) {
 
     socket.on('auction:playerUp', (state) => {
       setAuctionState(state);
+      setPreparedBid(null);
       setLastEvent({ type: 'playerUp', data: state });
     });
 
     socket.on('auction:bid', ({ bid, publicState }) => {
       setAuctionState(publicState);
+      setPreparedBid(null);
       setLastEvent({ type: 'bid', data: bid });
       audioSystem.playBidSound();
     });
@@ -122,6 +125,8 @@ export function AuctionProvider({ children }) {
       adminAction,
       adminError,
       clearAdminError,
+      preparedBid,
+      setPreparedBid,
       socket: socketRef.current,
     }}>
       {children}

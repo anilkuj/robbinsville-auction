@@ -525,12 +525,12 @@ function createAdminRouter(io) {
     for (const [id, team] of Object.entries(state.teams)) {
       teams[id] = { name: team.name, password: team.password };
     }
-    res.json({ teams, dashboardPin: state.settings.dashboardPin });
+    res.json({ teams, dashboardPin: state.settings.dashboardPin, hostPin: state.settings.hostPin });
   });
 
   // Update team passwords and/or dashboard PIN (works in any phase)
   router.post('/update-passwords', authenticate, requireAdmin, (req, res) => {
-    const { teams, dashboardPin } = req.body;
+    const { teams, dashboardPin, hostPin } = req.body;
     const state = getState();
 
     if (teams) {
@@ -542,6 +542,9 @@ function createAdminRouter(io) {
     }
     if (dashboardPin !== undefined) {
       state.settings.dashboardPin = String(dashboardPin).trim();
+    }
+    if (hostPin !== undefined) {
+      state.settings.hostPin = String(hostPin).trim();
     }
 
     saveState();

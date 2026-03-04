@@ -14,7 +14,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { poolColor as themePoolColor } from '../../theme.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
-export default function DashboardView({ state }) {
+export default function DashboardView({ state, hideRemaining = false, preparedBid, currentUser }) {
   const [rightWidth, setRightWidth] = useState(380);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -235,7 +235,7 @@ export default function DashboardView({ state }) {
           </Box>
 
           <Box sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
-            <BudgetChart teams={teams} startingBudget={startingBudget} />
+            <BudgetChart teams={teams} startingBudget={startingBudget} preparedBid={preparedBid} currentUser={currentUser} currentBid={state.currentBid} />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(320px, 1fr))' }, gap: 2 }}>
               {teamList.map(team => (
@@ -245,6 +245,9 @@ export default function DashboardView({ state }) {
                   startingBudget={startingBudget}
                   squadSize={squadSize}
                   isLeading={state.currentBid?.teamId === team.id}
+                  preparedBid={preparedBid}
+                  currentUser={currentUser}
+                  currentBid={state.currentBid}
                 />
               ))}
             </Box>
@@ -257,19 +260,23 @@ export default function DashboardView({ state }) {
         </Box>
 
         {/* Drag handle */}
-        <Box
-          onMouseDown={startDragRight}
-          title="Drag to resize"
-          sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
-        />
+        {!hideRemaining && (
+          <Box
+            onMouseDown={startDragRight}
+            title="Drag to resize"
+            sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+          />
+        )}
 
         {/* Remaining players pane */}
-        <RemainingPlayersPane
-          players={players}
-          pools={leagueConfig?.pools ?? []}
-          currentPlayerId={currentPlayer?.id ?? null}
-          width={rightWidth}
-        />
+        {!hideRemaining && (
+          <RemainingPlayersPane
+            players={players}
+            pools={leagueConfig?.pools ?? []}
+            currentPlayerId={currentPlayer?.id ?? null}
+            width={rightWidth}
+          />
+        )}
       </Box>
     </Box>
   );
@@ -374,8 +381,13 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
 
 // ── Team Card ─────────────────────────────────────────────────────────────────
 
-function TeamCard({ team, startingBudget, squadSize, isLeading }) {
-  const spent = startingBudget - team.budget;
+function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, currentUser, currentBid }) {
+  const isMyTeam = currentUser?.teamId === team.id;
+  const currentBidAmount = isLeading ? (currentBid?.amount || 0) : 0;
+  const pendingSpend = isLeading ? currentBidAmount : (isMyTeam && preparedBid > 0 ? preparedBid : 0);
+  const effectiveRemaining = team.budget - pendingSpend;
+
+  const spent = startingBudget - effectiveRemaining;
   const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
   const roster = team.roster ?? [];
 
@@ -399,7 +411,21 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
       <Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Stat label="Initial Budget" value={fmtPts(startingBudget)} color="text.secondary" />
         <Stat label="Spent" value={fmtPts(spent)} color="error.main" />
-        <Stat label="Remaining" value={fmtPts(team.budget)} color="success.main" />
+        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+            Remaining
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+            <Typography variant="body1" fontWeight={700} color={pendingSpend > 0 ? 'warning.main' : 'success.main'}>
+              {fmtPts(effectiveRemaining)}
+            </Typography>
+            {pendingSpend > 0 && (
+              <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.65rem' }}>
+                (-{fmtPts(pendingSpend)})
+              </Typography>
+            )}
+          </Box>
+        </Box>
       </Box>
 
       <Box sx={{ px: 2, pb: 1.5, pt: 1 }}>
@@ -456,7 +482,7 @@ function TeamCard({ team, startingBudget, squadSize, isLeading }) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function BudgetChart({ teams, startingBudget }) {
+function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentBid }) {
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
   if (teamList.length === 0 || startingBudget <= 0) return null;
 
@@ -465,7 +491,13 @@ function BudgetChart({ teams, startingBudget }) {
       <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.05em' }}>League Budget Overview</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2 }}>
         {teamList.map(team => {
-          const spent = startingBudget - team.budget;
+          const isMyTeam = currentUser?.teamId === team.id;
+          const isLeading = currentBid?.teamId === team.id;
+          const currentBidAmount = isLeading ? (currentBid?.amount || 0) : 0;
+          const pendingSpend = isLeading ? currentBidAmount : (isMyTeam && preparedBid > 0 ? preparedBid : 0);
+          const effectiveRemaining = team.budget - pendingSpend;
+
+          const spent = startingBudget - effectiveRemaining;
           const spentPct = Math.min(100, (spent / startingBudget) * 100);
           const remPct = 100 - spentPct;
 
@@ -473,7 +505,9 @@ function BudgetChart({ teams, startingBudget }) {
             <Box key={team.id} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '0.75rem' }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>{team.name}</Typography>
-                <Typography sx={{ fontWeight: 700, color: 'success.main', fontSize: '0.8rem' }}>{fmtPts(team.budget)} rem</Typography>
+                <Typography sx={{ fontWeight: 700, color: pendingSpend > 0 ? 'warning.main' : 'success.main', fontSize: '0.8rem' }}>
+                  {fmtPts(effectiveRemaining)} rem
+                </Typography>
               </Box>
               <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default' }}>
                 {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: 'error.main', opacity: 0.85 }} />}

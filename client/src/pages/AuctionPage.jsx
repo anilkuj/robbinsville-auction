@@ -14,6 +14,10 @@ import Chip from '@mui/material/Chip';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import DashboardView from '../components/admin/DashboardView.jsx';
+import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import IconButton from '@mui/material/IconButton';
@@ -21,13 +25,16 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { formatPts } from '../utils/budgetCalc.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../utils/playerSort.js';
+import RemainingPlayersPanel from '../components/auction/RemainingPlayersPanel.jsx';
+import PhaseBar from '../components/auction/PhaseBar.jsx';
 
 export default function AuctionPage() {
-  const { auctionState, connected, lastEvent } = useAuction();
+  const { auctionState, connected, lastEvent, preparedBid } = useAuction();
   const { user } = useAuth();
   const [toast, setToast] = useState(null);
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
+  const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -114,90 +121,107 @@ export default function AuctionPage() {
             </Paper>
           )}
 
-          <Box sx={{ flex: 1, p: 2, maxWidth: 600, mx: 'auto', width: '100%' }}>
-            <PhaseBar phase={phase} playerCount={auctionState?.players?.length} />
+          <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider', mb: 2 }}>
+            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto">
+              <Tab label="Live Auction" />
+              <Tab label="Player Data" />
+              <Tab label="Dashboard" />
+            </Tabs>
+          </Paper>
 
-            {phase === 'ENDED' && (
-              <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
-                <Typography sx={{ fontSize: '3rem', mb: 1 }}>🏆</Typography>
-                <Typography variant="h5" fontWeight={800} color="primary" sx={{ mb: 0.5 }}>Auction Complete!</Typography>
-                <Typography color="text.secondary">All players have been auctioned.</Typography>
-              </Paper>
-            )}
+          <Box sx={{ flex: 1, p: 2, maxWidth: currentTab === 0 ? 600 : '100%', mx: 'auto', width: '100%' }}>
 
-            {(phase === 'LIVE' || phase === 'PAUSED') && player && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                <PlayerCard player={player} />
-                <PlayerExtraData player={player} />
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
-                  <CountdownTimer
-                    timerEndsAt={auctionState.timerEndsAt}
-                    timerPaused={auctionState.timerPaused}
-                    timerRemainingOnPause={auctionState.timerRemainingOnPause}
-                    timerSeconds={settings?.timerSeconds ?? 30}
-                    endMode={settings?.endMode ?? 'timer'}
-                  />
-                  <Box sx={{ flex: 1 }}>
-                    <BidDisplay currentBid={currentBid} teams={teams} player={player} />
-                  </Box>
-                </Box>
-                {user.role === 'team' && <BidButton />}
-                <Paper sx={{ p: 2 }}>
-                  <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
-                    Bid History
-                  </Typography>
-                  <BidHistory history={currentBid?.history} />
-                </Paper>
-              </Box>
-            )}
+            {currentTab === 1 && <PlayerDataTab auctionState={auctionState} readOnly />}
 
-            {phase === 'SETUP' && (
-              <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
-                <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>⏳</Typography>
-                <Typography color="text.secondary" fontSize="1.1rem">Waiting for next player…</Typography>
-                {auctionState?.players?.length === 0 && (
-                  <Typography color="text.disabled" fontSize="0.85rem" sx={{ mt: 0.5 }}>
-                    Admin hasn't imported players yet.
-                  </Typography>
+            {currentTab === 2 && <DashboardView state={auctionState} hideRemaining={true} preparedBid={preparedBid} currentUser={user} />}
+
+            {currentTab === 0 && (
+              <>
+                <PhaseBar phase={phase} playerCount={auctionState?.players?.length} />
+
+                {phase === 'ENDED' && (
+                  <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
+                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>🏆</Typography>
+                    <Typography variant="h5" fontWeight={800} color="primary" sx={{ mb: 0.5 }}>Auction Complete!</Typography>
+                    <Typography color="text.secondary">All players have been auctioned.</Typography>
+                  </Paper>
                 )}
-              </Paper>
-            )}
 
-            {!auctionState && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, gap: 2 }}>
-                <Typography color="text.disabled">Connecting…</Typography>
-                <Button variant="outlined" color="inherit" size="small" onClick={user?.logout || (() => {
-                  localStorage.removeItem('rpl_token');
-                  localStorage.removeItem('rpl_user');
-                  window.location.href = '/login';
-                })} sx={{ borderColor: 'divider', color: 'text.secondary' }}>
-                  Sign Out
-                </Button>
-              </Box>
-            )}
-
-            {/* Mobile roster */}
-            {roster.length > 0 && (
-              <Paper className="mobile-roster" sx={{ mt: 2, overflow: 'hidden' }}>
-                <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="overline" color="text.secondary" fontWeight={600}>My Squad</Typography>
-                  <Typography variant="caption" color="text.disabled">{roster.length} player{roster.length !== 1 ? 's' : ''}</Typography>
-                </Box>
-                <Box sx={{ py: 0.5 }}>
-                  <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
-                    {['Player', 'Pool', 'Price'].map(h => (
-                      <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
-                    ))}
-                  </Box>
-                  {roster.map((r, i) => (
-                    <Box key={r.playerId || i} sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1, alignItems: 'center', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
-                      <Typography variant="body2" noWrap>{r.playerName}</Typography>
-                      <Typography variant="caption" color="text.disabled" sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 0.5, px: 0.5 }}>{r.pool}</Typography>
-                      <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right' }}>{r.price.toLocaleString()}</Typography>
+                {(phase === 'LIVE' || phase === 'PAUSED') && player && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                    <PlayerCard player={player} />
+                    <PlayerExtraData player={player} />
+                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
+                      <CountdownTimer
+                        timerEndsAt={auctionState.timerEndsAt}
+                        timerPaused={auctionState.timerPaused}
+                        timerRemainingOnPause={auctionState.timerRemainingOnPause}
+                        timerSeconds={settings?.timerSeconds ?? 30}
+                        endMode={settings?.endMode ?? 'timer'}
+                      />
+                      <Box sx={{ flex: 1 }}>
+                        <BidDisplay currentBid={currentBid} teams={teams} player={player} />
+                      </Box>
                     </Box>
-                  ))}
-                </Box>
-              </Paper>
+                    {user.role === 'team' && <BidButton />}
+                    <Paper sx={{ p: 2 }}>
+                      <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
+                        Bid History
+                      </Typography>
+                      <BidHistory history={currentBid?.history} />
+                    </Paper>
+                  </Box>
+                )}
+
+                {phase === 'SETUP' && (
+                  <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
+                    <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>⏳</Typography>
+                    <Typography color="text.secondary" fontSize="1.1rem">Waiting for next player…</Typography>
+                    {auctionState?.players?.length === 0 && (
+                      <Typography color="text.disabled" fontSize="0.85rem" sx={{ mt: 0.5 }}>
+                        Admin hasn't imported players yet.
+                      </Typography>
+                    )}
+                  </Paper>
+                )}
+
+                {!auctionState && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, gap: 2 }}>
+                    <Typography color="text.disabled">Connecting…</Typography>
+                    <Button variant="outlined" color="inherit" size="small" onClick={user?.logout || (() => {
+                      localStorage.removeItem('rpl_token');
+                      localStorage.removeItem('rpl_user');
+                      window.location.href = '/login';
+                    })} sx={{ borderColor: 'divider', color: 'text.secondary' }}>
+                      Sign Out
+                    </Button>
+                  </Box>
+                )}
+
+                {/* Mobile roster */}
+                {roster.length > 0 && (
+                  <Paper className="mobile-roster" sx={{ mt: 2, overflow: 'hidden' }}>
+                    <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="overline" color="text.secondary" fontWeight={600}>My Squad</Typography>
+                      <Typography variant="caption" color="text.disabled">{roster.length} player{roster.length !== 1 ? 's' : ''}</Typography>
+                    </Box>
+                    <Box sx={{ py: 0.5 }}>
+                      <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
+                        {['Player', 'Pool', 'Price'].map(h => (
+                          <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
+                        ))}
+                      </Box>
+                      {roster.map((r, i) => (
+                        <Box key={r.playerId || i} sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1, alignItems: 'center', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default', borderTop: '1px solid', borderColor: 'divider' }}>
+                          <Typography variant="body2" noWrap>{r.playerName}</Typography>
+                          <Typography variant="caption" color="text.disabled" sx={{ bgcolor: 'background.default', border: '1px solid', borderColor: 'divider', borderRadius: 0.5, px: 0.5 }}>{r.pool}</Typography>
+                          <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right' }}>{r.price.toLocaleString()}</Typography>
+                        </Box>
+                      ))}
+                    </Box>
+                  </Paper>
+                )}
+              </>
             )}
           </Box>
         </Box>
@@ -271,175 +295,7 @@ function PlayerExtraData({ player }) {
 
 // ── Right panel ────────────────────────────────────────────────────────────────
 
-function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 }) {
-  const [isOpen, setIsOpen] = useState(() => window.innerWidth >= 1200);
-
-  if (!players || !pools) return null;
-
-  const pending = players.filter(p => p.status === 'PENDING');
-  const poolOrder = pools.map(p => p.id);
-  const avgKey = getAvgPointsKey(players);
-
-  // First, figure out which pools still have actual non-owner players pending
-  const poolsWithActionablePlayers = new Set(
-    pending.filter(p => p.extra?.type !== 'owner').map(p => p.pool)
-  );
-
-  const byPool = {};
-  for (const p of pending) {
-    // If this player is an owner, but their pool is empty of real auctionable players, hide them
-    if (p.extra?.type === 'owner' && !poolsWithActionablePlayers.has(p.pool)) {
-      continue;
-    }
-
-    if (!byPool[p.pool]) byPool[p.pool] = [];
-    byPool[p.pool].push(p);
-  }
-
-  const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
-  const GRID = 'minmax(0,1fr) auto auto';
-
-  if (!isOpen) {
-    return (
-      <Box sx={{ width: 48, height: '100vh', flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, position: 'fixed', top: 0, right: 0, zIndex: 1200 }}>
-        <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane" sx={{ mb: 1 }}>
-          <ChevronLeftIcon />
-        </IconButton>
-        <Typography sx={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)', color: 'text.secondary', fontWeight: 600, fontSize: '0.8rem', letterSpacing: 1 }}>
-          REMAINING ({pending.length})
-        </Typography>
-      </Box>
-    );
-  }
-
-  return (
-    <Box sx={{
-      width: { xs: 300, sm: 340, lg: width },
-      height: '100vh',
-      flexShrink: 0,
-      borderLeft: '1px solid',
-      borderColor: 'divider',
-      bgcolor: 'background.default',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-      position: 'fixed',
-      top: 0,
-      right: 0,
-      zIndex: 1200,
-      boxShadow: { xs: '-4px 0 16px rgba(0,0,0,0.5)', lg: 'none' }
-    }}>
-      <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <IconButton size="small" onClick={() => setIsOpen(false)} title="Collapse pane" sx={{ ml: -1 }}>
-            <ChevronRightIcon fontSize="small" />
-          </IconButton>
-          <Typography variant="overline" color="text.secondary" fontWeight={600}>Remaining</Typography>
-        </Box>
-        <Chip label={pending.length} size="small" color="primary" sx={{ height: 20, fontSize: '0.68rem' }} />
-      </Box>
-
-      <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-        {pending.length === 0 ? (
-          <Typography color="text.disabled" fontSize="0.8rem" sx={{ p: 2, textAlign: 'center' }}>No players remaining</Typography>
-        ) : (
-          orderedPools.map(poolId => {
-            const poolPlayers = byPool[poolId];
-            const clr = poolColor(poolId);
-            const GRID = 'minmax(0,1fr) 50px 60px';
-            return (
-              <div key={poolId}>
-                <div style={{
-                  padding: '0.45rem 1rem',
-                  background: clr.bg,
-                  borderTop: `2px solid ${clr.border}`,
-                  borderBottom: `1px solid ${clr.border}50`,
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  position: 'sticky', top: 0, zIndex: 1,
-                }}>
-                  <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</span>
-                  <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
-                  <PColHead label="Player" first />
-                  <PColHead label="Pool" center />
-                  <PColHead label="Base" right />
-                </div>
-                {sortPlayersByPoints(poolPlayers, avgKey).map((p, rowIdx) => {
-                  const isOnBlock = p.id === currentPlayerId;
-                  const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
-                  return (
-                    <div key={p.id} style={{ display: 'grid', gridTemplateColumns: GRID, background: rowBg, borderBottom: '1px solid #0f172a' }}>
-                      <PCell first style={{ color: isOnBlock ? '#22c55e' : '#cbd5e1', fontWeight: isOnBlock ? 700 : 400 }}>
-                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}{p.name}
-                      </PCell>
-                      <PCell center>
-                        <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{p.pool}</span>
-                      </PCell>
-                      <PCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
-                        {fmtPts(p.basePrice)}
-                      </PCell>
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })
-        )}
-      </Box>
-    </Box>
-  );
-}
-
-function PColHead({ label, first, right }) {
-  return (
-    <span style={{
-      padding: '0.3rem 0.6rem',
-      fontSize: '0.62rem', fontWeight: 700,
-      textTransform: 'uppercase', letterSpacing: '0.06em',
-      color: '#64748b',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
-      textAlign: right ? 'right' : first ? 'left' : 'center',
-      whiteSpace: 'nowrap',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
-    }}>{label}</span>
-  );
-}
-
-function PCell({ children, first, right, center, style = {} }) {
-  return (
-    <span style={{
-      padding: '0.32rem 0.6rem',
-      fontSize: '0.74rem',
-      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-      borderLeft: first ? 'none' : '1px solid #1e293b',
-      textAlign: right ? 'right' : center ? 'center' : 'left',
-      alignSelf: 'center',
-      display: 'flex', alignItems: 'center',
-      justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start',
-      ...(first && { paddingLeft: '1rem' }),
-      ...(right && { paddingRight: '1rem' }),
-      ...style,
-    }}>{children}</span>
-  );
-}
-
-function PhaseBar({ phase, playerCount }) {
-  const labels = {
-    SETUP: { text: 'Setup', color: 'default' },
-    LIVE: { text: '● LIVE', color: 'success' },
-    PAUSED: { text: '⏸ Paused', color: 'warning' },
-    ENDED: { text: 'Ended', color: 'default' },
-  };
-  const cfg = labels[phase] || labels.SETUP;
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', py: 0.5, mb: 0.5 }}>
-      <Chip label={cfg.text} color={cfg.color} size="small" sx={{ fontWeight: 700 }} />
-      {playerCount > 0 && <Typography variant="caption" color="text.disabled">{playerCount} players total</Typography>}
-    </Box>
-  );
-}
+// ── Phase Bar ──────────────────────────────────────────────────────────────────
 
 function MobileHeader({ user, auctionState, connected }) {
   const team = auctionState?.teams?.[user?.teamId];

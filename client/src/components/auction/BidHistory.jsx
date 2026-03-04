@@ -6,10 +6,10 @@ import ListItem from '@mui/material/ListItem';
 import Typography from '@mui/material/Typography';
 
 export default function BidHistory({ history = [] }) {
-  const bottomRef = useRef(null);
+  const topRef = useRef(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    topRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [history.length]);
 
   if (history.length === 0) {
@@ -22,6 +22,7 @@ export default function BidHistory({ history = [] }) {
 
   return (
     <List dense disablePadding sx={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <div ref={topRef} />
       {[...history].reverse().map((entry, i) => (
         <ListItem
           key={i}
@@ -52,7 +53,6 @@ export default function BidHistory({ history = [] }) {
           </Typography>
         </ListItem>
       ))}
-      <div ref={bottomRef} />
     </List>
   );
 }

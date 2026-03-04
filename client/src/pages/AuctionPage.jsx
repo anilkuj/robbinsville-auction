@@ -7,6 +7,8 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidButton from '../components/auction/BidButton.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
+import PlayerExtraData from '../components/auction/PlayerExtraData.jsx';
+import RecentSoldPlayers from '../components/auction/RecentSoldPlayers.jsx';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -34,6 +36,7 @@ export default function AuctionPage() {
   const [toast, setToast] = useState(null);
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(380);
+  const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
   const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
 
   useEffect(() => {
@@ -81,6 +84,17 @@ export default function AuctionPage() {
   const settings = auctionState?.settings;
   const myTeam = auctionState?.teams?.[user?.teamId];
   const roster = myTeam?.roster ?? [];
+
+  // Determine the relevant pool for the "Recently Sold" display
+  let currentPool = player?.pool;
+  if (!currentPool && auctionState?.players) {
+    // If in SETUP phase (no active player), find the last player that was sold
+    const soldPlayers = auctionState.players.filter(p => p.status === 'SOLD');
+    if (soldPlayers.length > 0) {
+      // The last sold player is the one processed most recently
+      currentPool = soldPlayers[soldPlayers.length - 1].pool;
+    }
+  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', userSelect: 'none' }}>
@@ -170,19 +184,23 @@ export default function AuctionPage() {
                       </Typography>
                       <BidHistory history={currentBid?.history} />
                     </Paper>
+                    <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={teams} />
                   </Box>
                 )}
 
                 {phase === 'SETUP' && (
-                  <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
-                    <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>⏳</Typography>
-                    <Typography color="text.secondary" fontSize="1.1rem">Waiting for next player…</Typography>
-                    {auctionState?.players?.length === 0 && (
-                      <Typography color="text.disabled" fontSize="0.85rem" sx={{ mt: 0.5 }}>
-                        Admin hasn't imported players yet.
-                      </Typography>
-                    )}
-                  </Paper>
+                  <>
+                    <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
+                      <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>⏳</Typography>
+                      <Typography color="text.secondary" fontSize="1.1rem">Waiting for next player…</Typography>
+                      {auctionState?.players?.length === 0 && (
+                        <Typography color="text.disabled" fontSize="0.85rem" sx={{ mt: 0.5 }}>
+                          Admin hasn't imported players yet.
+                        </Typography>
+                      )}
+                    </Paper>
+                    <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={teams} />
+                  </>
                 )}
 
                 {!auctionState && (
@@ -227,19 +245,23 @@ export default function AuctionPage() {
         </Box>
 
         {/* Right drag handle */}
-        <Box
-          sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
-          onMouseDown={startDragRight}
-          title="Drag to resize"
-        />
+        {isRightPaneOpen && (
+          <Box
+            sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+            onMouseDown={startDragRight}
+            title="Drag to resize"
+          />
+        )}
 
         {/* Right panel */}
-        <Box sx={{ display: 'flex', width: { xs: '100%', lg: rightWidth }, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
           <RemainingPlayersPanel
             players={auctionState?.players}
             pools={auctionState?.leagueConfig?.pools}
             currentPlayerId={player?.id ?? null}
             width={rightWidth}
+            isOpen={isRightPaneOpen}
+            setIsOpen={setIsRightPaneOpen}
           />
         </Box>
       </Box>
@@ -270,27 +292,6 @@ function poolColor(poolId) {
   if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
   if (poolId === 'C') return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
   return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
-}
-
-// ── Player extra data card ─────────────────────────────────────────────────────
-
-function PlayerExtraData({ player }) {
-  if (!player?.extra) return null;
-  const entries = Object.entries(player.extra).filter(([, v]) => v);
-  if (entries.length === 0) return null;
-
-  return (
-    <Paper sx={{ overflow: 'hidden', display: 'grid', gridTemplateColumns: `repeat(${Math.min(entries.length, 4)}, 1fr)` }}>
-      {entries.map(([k, v], i) => (
-        <Box key={k} sx={{ p: '0.65rem 1rem', borderLeft: i > 0 ? '1px solid' : 'none', borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.disabled" display="block" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700, mb: 0.5 }}>
-            {k}
-          </Typography>
-          <Typography variant="body2" fontWeight={600}>{v}</Typography>
-        </Box>
-      ))}
-    </Paper>
-  );
 }
 
 // ── Right panel ────────────────────────────────────────────────────────────────

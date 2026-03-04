@@ -54,9 +54,7 @@ function PCell({ children, first, right, center, style = {} }) {
     );
 }
 
-export default function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280 }) {
-    const [isOpen, setIsOpen] = useState(() => window.innerWidth >= 1200);
-
+export default function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280, isOpen, setIsOpen }) {
     if (!players || !pools) return null;
 
     const pending = players.filter(p => p.status === 'PENDING');

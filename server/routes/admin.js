@@ -141,14 +141,36 @@ function createAdminRouter(io) {
           return res.status(400).json({ error: 'Each row must have a "name" column' });
         }
 
+        // Validate mandatory columns per user request (Name, Average_Point, Pool, Type, Team)
+        // Ensure some variant of the keys exist
+        const keys = Object.keys(row).map(k => k.trim().toLowerCase());
+        const hasName = keys.includes('name');
+        const hasAvgPts = keys.some(k => k.includes('average_point') || k === 'average_points');
+        const hasPool = keys.includes('pool');
+        const hasType = keys.includes('type') || keys.includes('player_type');
+        const hasTeam = keys.some(k => k.startsWith('team') || k === 'soldto');
+
+        if (!hasName || !hasAvgPts || !hasPool || !hasType || !hasTeam) {
+          return res.status(400).json({
+            error: `Row missing one or more mandatory fields. Mandatory fields are: Name, Average_Point, Pool, Type, Team. Found row: ${JSON.stringify(row)}`
+          });
+        }
+
         const poolId = (row.pool || 'UNASSIGNED').trim().toUpperCase();
-        const basePrice = parseInt(row.basePrice) || 0;
+
+        let basePrice = parseInt(row.basePrice);
+        if (isNaN(basePrice) || basePrice === 0) {
+          // If CSV doesn't specify a base price, try to preserve the existing
+          // base price configured for this pool in League Setup.
+          const existingPool = state.leagueConfig?.pools?.find(p => p.id === poolId);
+          basePrice = existingPool ? existingPool.basePrice : 0;
+        }
 
         if (!detectedPoolsMap[poolId]) {
           detectedPoolsMap[poolId] = {
             id: poolId,
             label: poolId,
-            basePrice: basePrice, // Use the first basePrice encountered for this pool if valid
+            basePrice: basePrice, // Preserve existing or use parsed
             count: 0
           };
         }
@@ -166,9 +188,9 @@ function createAdminRouter(io) {
       const { numTeams, squadSize } = state.leagueConfig;
       const expectedTotal = numTeams * squadSize;
 
-      if (totalPlayers !== expectedTotal) {
+      if (totalPlayers < expectedTotal) {
         return res.status(400).json({
-          error: `CSV has ${totalPlayers} players, expected ${expectedTotal} (${numTeams} teams × ${squadSize} players). Please update League Setup first if you want to change the total count.`,
+          error: `CSV has ${totalPlayers} players, expected at least ${expectedTotal} (${numTeams} teams × ${squadSize} players). Please update League Setup first.`,
         });
       }
 
@@ -207,6 +229,47 @@ function createAdminRouter(io) {
         return a.name.localeCompare(b.name);
       });
       players.forEach((p, i) => { p.sortOrder = i; });
+
+      // Wipe old team rosters, reset budgets, and clear mapped owner arrays
+      // so the new import can cleanly populate them without ghost data.
+      for (const team of Object.values(state.teams)) {
+        team.roster = [];
+        team.budget = state.leagueConfig.startingBudget || 0;
+
+        // Reset all owner tracking entirely
+        team.ownerIsPlayer = false;
+        team.ownerPlayerIds = [];
+        team.ownerName = '';
+      }
+
+      // Reset visible extra columns and spillover list
+      if (state.leagueConfig) {
+        state.leagueConfig.visibleExtraColumns = '';
+        state.leagueConfig.spilloverPlayerIds = [];
+      }
+
+      // Map owners to existing teams based on CSV column
+      for (const p of players) {
+        if (!p.extra) continue;
+        const typeKey = Object.keys(p.extra).find(k => String(k).trim().toLowerCase() === 'type' || String(k).trim().toLowerCase() === 'player_type');
+        if (typeKey && String(p.extra[typeKey]).trim().toLowerCase() === 'owner') {
+          const teamKey = Object.keys(p.extra).find(k => {
+            const kl = String(k).trim().toLowerCase();
+            return kl.startsWith('team') || kl === 'soldto';
+          });
+          const teamNameFromCsv = teamKey ? String(p.extra[teamKey]).replace(/\s+/g, ' ').trim() : null;
+          if (teamNameFromCsv) {
+            const team = Object.values(state.teams).find(t => String(t.name).replace(/\s+/g, ' ').trim().toLowerCase() === teamNameFromCsv.toLowerCase());
+            if (team) {
+              team.ownerIsPlayer = true;
+              if (!team.ownerPlayerIds) team.ownerPlayerIds = [];
+              if (!team.ownerPlayerIds.includes(p.id)) {
+                team.ownerPlayerIds.push(p.id);
+              }
+            }
+          }
+        }
+      }
 
       state.players = players;
       state.phase = 'SETUP';
@@ -343,13 +406,20 @@ function createAdminRouter(io) {
       }
     }
 
-    const { pools, numTeams, squadSize } = leagueConfig;
+    const { pools, numTeams, squadSize, spilloverPlayerIds = [] } = leagueConfig;
     const totalPlayers = pools.reduce((sum, p) => sum + (parseInt(p.count) || 0), 0);
     const required = parseInt(numTeams) * parseInt(squadSize);
+    const overflow = Math.max(0, totalPlayers - required);
 
-    if (totalPlayers !== required) {
+    if (totalPlayers < required) {
       return res.status(400).json({
-        error: `Pool total (${totalPlayers}) must equal numTeams × squadSize (${numTeams} × ${squadSize} = ${required})`,
+        error: `Pool total (${totalPlayers}) must be at least numTeams × squadSize (${numTeams} × ${squadSize} = ${required})`,
+      });
+    }
+
+    if (spilloverPlayerIds.length !== overflow) {
+      return res.status(400).json({
+        error: `You have ${totalPlayers} players for ${required} roster spots. You must designate exactly ${overflow} Spillover/Manual Sale players to proceed. (Currently selected: ${spilloverPlayerIds.length})`,
       });
     }
 
@@ -373,32 +443,29 @@ function createAdminRouter(io) {
       squadSize: parseInt(squadSize) || 0,
       startingBudget: parseInt(leagueConfig.startingBudget) || 0,
       minBid: parseInt(leagueConfig.minBid) || 0,
+      visibleExtraColumns: String(leagueConfig.visibleExtraColumns || '').trim(),
+      spilloverPlayerIds: Array.isArray(spilloverPlayerIds) ? spilloverPlayerIds : [],
       pools: pools.map(p => {
         const bp = parseInt(p.basePrice);
         const cnt = parseInt(p.count);
         return {
-          id: String(p.id),
-          label: String(p.label || p.id),
+          id: String(p.id).trim(),
+          label: String(p.label || p.id).trim(),
           basePrice: isNaN(bp) ? 0 : bp,
           count: isNaN(cnt) ? 0 : cnt,
+          oldId: p.oldId,
         };
       }),
     };
 
     // Update teams — preserve budgets/rosters for existing teams, init new ones
     const newTeams = {};
-    for (const [teamId, teamData] of teamEntries) {
-      const existing = state.teams[teamId];
-      newTeams[teamId] = {
-        id: teamId,
-        name: teamData.name,
-        password: teamData.password || existing?.password || 'team123',
-        budget: (existing?.roster?.length > 0) ? existing.budget : parseInt(leagueConfig.startingBudget),
-        roster: existing?.roster || [],
-        ownerIsPlayer: teamData.ownerIsPlayer || false,
-        ownerPlayerId: teamData.ownerPlayerId || null,
-        ownerName: teamData.ownerName || null,
-      };
+    for (const [id, t] of Object.entries(teams)) {
+      if (state.teams[id]) {
+        newTeams[id] = { ...state.teams[id], name: String(t.name).trim(), password: t.password || 'team123', ownerIsPlayer: t.ownerIsPlayer || false, ownerName: t.ownerName || '', ownerPlayerIds: t.ownerPlayerIds || [] };
+      } else {
+        newTeams[id] = { id: String(t.id).trim(), name: String(t.name).trim(), password: t.password || 'team123', budget: state.leagueConfig.startingBudget, roster: [], ownerIsPlayer: t.ownerIsPlayer || false, ownerName: t.ownerName || '', ownerPlayerIds: t.ownerPlayerIds || [] };
+      }
     }
     state.teams = newTeams;
 
@@ -598,9 +665,9 @@ function createAdminRouter(io) {
 
       // Set teams
       state.teams = {
-        team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner1Id },
-        team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner2Id },
-        team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerId: owner3Id },
+        team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner1Id] },
+        team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner2Id] },
+        team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner3Id] },
       };
 
       // Build players sorted by pool order then name

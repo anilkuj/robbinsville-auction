@@ -16,8 +16,8 @@ function computeMaxBid(budget, rosterSize, squadSize, minBid) {
 // case-insensitive) equals "owner" (case-insensitive value).
 function isOwner(player) {
   if (!player.extra) return false;
-  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
-  return typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
+  const typeKey = Object.keys(player.extra).find(k => String(k).trim().toLowerCase() === 'type' || String(k).trim().toLowerCase() === 'player_type');
+  return typeKey ? String(player.extra[typeKey]).trim().toLowerCase() === 'owner' : false;
 }
 
 // Average soldFor of non-owner SOLD players in the given pool.
@@ -65,15 +65,18 @@ function syncOwnerAverages(state, poolId) {
       owner.status = 'SOLD';
 
       // Team resolution priority:
-      // 1. League Setup ownerPlayerId (admin explicitly linked this player to a team)
+      // 1. League Setup ownerPlayerIds (admin explicitly linked this player to a team)
       // 2. CSV extra.team column (case-insensitive key + value match)
-      let team = Object.values(state.teams).find(t => t.ownerPlayerId === owner.id);
+      let team = Object.values(state.teams).find(t => t.ownerPlayerIds && t.ownerPlayerIds.includes(owner.id));
 
       if (!team) {
-        const teamKey = Object.keys(owner.extra || {}).find(k => k.toLowerCase() === 'team');
+        const teamKey = Object.keys(owner.extra || {}).find(k => {
+          const kl = String(k).trim().toLowerCase();
+          return kl.startsWith('team') || kl === 'soldto';
+        });
         if (teamKey) {
-          const teamName = String(owner.extra[teamKey]).trim().toLowerCase();
-          team = Object.values(state.teams).find(t => t.name.trim().toLowerCase() === teamName);
+          const teamName = String(owner.extra[teamKey]).replace(/\s+/g, ' ').trim().toLowerCase();
+          team = Object.values(state.teams).find(t => t.name.replace(/\s+/g, ' ').trim().toLowerCase() === teamName);
         }
       }
 
@@ -130,7 +133,7 @@ function getPublicState() {
       budget: team.budget,
       roster: team.roster,
       ownerIsPlayer: team.ownerIsPlayer || false,
-      ownerPlayerId: team.ownerPlayerId || null,
+      ownerPlayerIds: team.ownerPlayerIds || (team.ownerPlayerId ? [team.ownerPlayerId] : []),
       ownerName: team.ownerName || null,
     };
   }
@@ -182,10 +185,12 @@ function findNextPendingIndex(fromIndex, randomize = false) {
   const state = getState();
   const pending = [];
 
+  const spillovers = state.leagueConfig?.spilloverPlayerIds || [];
+
   // Find all pending eligible players after the fromIndex
   for (let i = fromIndex; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.status === 'PENDING' && !isOwner(p)) pending.push(i);
+    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id)) pending.push(i);
   }
 
   if (pending.length === 0) return -1;
@@ -195,7 +200,7 @@ function findNextPendingIndex(fromIndex, randomize = false) {
   let firstPendingPool = null;
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.status === 'PENDING' && !isOwner(p)) {
+    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id)) {
       firstPendingPool = p.pool;
       break;
     }
@@ -208,7 +213,7 @@ function findNextPendingIndex(fromIndex, randomize = false) {
   const inPool = [];
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.status === 'PENDING' && !isOwner(p) && p.pool === firstPendingPool) {
+    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id) && p.pool === firstPendingPool) {
       inPool.push(i);
     }
   }

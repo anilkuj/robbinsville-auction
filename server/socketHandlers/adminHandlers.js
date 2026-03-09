@@ -48,12 +48,31 @@ function registerAdminHandlers(io, socket) {
       socket.emit('admin:error', { message: 'Can only advance player in SETUP phase' });
       return;
     }
-    const teamsWithMissingOwner = Object.values(state.teams).filter(t => t.ownerIsPlayer && !t.ownerPlayerId);
+    const teamsWithMissingOwner = Object.values(state.teams).filter(t => t.ownerIsPlayer && (!t.ownerPlayerIds || t.ownerPlayerIds.length === 0));
     if (teamsWithMissingOwner.length > 0) {
       const names = teamsWithMissingOwner.map(t => t.name || t.id).join(', ');
       socket.emit('admin:error', { message: `Owner player not selected for: ${names}` });
       return;
     }
+
+    const activePools = state.leagueConfig?.pools || [];
+    const zeroPricePools = activePools.filter(p => p.count > 0 && (!p.basePrice || p.basePrice <= 0));
+    if (zeroPricePools.length > 0) {
+      const names = zeroPricePools.map(p => p.label || p.id).join(', ');
+      socket.emit('admin:error', { message: `Cannot start auction! Base price is 0 for pools: ${names}. Please set a base price in League Setup.` });
+      return;
+    }
+
+    const totalPlayers = state.players?.length || 0;
+    const required = (state.leagueConfig?.numTeams || 0) * (state.leagueConfig?.squadSize || 0);
+    const overflow = Math.max(0, totalPlayers - required);
+    const spillovers = state.leagueConfig?.spilloverPlayerIds || [];
+
+    if (spillovers.length !== overflow) {
+      socket.emit('admin:error', { message: `Cannot start auction! You have ${totalPlayers} players for ${required} spots. Configure exactly ${overflow} spillover players in Setting.` });
+      return;
+    }
+
     startPlayer(io);
   });
 
@@ -248,8 +267,8 @@ function registerAdminHandlers(io, socket) {
     }
 
     const amount = parseInt(saleAmount);
-    if (isNaN(amount) || amount <= 0) {
-      socket.emit('admin:error', { message: 'Sale amount must be a positive number' });
+    if (isNaN(amount) || amount < 0) {
+      socket.emit('admin:error', { message: 'Sale amount must be a non-negative number' });
       return;
     }
 
@@ -321,8 +340,8 @@ function registerAdminHandlers(io, socket) {
     }
 
     const amount = parseInt(newAmount);
-    if (isNaN(amount) || amount <= 0) {
-      socket.emit('admin:error', { message: 'Amount must be a positive number' });
+    if (isNaN(amount) || amount < 0) {
+      socket.emit('admin:error', { message: 'Amount must be a non-negative number' });
       return;
     }
 

@@ -21,7 +21,8 @@ function playerIsOwner(player) {
 }
 
 export default function PlayerDataTab({ auctionState, adminAction, readOnly = false }) {
-    const { players = [], teams = {} } = auctionState;
+    const { players = [], teams = {}, leagueConfig = {} } = auctionState;
+    const spillovers = leagueConfig.spilloverPlayerIds || [];
     const [statusFilter, setStatusFilter] = useState('ALL');
     const [search, setSearch] = useState('');
 
@@ -71,13 +72,21 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     }
 
     const HIDDEN_EXTRA_COLS = new Set(['player_type', 'other_s25']);
-    const extraKeys = [];
+    let extraKeys = [];
     for (const p of players) {
         if (p.extra) {
             for (const k of Object.keys(p.extra)) {
                 if (!extraKeys.includes(k) && !HIDDEN_EXTRA_COLS.has(k.toLowerCase())) extraKeys.push(k);
             }
         }
+    }
+
+    if (readOnly) {
+        const visibleColsStr = auctionState?.leagueConfig?.visibleExtraColumns || '';
+        const allowedCols = new Set(visibleColsStr.split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+        const avgKey = getAvgPointsKey(players);
+        if (avgKey) allowedCols.add(avgKey.toLowerCase());
+        extraKeys = extraKeys.filter(k => allowedCols.has(k.toLowerCase()));
     }
 
     const statusCfg = {
@@ -300,11 +309,11 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             {thSort('#', '#', { first: true })}
                             {thSort('name', 'Player Name')}
                             {thSort('pool', 'Pool')}
-                            {thSort('status', 'Status', { center: true })}
-                            {thSort('soldTo', 'Sold To')}
-                            {thSort('soldFor', 'Sold Price', { right: true })}
+                            {!readOnly && thSort('status', 'Status', { center: true })}
+                            {!readOnly && thSort('soldTo', 'Sold To')}
+                            {!readOnly && thSort('soldFor', 'Sold Price', { right: true })}
                             {extraKeys.map(k => thSort(k, k))}
-                            {thSort('base', 'Base', { right: true })}
+                            {thSort('base', 'Base Price', { right: true })}
                             <TH center></TH>
                         </tr>
                     </thead>
@@ -352,6 +361,9 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                                 {owner && (
                                                     <span style={{ background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
                                                 )}
+                                                {spillovers.includes(p.id) && (
+                                                    <span style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #47556960', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }} title="This player will not be drafted randomly and must be auctioned manually">MANUAL SALE</span>
+                                                )}
                                             </span>
                                         )}
                                     </TD>
@@ -370,41 +382,45 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             <span style={{ background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`, borderRadius: 4, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{p.pool}</span>
                                         )}
                                     </TD>
-                                    <TD center style={cellStyle('status')}>
-                                        {isEditing ? (
-                                            <select
-                                                style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
-                                                value={changes.status !== undefined ? changes.status : p.status}
-                                                onChange={e => handleFieldChange(p.id, 'status', e.target.value)}
-                                            >
-                                                {['PENDING', 'SOLD', 'UNSOLD'].map(s => (
-                                                    <option key={s} value={s}>{s}</option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
-                                        )}
-                                    </TD>
-                                    <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
-                                    <TD right style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
-                                        {isEditing && (changes.status === 'SOLD' || (!changes.status && p.status === 'SOLD')) ? (
-                                            <input
-                                                type="number"
-                                                style={{ background: 'transparent', border: 'none', color: 'inherit', textAlign: 'right', width: '60px' }}
-                                                value={changes.soldFor !== undefined ? changes.soldFor : (p.soldFor || 0)}
-                                                onChange={e => handleFieldChange(p.id, 'soldFor', e.target.value)}
-                                                disabled={owner} // owners price is avg-based
-                                            />
-                                        ) : (
-                                            owner && p.soldFor ? (
-                                                <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
-                                            ) : p.soldFor ? (
-                                                <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
-                                            ) : (
-                                                <span style={{ color: '#334155' }}>—</span>
-                                            )
-                                        )}
-                                    </TD>
+                                    {!readOnly && (
+                                        <>
+                                            <TD center style={cellStyle('status')}>
+                                                {isEditing ? (
+                                                    <select
+                                                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                                                        value={changes.status !== undefined ? changes.status : p.status}
+                                                        onChange={e => handleFieldChange(p.id, 'status', e.target.value)}
+                                                    >
+                                                        {['PENDING', 'SOLD', 'UNSOLD'].map(s => (
+                                                            <option key={s} value={s}>{s}</option>
+                                                        ))}
+                                                    </select>
+                                                ) : (
+                                                    <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
+                                                )}
+                                            </TD>
+                                            <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
+                                            <TD right style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
+                                                {isEditing && (changes.status === 'SOLD' || (!changes.status && p.status === 'SOLD')) ? (
+                                                    <input
+                                                        type="number"
+                                                        style={{ background: 'transparent', border: 'none', color: 'inherit', textAlign: 'right', width: '60px' }}
+                                                        value={changes.soldFor !== undefined ? changes.soldFor : (p.soldFor || 0)}
+                                                        onChange={e => handleFieldChange(p.id, 'soldFor', e.target.value)}
+                                                        disabled={owner} // owners price is avg-based
+                                                    />
+                                                ) : (
+                                                    owner && p.soldFor ? (
+                                                        <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
+                                                    ) : p.soldFor ? (
+                                                        <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
+                                                    ) : (
+                                                        <span style={{ color: '#334155' }}>—</span>
+                                                    )
+                                                )}
+                                            </TD>
+                                        </>
+                                    )}
                                     {extraKeys.map(k => {
                                         const extraVal = changes.extra && changes.extra[k] !== undefined ? changes.extra[k] : (p.extra?.[k] ?? '');
                                         return (

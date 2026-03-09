@@ -58,7 +58,7 @@ export default function AuctionControls() {
   const isSetup = phase === 'SETUP';
 
   const teamsWithMissingOwner = Object.values(auctionState.teams || {})
-    .filter(t => t.ownerIsPlayer && !t.ownerPlayerId);
+    .filter(t => t.ownerIsPlayer && (!t.ownerPlayerIds || t.ownerPlayerIds.length === 0));
   const ownerBlocked = teamsWithMissingOwner.length > 0;
   const isManual = settings.endMode === 'manual';
   const awaitingHammer = isLive && isManual && !timerEndsAt;
@@ -82,7 +82,7 @@ export default function AuctionControls() {
     ? computeMaxBid(selectedTeam.budget, selectedTeam.roster.length, squadSize || 18, minBid || 1000)
     : null;
   const msAmountNum = parseInt(msAmount);
-  const msAmountInvalid = msAmount !== '' && (isNaN(msAmountNum) || msAmountNum <= 0 || (msMaxBid !== null && msAmountNum > msMaxBid));
+  const msAmountInvalid = msAmount !== '' && (isNaN(msAmountNum) || msAmountNum < 0 || (msMaxBid !== null && msAmountNum > msMaxBid));
   const canSubmitManualSale = msPlayer && msTeam && msAmount !== '' && !msAmountInvalid;
 
   function submitManualSale() {
@@ -140,10 +140,16 @@ export default function AuctionControls() {
         </Paper>
       )}
 
-      {/* Owner blocked warning */}
       {ownerBlocked && isSetup && (
         <Alert severity="error" sx={{ fontSize: '0.8rem' }}>
           ⚠ Owner player not selected for: {teamsWithMissingOwner.map(t => t.name || t.id).join(', ')} — go to League Setup to fix.
+        </Alert>
+      )}
+
+      {/* General admin error banner */}
+      {adminError && !showManualSale && (
+        <Alert severity="error" onClose={() => clearAdminError()} sx={{ fontSize: '0.8rem' }}>
+          {adminError}
         </Alert>
       )}
 
@@ -288,7 +294,7 @@ export default function AuctionControls() {
                   <TextField
                     size="small"
                     type="number"
-                    inputProps={{ min: 1 }}
+                    inputProps={{ min: 0 }}
                     placeholder="pts"
                     value={msAmount}
                     onChange={e => { setMsAmount(e.target.value); setMsLocalError(''); }}
@@ -307,7 +313,7 @@ export default function AuctionControls() {
                 <Typography variant="caption" color="text.disabled">
                   {selectedTeam.name}: budget {formatPts(selectedTeam.budget)}, roster {selectedTeam.roster.length}/{squadSize || 18}
                   {msMaxBid !== null && msMaxBid <= 0 && (
-                    <Box component="span" color="error.main" ml={1}>⚠ Cannot purchase any more players</Box>
+                    <Box component="span" color="warning.main" ml={1}>⚠ Budget exhausted (0 pt sales only)</Box>
                   )}
                 </Typography>
               )}

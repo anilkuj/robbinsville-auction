@@ -48,6 +48,7 @@ export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('Auction Controls');
+  const [showReviewDialog, setShowReviewDialog] = useState(false);
 
   if (!auctionState) {
     return (
@@ -112,8 +113,8 @@ export default function AdminPage() {
           ) : (
             <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
-                {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} />}
-                {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} />}
+                {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} onImported={() => setShowReviewDialog(true)} />}
+                {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} onImported={() => setShowReviewDialog(true)} />}
                 {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
                 {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
               </Box>
@@ -130,21 +131,40 @@ export default function AdminPage() {
           )}
         </Box>
       </Box>
+
+      <PostImportReviewDialog
+        open={showReviewDialog}
+        onClose={() => setShowReviewDialog(false)}
+        auctionState={auctionState}
+      />
     </Box>
   );
 }
 
 // ─── League Setup Tab ─────────────────────────────────────────────────────────
 
-function LeagueSetupTab({ auctionState }) {
+function LeagueSetupTab({ auctionState, onImported }) {
   const { phase, leagueConfig } = auctionState;
   const isSetup = phase === 'SETUP';
 
   const ownerPlayers = (auctionState.players || []).filter(p => {
     if (!p.extra) return false;
-    const typeKey = Object.keys(p.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
-    return typeKey && String(p.extra[typeKey]).toLowerCase() === 'owner';
+    const typeKey = Object.keys(p.extra).find(k => String(k).trim().toLowerCase() === 'type' || String(k).trim().toLowerCase() === 'player_type');
+    return typeKey && String(p.extra[typeKey]).trim().toLowerCase() === 'owner';
   });
+
+  const allExtraKeys = React.useMemo(() => {
+    const keys = new Set();
+    const hidden = new Set(['player_type', 'other_s25']);
+    (auctionState.players || []).forEach(p => {
+      if (p.extra) {
+        Object.keys(p.extra).forEach(k => {
+          if (!hidden.has(String(k).trim().toLowerCase())) keys.add(k);
+        });
+      }
+    });
+    return Array.from(keys);
+  }, [auctionState.players]);
 
   const [cfg, setCfg] = useState(() => JSON.parse(JSON.stringify(leagueConfig)));
   const [teams, setTeams] = useState(() => {
@@ -176,11 +196,13 @@ function LeagueSetupTab({ auctionState }) {
 
   const required = parseInt(cfg.numTeams) * parseInt(cfg.squadSize);
   const poolTotal = cfg.pools.reduce((s, p) => s + (parseInt(p.count) || 0), 0);
+  const overflow = Math.max(0, poolTotal - required);
   const teamCount = Object.keys(teams).length;
-  const poolsValid = poolTotal === required;
+  const poolsValid = poolTotal >= required;
   const teamsValid = teamCount === parseInt(cfg.numTeams);
-  const ownerValid = Object.values(teams).every(t => !t.ownerIsPlayer || (t.ownerPlayerId && t.ownerPlayerId !== ''));
-  const canSave = isSetup && poolsValid && teamsValid && ownerValid;
+  const ownerValid = Object.values(teams).every(t => !t.ownerIsPlayer || (t.ownerPlayerIds && t.ownerPlayerIds.length > 0));
+  const spilloverValid = overflow === 0 || ((cfg.spilloverPlayerIds || []).length === overflow);
+  const canSave = poolsValid && teamsValid && ownerValid && spilloverValid;
   const auctionStarted = phase !== 'SETUP' || (auctionState.players || []).some(p => p.status !== 'PENDING');
 
   function updatePool(idx, field, val) {
@@ -224,7 +246,7 @@ function LeagueSetupTab({ auctionState }) {
     setTeams(prev => {
       const updated = { ...prev[id], [field]: val };
       if (field === 'ownerIsPlayer' && val) updated.ownerName = '';
-      if (field === 'ownerIsPlayer' && !val) updated.ownerPlayerId = null;
+      if (field === 'ownerIsPlayer' && !val) updated.ownerPlayerIds = [];
       return { ...prev, [id]: updated };
     });
   }
@@ -240,6 +262,7 @@ function LeagueSetupTab({ auctionState }) {
           squadSize: parseInt(cfg.squadSize),
           startingBudget: parseInt(cfg.startingBudget),
           minBid: parseInt(cfg.minBid),
+          visibleExtraColumns: cfg.visibleExtraColumns || '',
           pools: cfg.pools.map(p => ({
             ...p,
             count: parseInt(p.count),
@@ -273,49 +296,110 @@ function LeagueSetupTab({ auctionState }) {
       <Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
           <SectionTitle style={{ margin: 0 }}>Global Settings</SectionTitle>
-          {isSetup && !auctionStarted && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {auctionStarted && (
+              <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
+                Only Visible Columns can be edited during auction
+              </Typography>
+            )}
             <Button size="small" variant="outlined" color="primary" onClick={() => setEditingGlobal(!editingGlobal)} sx={{ fontSize: '0.75rem' }}>
               {editingGlobal ? 'Done Editing' : 'Edit Settings'}
             </Button>
-          )}
-          {isSetup && auctionStarted && (
-            <Typography variant="caption" color="warning.main" sx={{ fontStyle: 'italic' }}>
-              Settings locked (auction started)
-            </Typography>
-          )}
+          </Box>
         </Box>
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
           {[
-            { label: 'Number of Teams', key: 'numTeams', min: 2, unit: '' },
-            { label: 'Squad Size', key: 'squadSize', min: 1, unit: '' },
-            { label: 'Starting Budget', key: 'startingBudget', min: 1000, unit: 'pts' },
-            { label: 'Min Bid', key: 'minBid', min: 100, unit: 'pts' },
-          ].map(({ label, key, min, unit }) => (
-            <Box key={key} sx={{ flex: '1 1 160px', minWidth: 160 }}>
+            { label: 'Number of Teams', key: 'numTeams', type: 'number', min: 2, unit: '' },
+            { label: 'Squad Size', key: 'squadSize', type: 'number', min: 1, unit: '' },
+            { label: 'Starting Budget', key: 'startingBudget', type: 'number', min: 1000, unit: 'pts' },
+            { label: 'Min Bid', key: 'minBid', type: 'number', min: 100, unit: 'pts' },
+            { label: 'Visible Columns', key: 'visibleExtraColumns', type: 'multiselect' },
+          ].map(({ label, key, min, unit, type, placeholder }) => (
+            <Box key={key} sx={{ flex: '1 1 160px', minWidth: 160, maxWidth: type === 'multiselect' ? '100%' : 'auto' }}>
               {editingGlobal ? (
-                <TextField
-                  label={label}
-                  type="number"
-                  inputProps={{ min }}
-                  size="small"
-                  value={cfg[key]}
-                  disabled={!isSetup}
-                  onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
-                  fullWidth
-                />
+                type === 'multiselect' ? (
+                  <FormControl size="small" fullWidth>
+                    <InputLabel>{label}</InputLabel>
+                    <Select
+                      multiple
+                      label={label}
+                      value={String(cfg[key] || '').split(',').map(s => s.trim()).filter(Boolean)}
+                      disabled={false}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCfg(prev => ({ ...prev, [key]: (typeof val === 'string' ? val : val.join(', ')) }));
+                      }}
+                      renderValue={(selected) => selected.join(', ')}
+                    >
+                      {allExtraKeys.length === 0 && <MenuItem disabled>No extra columns found</MenuItem>}
+                      {allExtraKeys.map(k => (
+                        <MenuItem key={k} value={k}>{k}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <TextField
+                    label={label}
+                    type={type || 'number'}
+                    inputProps={{ min }}
+                    placeholder={placeholder}
+                    size="small"
+                    value={cfg[key] || ''}
+                    disabled={!isSetup || auctionStarted}
+                    onChange={e => setCfg(prev => ({ ...prev, [key]: e.target.value }))}
+                    fullWidth
+                  />
+                )
               ) : (
                 <Box sx={{ bgcolor: 'background.default', p: 1.5, borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
                   <Typography variant="caption" color="text.secondary" display="block">{label}</Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {parseInt(cfg[key] || 0).toLocaleString()} {unit}
+                  <Typography variant="body1" fontWeight={600} noWrap>
+                    {type === 'multiselect' ? (cfg[key] || 'None') : `${parseInt(cfg[key] || 0).toLocaleString()} ${unit}`}
                   </Typography>
                 </Box>
               )}
             </Box>
           ))}
         </Box>
-        {isSetup && editingGlobal && (
-          <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end' }}>
+        {overflow > 0 && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(239, 68, 68, 0.05)', border: '1px solid', borderColor: 'error.main', borderRadius: 1 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle2" color="error.main" fontWeight={600}>Action Required: Spillover Players</Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              You imported {poolTotal} players but only need {required} for all team rosters. You must designate exactly {overflow} players for Manual Sale to balance the draft.
+            </Typography>
+            {editingGlobal ? (
+              <FormControl size="small" fullWidth error={!spilloverValid}>
+                <InputLabel>Select {overflow} Spillover Player{overflow !== 1 ? 's' : ''}</InputLabel>
+                <Select
+                  multiple
+                  label={`Select ${overflow} Spillover Player${overflow !== 1 ? 's' : ''}`}
+                  value={cfg.spilloverPlayerIds || []}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setCfg(prev => ({ ...prev, spilloverPlayerIds: typeof val === 'string' ? val.split(',') : val }));
+                  }}
+                  renderValue={(selected) => selected.map(sid => auctionState.players?.find(p => p.id === sid)?.name || sid).filter(Boolean).join(', ')}
+                >
+                  {auctionState.players?.filter(p => p.status === 'PENDING' && (!p.extra || p.extra.type?.toLowerCase() !== 'owner')).map(p => (
+                    <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <Typography variant="body1" fontWeight={600} noWrap>
+                {(cfg.spilloverPlayerIds || []).length > 0
+                  ? (cfg.spilloverPlayerIds || []).map(sid => auctionState.players?.find(p => p.id === sid)?.name).filter(Boolean).join(', ')
+                  : <span style={{ color: '#ef4444' }}>None Selected</span>
+                }
+              </Typography>
+            )}
+          </Box>
+        )}
+        {editingGlobal && (
+          <Box sx={{ mt: 1.5, display: 'flex', justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' }}>
+            {!spilloverValid && <Typography variant="caption" color="error.main" sx={{ mb: 1 }}>Please select exactly {overflow} spillover players before saving.</Typography>}
             <Button
               variant="contained"
               color="success"
@@ -480,30 +564,34 @@ function LeagueSetupTab({ auctionState }) {
                       const takenIds = new Set(
                         Object.entries(teams)
                           .filter(([tid]) => tid !== id)
-                          .map(([, t]) => t.ownerPlayerId)
-                          .filter(Boolean)
+                          .flatMap(([, t]) => t.ownerPlayerIds || [])
                       );
-                      const available = ownerPlayers.filter(p => !takenIds.has(p.id));
+                      const myOwners = team.ownerPlayerIds || [];
                       return (
-                        <FormControl size="small" sx={{ flex: 1, maxWidth: 260 }} error={!team.ownerPlayerId}>
-                          <InputLabel>Select owner player</InputLabel>
+                        <FormControl size="small" sx={{ flex: 1, maxWidth: 260 }} error={myOwners.length === 0}>
+                          <InputLabel>Select owner players</InputLabel>
                           <Select
-                            label="Select owner player"
-                            value={team.ownerPlayerId || ''}
+                            multiple
+                            label="Select owner players"
+                            value={myOwners}
                             disabled={!isSetup}
-                            onChange={e => updateTeam(id, 'ownerPlayerId', e.target.value || null)}
+                            onChange={e => {
+                              const val = e.target.value;
+                              updateTeam(id, 'ownerPlayerIds', typeof val === 'string' ? val.split(',') : val);
+                            }}
+                            renderValue={(selected) => selected.map(sid => ownerPlayers.find(p => p.id === sid)?.name).filter(Boolean).join(', ')}
                           >
-                            <MenuItem value=""><em>— Select team owner —</em></MenuItem>
-                            {team.ownerPlayerId && !available.find(p => p.id === team.ownerPlayerId) && (() => {
-                              const p = ownerPlayers.find(op => op.id === team.ownerPlayerId);
-                              return p ? <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem> : null;
-                            })()}
-                            {available.map(p => <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>)}
+                            {ownerPlayers.map(p => {
+                              if (!takenIds.has(p.id) || myOwners.includes(p.id)) {
+                                return <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>;
+                              }
+                              return null;
+                            })}
                           </Select>
                         </FormControl>
                       );
                     })()}
-                    {team.ownerIsPlayer && !team.ownerPlayerId && (
+                    {team.ownerIsPlayer && (!team.ownerPlayerIds || team.ownerPlayerIds.length === 0) && (
                       <Typography variant="caption" color="error">Required</Typography>
                     )}
                   </Box>
@@ -512,9 +600,9 @@ function LeagueSetupTab({ auctionState }) {
                 <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(120px, 1fr) minmax(120px, 1fr)', gap: 1, alignItems: 'center' }}>
                   <Box>
                     <Typography variant="body1" fontWeight={600} noWrap>{team.name || '—'}</Typography>
-                    {team.ownerIsPlayer && team.ownerPlayerId && (
+                    {team.ownerIsPlayer && team.ownerPlayerIds && team.ownerPlayerIds.length > 0 && (
                       <Typography variant="caption" color="primary.main" display="block">
-                        Owner: {ownerPlayers.find(p => p.id === team.ownerPlayerId)?.name || 'Unknown'}
+                        {team.ownerPlayerIds.length === 1 ? 'Owner' : 'Owners'}: {team.ownerPlayerIds.map(sid => ownerPlayers.find(p => p.id === sid)?.name).filter(Boolean).join(', ')}
                       </Typography>
                     )}
                     {!team.ownerIsPlayer && team.ownerName && (
@@ -695,7 +783,7 @@ function LeagueSetupTab({ auctionState }) {
 
 // ─── Auction Controls Tab ─────────────────────────────────────────────────────
 
-function AuctionControlsTab({ auctionState, adminAction }) {
+function AuctionControlsTab({ auctionState, adminAction, onImported }) {
   const { phase, players, currentPlayerIndex, currentBid, teams } = auctionState;
 
   const isSetup = phase === 'SETUP';
@@ -815,7 +903,7 @@ function AuctionControlsTab({ auctionState, adminAction }) {
       {isSetup && (
         <Box>
           <SectionTitle>Import Players</SectionTitle>
-          <PlayerImport />
+          <PlayerImport onImported={onImported} />
         </Box>
       )}
 
@@ -1413,5 +1501,84 @@ function TD({ children, first, right, center, style = {} }) {
     }}>
       {children}
     </td>
+  );
+}
+
+function PostImportReviewDialog({ open, onClose, auctionState }) {
+  const { leagueConfig, settings, players = [] } = auctionState;
+  const required = (leagueConfig?.numTeams || 0) * (leagueConfig?.squadSize || 0);
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle sx={{ bgcolor: 'secondary.main', color: 'white', py: 1.5 }}>
+        Review League & Auction Setup
+      </DialogTitle>
+      <DialogContent sx={{ mt: 2 }}>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          Players have been imported successfully. Please verify the configuration before starting the auction.
+        </Typography>
+
+        <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+          {/* League Setup */}
+          <Box>
+            <Typography variant="subtitle2" color="primary" sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 0.5, mb: 1.5 }}>
+              League Structure
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <ReviewItem label="Total Teams" value={leagueConfig?.numTeams} />
+              <ReviewItem label="Squad Size" value={leagueConfig?.squadSize} />
+              <ReviewItem label="Starting Budget" value={leagueConfig?.startingBudget ? `${leagueConfig.startingBudget.toLocaleString()} pts` : '—'} />
+              <ReviewItem label="Min Bid" value={leagueConfig?.minBid ? `${leagueConfig.minBid.toLocaleString()} pts` : '—'} />
+            </Box>
+          </Box>
+
+          {/* Auction Controls */}
+          <Box>
+            <Typography variant="subtitle2" color="primary" sx={{ borderBottom: '1px solid', borderColor: 'divider', pb: 0.5, mb: 1.5 }}>
+              Auction Logic
+            </Typography>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1.5 }}>
+              <ReviewItem label="Timer Seconds" value={settings?.timerSeconds} />
+              <ReviewItem label="Bid Increment" value={settings?.bidIncrement ? `${settings.bidIncrement.toLocaleString()} pts` : '—'} />
+              <ReviewItem label="End Mode" value={settings?.endMode?.toUpperCase()} />
+              <ReviewItem label="Randomize Pool" value={settings?.randomizePool ? 'YES' : 'NO'} />
+            </Box>
+          </Box>
+
+          {/* Data Summary */}
+          <Box sx={{ px: 2, py: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>Data Verification</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="body2">Players Imported</Typography>
+              <Typography variant="body2" fontWeight={700}>{players.length}</Typography>
+            </Box>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+              <Typography variant="body2">Roster Spots Required</Typography>
+              <Typography variant="body2" fontWeight={700}>{required}</Typography>
+            </Box>
+            {players.length > required && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', color: 'warning.main', mt: 0.5 }}>
+                <Typography variant="caption">Overflow/Spillover</Typography>
+                <Typography variant="caption" fontWeight={700}>{players.length - required}</Typography>
+              </Box>
+            )}
+          </Box>
+        </Box>
+      </DialogContent>
+      <DialogActions sx={{ p: 2, bgcolor: 'action.hover' }}>
+        <Button onClick={onClose} variant="contained" color="secondary" fullWidth>
+          Confirm & Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function ReviewItem({ label, value }) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1 }}>{label}</Typography>
+      <Typography variant="body2" fontWeight={600}>{value ?? '—'}</Typography>
+    </Box>
   );
 }

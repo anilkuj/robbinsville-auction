@@ -3,9 +3,15 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
-export default function PlayerExtraData({ player }) {
+export default function PlayerExtraData({ player, visibleKeys = [] }) {
     if (!player?.extra) return null;
-    const entries = Object.entries(player.extra).filter(([, v]) => v);
+
+    // Default fallback to all columns if visibleKeys is not configured or empty
+    let entries = Object.entries(player.extra).filter(([, v]) => v);
+    if (visibleKeys.length > 0) {
+        entries = entries.filter(([k]) => visibleKeys.includes(k));
+    }
+
     if (entries.length === 0) return null;
 
     return (

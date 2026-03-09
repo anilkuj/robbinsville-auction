@@ -49,6 +49,7 @@ export default function HostPage() {
     const player = phase === 'LIVE' ? auctionState?.players?.[auctionState?.currentPlayerIndex] : null;
     const currentBid = auctionState?.currentBid;
     const settings = auctionState?.settings;
+    const leagueConfig = auctionState?.leagueConfig;
 
     // Determine the relevant pool for the "Recently Sold" display
     let currentPool = player?.pool;
@@ -108,7 +109,7 @@ export default function HostPage() {
                                 {phase === 'LIVE' && player && (
                                     <>
                                         <PlayerCard player={player} />
-                                        <PlayerExtraData player={player} />
+                                        <PlayerExtraData player={player} visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
                                         <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
                                             {/* Timer and Bid Display */}

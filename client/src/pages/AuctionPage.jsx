@@ -83,8 +83,15 @@ export default function AuctionPage() {
   const currentBid = auctionState?.currentBid;
   const teams = auctionState?.teams;
   const settings = auctionState?.settings;
+  const leagueConfig = auctionState?.leagueConfig;
   const myTeam = auctionState?.teams?.[user?.teamId];
-  const roster = myTeam?.roster ?? [];
+  const roster = [...(myTeam?.roster ?? [])].sort((a, b) => {
+    const isAOwner = myTeam.ownerPlayerIds && myTeam.ownerPlayerIds.includes(a.playerId);
+    const isBOwner = myTeam.ownerPlayerIds && myTeam.ownerPlayerIds.includes(b.playerId);
+    if (isAOwner && !isBOwner) return -1;
+    if (!isAOwner && isBOwner) return 1;
+    return b.price - a.price;
+  });
 
   // Determine the relevant pool for the "Recently Sold" display
   let currentPool = player?.pool;
@@ -175,7 +182,7 @@ export default function AuctionPage() {
                 {(phase === 'LIVE' || phase === 'PAUSED') && player && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                     <PlayerCard player={player} />
-                    <PlayerExtraData player={player} />
+                    <PlayerExtraData player={player} visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
                       <CountdownTimer
                         timerEndsAt={auctionState.timerEndsAt}

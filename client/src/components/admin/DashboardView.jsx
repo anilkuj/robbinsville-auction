@@ -103,8 +103,19 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
         });
 
         // Roster Data
-        const roster1 = team1.roster || [];
-        const roster2 = team2 ? (team2.roster || []) : [];
+        const getSortedRoster = (team) => {
+          if (!team || !team.roster) return [];
+          return [...team.roster].sort((a, b) => {
+            const isAOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(a.playerId);
+            const isBOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(b.playerId);
+            if (isAOwner && !isBOwner) return -1;
+            if (!isAOwner && isBOwner) return 1;
+            return b.price - a.price;
+          });
+        };
+
+        const roster1 = getSortedRoster(team1);
+        const roster2 = getSortedRoster(team2);
         const maxRoster = Math.max(roster1.length, roster2.length);
 
         if (maxRoster === 0) {
@@ -120,14 +131,14 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
             const rowData = ['', '', '', '', '', '', ''];
 
             if (r1) {
-              const isOwner = team1.ownerPlayerId === r1.playerId;
+              const isOwner = team1.ownerPlayerIds && team1.ownerPlayerIds.includes(r1.playerId);
               const ownerName = !team1.ownerIsPlayer && team1.ownerName ? ` (${team1.ownerName})` : '';
               rowData[0] = r1.playerName + (isOwner ? ' (★ OWNER)' : ownerName);
               rowData[1] = r1.pool;
               rowData[2] = r1.price;
             }
             if (r2) {
-              const isOwner2 = team2.ownerPlayerId === r2.playerId;
+              const isOwner2 = team2.ownerPlayerIds && team2.ownerPlayerIds.includes(r2.playerId);
               const ownerName2 = !team2.ownerIsPlayer && team2.ownerName ? ` (${team2.ownerName})` : '';
               rowData[4] = r2.playerName + (isOwner2 ? ' (★ OWNER)' : ownerName2);
               rowData[5] = r2.pool;
@@ -387,7 +398,13 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
 
   const spent = startingBudget - effectiveRemaining;
   const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
-  const roster = team.roster ?? [];
+  const roster = [...(team.roster ?? [])].sort((a, b) => {
+    const isAOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(a.playerId);
+    const isBOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(b.playerId);
+    if (isAOwner && !isBOwner) return -1;
+    if (!isAOwner && isBOwner) return 1;
+    return b.price - a.price;
+  });
 
   const progressColor = spentPct > 80 ? 'error' : spentPct > 60 ? 'warning' : 'success';
 
@@ -449,7 +466,7 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
           </Box>
           <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
             {roster.map((r, i) => {
-              const isOwner = team.ownerPlayerId === r.playerId;
+              const isOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(r.playerId);
               return (
                 <Box key={i} sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default' }}>
                   <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 1, alignItems: 'center' }}>

@@ -11,6 +11,7 @@ const {
   computeMaxBid,
   isOwner,
   syncOwnerAverages,
+  addCommentary,
 } = require('../auction');
 const { z } = require('zod');
 
@@ -306,6 +307,7 @@ function registerAdminHandlers(io, socket) {
     state.lastSoldPlayerId = player.id;
     saveState();
 
+    addCommentary(io, 'manualSale', { playerName: player.name, teamName: team.name, saleAmount: amount });
     io.emit('auction:sold', {
       player: { ...player },
       teamId,

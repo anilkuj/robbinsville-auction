@@ -1,6 +1,6 @@
 const { getState } = require('../state');
 const { saveState } = require('../persistence');
-const { getPublicState, computeMaxBid, scheduleTimer } = require('../auction');
+const { getPublicState, computeMaxBid, scheduleTimer, addCommentary } = require('../auction');
 const { z } = require('zod');
 
 const bidSchema = z.object({
@@ -120,6 +120,7 @@ function registerBidHandlers(io, socket) {
     state.timerEndsAt = newEndsAt;
     scheduleTimer(io, newEndsAt - Date.now());
 
+    addCommentary(io, 'bidPlaced', bidEntry);
     saveState();
     io.emit('auction:bid', { bid: bidEntry, publicState: getPublicState() });
   });

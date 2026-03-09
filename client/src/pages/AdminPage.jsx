@@ -15,6 +15,7 @@ import { formatPts } from '../utils/budgetCalc.js';
 import { getAvgPointsKey } from '../utils/playerSort.js';
 import DashboardView, { RemainingPlayersPane } from '../components/admin/DashboardView.jsx';
 import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
+import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import Box from '@mui/material/Box';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -42,7 +43,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 
-const TABS = ['League Setup', 'Auction Controls', 'Player Data', 'Settings', 'Dashboard'];
+const TABS = ['League Setup', 'Auction Controls', 'Commentary', 'Player Data', 'Settings', 'Dashboard'];
 
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
@@ -102,6 +103,7 @@ export default function AdminPage() {
 
         {/* Main panel */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', pr: { xs: '48px', lg: 0 } }}>
+          {/* Global Commentary Banner (optional, but let's stick to the tab for now as requested) */}
           <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
             <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
               {TABS.map(t => <Tab key={t} label={t} value={t} sx={{ fontSize: '0.85rem', minHeight: 48 }} />)}
@@ -115,6 +117,7 @@ export default function AdminPage() {
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} onImported={() => setShowReviewDialog(true)} />}
                 {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} onImported={() => setShowReviewDialog(true)} />}
+                {tab === 'Commentary' && <CommentaryFeed commentary={auctionState.commentary} />}
                 {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
                 {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
               </Box>
@@ -124,6 +127,7 @@ export default function AdminPage() {
                   players={auctionState.players || []}
                   pools={auctionState.leagueConfig?.pools || []}
                   currentPlayerId={player?.id || null}
+                  spilloverIds={auctionState.leagueConfig?.spilloverPlayerIds || []}
                   width={340}
                 />
               )}

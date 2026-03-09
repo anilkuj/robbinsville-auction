@@ -19,6 +19,7 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import DashboardView from '../components/admin/DashboardView.jsx';
 import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
+import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 
 export default function HostPage() {
     const { user } = useAuth();
@@ -87,6 +88,7 @@ export default function HostPage() {
                         }}>
                             <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
                                 <Tab label="Live Auction" />
+                                <Tab label="Commentary" />
                                 <Tab label="Player Data" />
                                 <Tab label="Dashboard" />
                             </Tabs>
@@ -95,11 +97,14 @@ export default function HostPage() {
                             </Box>
                         </Paper>
 
+                        {/* Commentary Tab */}
+                        {currentTab === 1 && <CommentaryFeed commentary={auctionState?.commentary} />}
+
                         {/* Player Data Tab */}
-                        {currentTab === 1 && <PlayerDataTab auctionState={auctionState} readOnly />}
+                        {currentTab === 2 && <PlayerDataTab auctionState={auctionState} readOnly />}
 
                         {/* Dashboard Tab */}
-                        {currentTab === 2 && <DashboardView state={auctionState} hideRemaining={true} currentUser={user} />}
+                        {currentTab === 3 && <DashboardView state={auctionState} hideRemaining={true} currentUser={user} />}
 
                         {/* Live Auction Tab */}
                         {currentTab === 0 && (
@@ -198,6 +203,7 @@ export default function HostPage() {
                             players={auctionState?.players}
                             pools={auctionState?.leagueConfig?.pools}
                             currentPlayerId={player?.id ?? null}
+                            spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
                             width={rightWidth}
                             isOpen={isRightPaneOpen}
                             setIsOpen={setIsRightPaneOpen}

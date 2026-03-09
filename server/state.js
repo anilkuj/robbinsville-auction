@@ -28,6 +28,7 @@ const state = {
   teams: {},               // { teamId: { id, name, password, budget, roster: [] } }
   unsoldPlayers: [],       // array of player IDs
   lastSoldPlayerId: null,  // for rollback support
+  commentary: [],          // array of creative commentary objects
 };
 
 function getState() {

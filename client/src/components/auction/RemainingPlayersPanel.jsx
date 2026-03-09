@@ -54,7 +54,7 @@ function PCell({ children, first, right, center, style = {} }) {
     );
 }
 
-export default function RemainingPlayersPanel({ players, pools, currentPlayerId, width = 280, isOpen, setIsOpen }) {
+export default function RemainingPlayersPanel({ players, pools, currentPlayerId, spilloverIds = [], width = 280, isOpen, setIsOpen }) {
     if (!players || !pools) return null;
 
     const pending = players.filter(p => p.status === 'PENDING');
@@ -145,17 +145,35 @@ export default function RemainingPlayersPanel({ players, pools, currentPlayerId,
                                 </div>
                                 {sortPlayersByPoints(poolPlayers, avgKey).map((p, rowIdx) => {
                                     const isOnBlock = p.id === currentPlayerId;
-                                    const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
+                                    const isSpillover = spilloverIds.includes(p.id);
+                                    const typeKey = Object.keys(p.extra || {}).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
+                                    const isOwner = typeKey ? String(p.extra[typeKey]).toLowerCase() === 'owner' : false;
+
+                                    let rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
+                                    if (isSpillover && !isOnBlock) rowBg = '#270a0a'; // Dark red for spillover
+
                                     return (
-                                        <div key={p.id} style={{ display: 'grid', gridTemplateColumns: GRID, background: rowBg, borderBottom: '1px solid #0f172a' }}>
-                                            <PCell first style={{ color: isOnBlock ? '#22c55e' : '#cbd5e1', fontWeight: isOnBlock ? 700 : 400 }}>
-                                                {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}{p.name}
+                                        <div key={p.id} style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: GRID,
+                                            background: rowBg,
+                                            borderBottom: '1px solid #0f172a',
+                                            ...(isSpillover && { borderLeft: '3px solid #ef4444' })
+                                        }}>
+                                            <PCell first style={{
+                                                color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#cbd5e1',
+                                                fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400
+                                            }}>
+                                                {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
+                                                {p.name}
+                                                {isOwner && <span style={{ marginLeft: '6px', background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
+                                                {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: '#ef4444', border: '1px solid #ef444460', borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
                                             </PCell>
                                             <PCell center>
                                                 <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{p.pool}</span>
                                             </PCell>
-                                            <PCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
-                                                {fmtPts(p.basePrice)}
+                                            <PCell right style={{ color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#475569', fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
+                                                {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>AVG-SYNCED</span> : fmtPts(p.basePrice)}
                                             </PCell>
                                         </div>
                                     );

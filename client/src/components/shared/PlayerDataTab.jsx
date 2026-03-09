@@ -327,7 +327,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             const pc = poolClr(currentPoolId);
 
                             const soldTeam = p.soldTo ? teams[p.soldTo] : null;
-                            const rowBg = i % 2 === 0 ? '#0f172a' : '#0a111e';
+                            const isSpillover = spillovers.includes(p.id);
+                            const rowBg = isSpillover ? '#270a0a' : (i % 2 === 0 ? '#0f172a' : '#0a111e');
 
                             const isChanged = (field) => {
                                 if (field === 'extra') return !!changes.extra;

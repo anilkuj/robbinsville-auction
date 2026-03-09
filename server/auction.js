@@ -1,7 +1,15 @@
 const { getState } = require('./state');
 const { saveState } = require('./persistence');
+const { generateCommentary } = require('./utils/commentaryGenerator');
 
 let auctionTimer = null;
+
+function addCommentary(io, type, data) {
+  const state = getState();
+  const entry = generateCommentary(type, data);
+  state.commentary = [entry, ...(state.commentary || [])].slice(0, 50);
+  io.emit('commentary:new', { entry, history: state.commentary });
+}
 
 // Pure function — identical logic used on client for BidButton disabled state
 function computeMaxBid(budget, rosterSize, squadSize, minBid) {
@@ -279,6 +287,7 @@ function startPlayer(io, playerIndex) {
 
   saveState();
   io.emit('auction:playerUp', getPublicState());
+  addCommentary(io, 'playerUp', { ...player, playerName: player.name });
   scheduleTimer(io, state.settings.timerSeconds * 1000);
 }
 
@@ -321,6 +330,7 @@ function processSold(io) {
 
   clearAuctionTimer();
   saveState();
+  addCommentary(io, 'sold', soldEvent);
   io.emit('auction:sold', { ...soldEvent, publicState: getPublicState() });
 }
 
@@ -342,6 +352,7 @@ function processUnsold(io) {
 
   clearAuctionTimer();
   saveState();
+  addCommentary(io, 'unsold', unsoldEvent);
   io.emit('auction:unsold', { ...unsoldEvent, publicState: getPublicState() });
 }
 
@@ -391,4 +402,5 @@ module.exports = {
   isOwner,
   syncOwnerAverages,
   syncPoolCounts,
+  addCommentary,
 };

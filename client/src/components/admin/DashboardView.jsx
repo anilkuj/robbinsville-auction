@@ -293,7 +293,7 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
 
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
-export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 380 }) {
+export function RemainingPlayersPane({ players, pools, currentPlayerId, spilloverIds = [], width = 380 }) {
   const [isOpen, setIsOpen] = React.useState(() => window.innerWidth >= 1200);
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
@@ -364,17 +364,35 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, width = 
                 </div>
                 {sortPlayersByPoints(poolPlayers, avgKey).map((player, rowIdx) => {
                   const isOnBlock = player.id === currentPlayerId;
-                  const rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
+                  const isSpillover = spilloverIds.includes(player.id);
+                  const typeKey = Object.keys(player.extra || {}).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
+                  const isOwner = typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
+
+                  let rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
+                  if (isSpillover && !isOnBlock) rowBg = '#270a0a';
+
                   return (
-                    <div key={player.id} style={{ display: 'grid', gridTemplateColumns: GRID, background: rowBg, borderBottom: '1px solid #0f172a' }}>
-                      <DCell first style={{ color: isOnBlock ? '#22c55e' : '#cbd5e1', fontWeight: isOnBlock ? 700 : 400 }}>
-                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}{player.name}
+                    <div key={player.id} style={{
+                      display: 'grid',
+                      gridTemplateColumns: GRID,
+                      background: rowBg,
+                      borderBottom: '1px solid #0f172a',
+                      ...(isSpillover && { borderLeft: '3px solid #ef4444' })
+                    }}>
+                      <DCell first style={{
+                        color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#cbd5e1',
+                        fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400
+                      }}>
+                        {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
+                        {player.name}
+                        {isOwner && <span style={{ marginLeft: '6px', background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
+                        {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: '#ef4444', border: '1px solid #ef444460', borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
                       </DCell>
                       <DCell center>
                         <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{player.pool}</span>
                       </DCell>
-                      <DCell right style={{ color: isOnBlock ? '#22c55e' : '#475569', fontWeight: isOnBlock ? 700 : 400 }}>
-                        {fmtPts(player.basePrice)}
+                      <DCell right style={{ color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#475569', fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
+                        {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>AVG-SYNCED</span> : fmtPts(player.basePrice)}
                       </DCell>
                     </div>
                   );

@@ -21,6 +21,7 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import DashboardView from '../components/admin/DashboardView.jsx';
 import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
+import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import IconButton from '@mui/material/IconButton';
@@ -153,6 +154,7 @@ export default function AuctionPage() {
           }}>
             <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
               <Tab label="Live Auction" />
+              <Tab label="Commentary" />
               <Tab label="Player Data" />
               <Tab label="Dashboard" />
             </Tabs>
@@ -163,9 +165,11 @@ export default function AuctionPage() {
 
           <Box sx={{ flex: 1, p: 2, maxWidth: currentTab === 0 ? 1200 : '100%', mx: 'auto', width: '100%' }}>
 
-            {currentTab === 1 && <PlayerDataTab auctionState={auctionState} readOnly />}
+            {currentTab === 1 && <CommentaryFeed commentary={auctionState?.commentary} />}
 
-            {currentTab === 2 && <DashboardView state={auctionState} hideRemaining={true} preparedBid={preparedBid} currentUser={user} />}
+            {currentTab === 2 && <PlayerDataTab auctionState={auctionState} readOnly />}
+
+            {currentTab === 3 && <DashboardView state={auctionState} hideRemaining={true} preparedBid={preparedBid} currentUser={user} />}
 
             {currentTab === 0 && (
               <>
@@ -278,6 +282,7 @@ export default function AuctionPage() {
                 players={auctionState?.players}
                 pools={auctionState?.leagueConfig?.pools}
                 currentPlayerId={player?.id ?? null}
+                spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
                 width={rightWidth}
                 isOpen={isRightPaneOpen}
                 setIsOpen={setIsRightPaneOpen}

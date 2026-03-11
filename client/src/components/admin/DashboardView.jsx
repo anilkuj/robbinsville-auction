@@ -434,11 +434,16 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
       transition: 'border-color 0.3s',
     }}>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
           <Typography fontWeight={700}>🏏 {team.name}</Typography>
           {isLeading && <Chip label="● LEADING" size="small" color="success" sx={{ height: 20, fontSize: '0.62rem' }} />}
+          {team.isOnline && (
+            <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+              <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.65rem', mr: 1 }}>● ONLINE</Typography>
+            </Box>
+          )}
         </Box>
-        <Typography variant="caption" color="text.disabled">{roster.length} / {squadSize} players</Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', ml: 1 }}>{roster.length} / {squadSize} players</Typography>
       </Box>
 
       <Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>

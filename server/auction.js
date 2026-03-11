@@ -140,6 +140,7 @@ function getPublicState() {
       name: team.name,
       budget: team.budget,
       roster: team.roster,
+      isOnline: team.isOnline || false,
       ownerIsPlayer: team.ownerIsPlayer || false,
       ownerPlayerIds: team.ownerPlayerIds || (team.ownerPlayerId ? [team.ownerPlayerId] : []),
       ownerName: team.ownerName || null,

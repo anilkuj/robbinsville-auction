@@ -39,10 +39,34 @@ function registerSocketHandlers(io) {
       registerAdminHandlers(io, socket);
     } else if (socket.user.role === 'team') {
       registerBidHandlers(io, socket);
+
+      // Mark team as online and broadcast update
+      const { getState } = require('../state');
+      const state = getState();
+      if (state.teams[socket.user.id]) {
+        state.teams[socket.user.id].isOnline = true;
+        io.emit('state:full', getPublicState());
+      }
     }
 
     socket.on('disconnect', (reason) => {
       console.log(`[Socket] Disconnected: ${socket.user.name} — ${reason}`);
+      if (socket.user.role === 'team') {
+        const { getState } = require('../state');
+        const state = getState();
+        if (state.teams[socket.user.id]) {
+          // Double check if there's somehow another connection for this team
+          let stillOnline = false;
+          for (const [_, s] of io.sockets.sockets) {
+            if (s.id !== socket.id && s.user && s.user.role === 'team' && s.user.id === socket.user.id) {
+              stillOnline = true;
+              break;
+            }
+          }
+          state.teams[socket.user.id].isOnline = stillOnline;
+          io.emit('state:full', getPublicState());
+        }
+      }
     });
 
     socket.on('error', (err) => {

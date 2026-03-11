@@ -96,6 +96,11 @@ export function AuctionProvider({ children }) {
       setLastEvent({ type: 'phaseChange', data: { phase: state.phase } });
     });
 
+    socket.on('auction:kicked', ({ message }) => {
+      alert(`Session Cleared: ${message}`);
+      if (logout) logout();
+    });
+
     socket.on('admin:error', ({ message }) => {
       setAdminError(message);
     });

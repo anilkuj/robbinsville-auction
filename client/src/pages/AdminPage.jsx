@@ -119,7 +119,7 @@ export default function AdminPage() {
                 {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} onImported={() => setShowReviewDialog(true)} />}
                 {tab === 'Commentary' && <CommentaryFeed commentary={auctionState.commentary} />}
                 {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
-                {tab === 'Settings' && <SettingsTab auctionState={auctionState} />}
+                {tab === 'Settings' && <SettingsTab auctionState={auctionState} adminAction={adminAction} />}
               </Box>
 
               {tab === 'Auction Controls' && (
@@ -983,7 +983,7 @@ function AuctionControlsTab({ auctionState, adminAction, onImported }) {
 
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
-function SettingsTab({ auctionState }) {
+function SettingsTab({ auctionState, adminAction }) {
   const { teams, settings } = auctionState;
   const teamList = Object.values(teams);
   const [passwords, setPasswords] = useState({});
@@ -1027,8 +1027,28 @@ function SettingsTab({ auctionState }) {
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>New Password</Typography>
             </Box>
             {teamList.map(team => (
-              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
-                <Typography fontSize="0.88rem">{team.name}</Typography>
+              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                  <Typography fontSize="0.88rem">{team.name}</Typography>
+                  {team.isOnline && (
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600, fontSize: '0.65rem', mr: 1 }}>● ONLINE</Typography>
+                      <Button
+                        size="small"
+                        color="error"
+                        variant="outlined"
+                        sx={{ minWidth: 'auto', p: '0px 6px', fontSize: '0.6rem', height: 20 }}
+                        onClick={() => {
+                          if (window.confirm(`Kick ${team.name} from the auction? They will need to log in again.`)) {
+                            adminAction('admin:kickTeam', { teamId: team.id });
+                          }
+                        }}
+                      >
+                        KICK
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
                 <TextField
                   size="small"
                   type="text"

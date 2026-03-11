@@ -36,7 +36,7 @@ app.use((req, res, next) => {
 });
 
 // API routes
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authRoutes(io));
 app.use('/api/admin', adminRoutes(io));
 app.use('/api/public', publicRoutes);
 

@@ -406,6 +406,19 @@ function registerAdminHandlers(io, socket) {
     saveState();
     io.emit('auction:settingsChanged', getPublicState());
   });
+
+  socket.on('admin:kickTeam', (payload) => {
+    const { teamId } = payload;
+    if (!teamId) return;
+
+    // Find all sockets for this team and disconnect them
+    for (const [_, s] of io.sockets.sockets) {
+      if (s.user && s.user.role === 'team' && s.user.id === teamId) {
+        s.emit('auction:kicked', { message: 'You have been disconnected by the Admin.' });
+        s.disconnect(true);
+      }
+    }
+  });
 }
 
 module.exports = registerAdminHandlers;

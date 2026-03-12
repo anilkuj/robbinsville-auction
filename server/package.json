@@ -1,6 +1,6 @@
 {
   "name": "robbinsville-auction-server",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",

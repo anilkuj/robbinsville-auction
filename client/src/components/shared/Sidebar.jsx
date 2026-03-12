@@ -47,14 +47,14 @@ export default function Sidebar({ width }) {
         top: 0,
       }}
     >
-      <Typography fontWeight={800} color="primary" sx={{ textAlign: 'center', pb: 1.5, borderBottom: '1px solid', borderColor: 'divider' }}>
+      <Typography fontWeight={800} color="primary" sx={{ textAlign: 'center', pb: 1.5, borderBottom: '1px solid', borderColor: 'divider', color: team?.color || 'primary.main' }}>
         🏏 RPL Auction
       </Typography>
 
       {team && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
           <Typography variant="overline" color="text.disabled">Your Team</Typography>
-          <Typography fontWeight={700} sx={{ mt: 0.25 }}>{team.name}</Typography>
+          <Typography fontWeight={700} sx={{ mt: 0.25, color: team.color || 'white' }}>{team.name}</Typography>
 
           <Typography variant="overline" color="text.disabled" display="block" sx={{ mt: 1.5 }}>Budget Remaining</Typography>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
@@ -83,7 +83,7 @@ export default function Sidebar({ width }) {
       )}
 
       {roster.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
           <Typography variant="overline" color="text.disabled">My Squad</Typography>
           <List dense disablePadding sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {roster.map((r, i) => (

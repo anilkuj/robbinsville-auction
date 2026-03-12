@@ -5,7 +5,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Typography from '@mui/material/Typography';
 
-export default function BidHistory({ history = [] }) {
+export default function BidHistory({ history = [], teams = {} }) {
   const topRef = useRef(null);
 
   useEffect(() => {
@@ -30,9 +30,9 @@ export default function BidHistory({ history = [] }) {
             borderRadius: 1,
             px: 1.5,
             py: 0.5,
-            bgcolor: i === 0 ? '#14532d30' : 'background.paper',
+            bgcolor: i === 0 ? (teams[entry.teamId]?.color ? `${teams[entry.teamId].color}20` : '#14532d30') : 'background.paper',
             border: '1px solid',
-            borderColor: i === 0 ? '#22c55e40' : 'divider',
+            borderColor: i === 0 ? (teams[entry.teamId]?.color || '#22c55e40') : 'divider',
             display: 'flex',
             justifyContent: 'space-between',
           }}
@@ -40,14 +40,14 @@ export default function BidHistory({ history = [] }) {
           <Typography
             variant="body2"
             fontWeight={i === 0 ? 700 : 400}
-            sx={{ color: i === 0 ? 'success.main' : 'text.secondary' }}
+            sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.secondary' }}
           >
             {entry.teamName}
           </Typography>
           <Typography
             variant="body2"
             fontWeight={600}
-            sx={{ color: i === 0 ? 'success.main' : 'text.disabled', fontVariantNumeric: 'tabular-nums' }}
+            sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.disabled', fontVariantNumeric: 'tabular-nums' }}
           >
             {formatPts(entry.amount)}
           </Typography>

@@ -13,7 +13,10 @@ export default function ProtectedRoute({ children, adminOnly = false, allowedRol
     );
   }
 
-  if (!user) return <Navigate to={adminOnly ? '/login?admin=1' : '/login'} replace />;
+  if (!user) {
+    if (allowedRoles.includes('host')) return <Navigate to="/login?host=1" replace />;
+    return <Navigate to={adminOnly ? '/login?admin=1' : '/login'} replace />;
+  }
   if (adminOnly && user.role !== 'admin') return <Navigate to="/auction" replace />;
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
     if (user.role === 'admin') return <Navigate to="/admin" replace />;

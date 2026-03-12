@@ -31,7 +31,7 @@ export default function BidDisplay({ currentBid, teams, player }) {
             variant="h3"
             fontWeight={900}
             sx={{
-              color: hasBid ? 'success.main' : 'primary.main',
+              color: hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main',
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.02em',
               lineHeight: 1.1,
@@ -48,7 +48,15 @@ export default function BidDisplay({ currentBid, teams, player }) {
           size="small"
           color="success"
           variant="outlined"
-          sx={{ mt: 0.75, fontWeight: 700 }}
+          sx={{ 
+            mt: 0.75, 
+            fontWeight: 700, 
+            borderColor: leadingTeam?.color || 'success.main',
+            color: leadingTeam?.color || 'success.main',
+            '& .MuiChip-icon': {
+              color: leadingTeam?.color || 'success.main'
+            }
+          }}
         />
       )}
       {!hasBid && (

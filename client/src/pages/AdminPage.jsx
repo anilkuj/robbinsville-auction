@@ -106,7 +106,7 @@ export default function AdminPage() {
             />
             <BidDisplay currentBid={auctionState.currentBid} teams={auctionState.teams} player={player} />
             <Typography variant="overline" color="text.disabled">Bids</Typography>
-            <BidHistory history={auctionState.currentBid?.history} />
+            <BidHistory history={auctionState.currentBid?.history} teams={auctionState.teams} />
           </Paper>
         )}
 
@@ -202,8 +202,14 @@ function LeagueSetupTab({ auctionState, onImported }) {
     const t = JSON.parse(JSON.stringify(auctionState.teams));
     if (Object.keys(t).length === 0) {
       const init = {};
+      const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366 Indigo'];
       for (let i = 1; i <= 10; i++) {
-        init[`team_${i}`] = { id: `team_${i}`, name: `Team ${i}`, password: 'team123' };
+        init[`team_${i}`] = { 
+          id: `team_${i}`, 
+          name: `Team ${i}`, 
+          password: 'team123',
+          color: DEFAULT_COLORS[(i - 1) % DEFAULT_COLORS.length]
+        };
       }
       return init;
     }
@@ -1026,8 +1032,9 @@ function AuctionControlsTab({
 
 function SettingsTab({ auctionState, adminAction }) {
   const { teams, settings } = auctionState;
-  const teamList = Object.values(teams);
+  const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
   const [passwords, setPasswords] = useState({});
+  const [colors, setColors] = useState({});
   const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
   const [hostPin, setHostPin] = useState(settings.hostPin || '');
   const [spectatorEnabled, setSpectatorEnabled] = useState(settings.spectatorEnabled ?? true);
@@ -1039,9 +1046,10 @@ function SettingsTab({ auctionState, adminAction }) {
   useEffect(() => { setDashPin(settings.dashboardPin || ''); }, [settings.dashboardPin]);
   useEffect(() => { setHostPin(settings.hostPin || ''); }, [settings.hostPin]);
   useEffect(() => { setSpectatorEnabled(settings.spectatorEnabled ?? true); }, [settings.spectatorEnabled]);
-  useEffect(() => { setPasswords({}); }, [Object.keys(teams).join(',')]);
+  useEffect(() => { setPasswords({}); setColors({}); }, [Object.keys(teams).join(',')]);
 
   const hasChanges = Object.values(passwords).some(p => p.trim()) || 
+                     Object.keys(colors).length > 0 ||
                      dashPin !== (settings.dashboardPin || '') || 
                      hostPin !== (settings.hostPin || '') ||
                      spectatorEnabled !== (settings.spectatorEnabled ?? true);
@@ -1050,8 +1058,15 @@ function SettingsTab({ auctionState, adminAction }) {
     setSaving(true);
     setMsg(null);
     try {
-      await axios.post('/api/admin/update-passwords', { teams: passwords, dashboardPin: dashPin, hostPin, spectatorEnabled });
+      await axios.post('/api/admin/update-passwords', { 
+        teams: passwords, 
+        colors, 
+        dashboardPin: dashPin, 
+        hostPin, 
+        spectatorEnabled 
+      });
       setPasswords({});
+      setColors({});
       setMsg({ type: 'ok', text: 'Settings saved!' });
     } catch (err) {
       setMsg({ type: 'err', text: err.response?.data?.error || 'Save failed' });
@@ -1083,12 +1098,13 @@ function SettingsTab({ auctionState, adminAction }) {
           <Typography color="text.disabled" fontSize="0.85rem">No teams configured yet. Set up teams in League Setup first.</Typography>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, px: 0.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 60px 1fr', gap: 1, px: 0.5 }}>
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>Team Name</Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', textAlign: 'center' }}>Color</Typography>
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>New Password</Typography>
             </Box>
             {teamList.map(team => (
-              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
+              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 60px 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography fontSize="0.88rem">{team.name}</Typography>
                   {team.isOnline && (
@@ -1109,6 +1125,23 @@ function SettingsTab({ auctionState, adminAction }) {
                       </Button>
                     </Box>
                   )}
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                  <input
+                    type="color"
+                    value={colors[team.id] || team.color || '#3b82f6'}
+                    onChange={e => setColors(prev => ({ ...prev, [team.id]: e.target.value }))}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      padding: 0,
+                      border: 'none',
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      backgroundColor: 'transparent'
+                    }}
+                    title="Choose team color"
+                  />
                 </Box>
                   <TextField
                     size="small"

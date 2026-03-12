@@ -430,12 +430,13 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
     <Card sx={{
       border: '1px solid',
       borderColor: isLeading ? 'success.main' : 'divider',
+      borderTop: `4px solid ${team.color || 'divider'}`,
       boxShadow: isLeading ? '0 0 0 1px #22c55e40' : 'none',
       transition: 'border-color 0.3s',
     }}>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography fontWeight={700}>🏏 {team.name}</Typography>
+          <Typography fontWeight={700} sx={{ color: team.color || 'inherit' }}>🏏 {team.name}</Typography>
           {isLeading && <Chip label="● LEADING" size="small" color="success" sx={{ height: 20, fontSize: '0.62rem' }} />}
           {team.isOnline && (
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
@@ -470,8 +471,14 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
         <LinearProgress
           variant="determinate"
           value={Math.min(100, spentPct)}
-          color={progressColor}
-          sx={{ height: 4, borderRadius: 2, bgcolor: 'background.default' }}
+          sx={{ 
+            height: 4, 
+            borderRadius: 2, 
+            bgcolor: 'background.default',
+            '& .MuiLinearProgress-bar': {
+              bgcolor: team.color || 'success.main'
+            }
+          }}
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
           <Typography variant="caption" color="text.disabled">0</Typography>
@@ -549,7 +556,7 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
               </Box>
               <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default' }}>
                 {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
-                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: 'success.main', opacity: 0.85 }} />}
+                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: team.color || 'success.main', opacity: 0.85 }} />}
               </Box>
             </Box>
           );

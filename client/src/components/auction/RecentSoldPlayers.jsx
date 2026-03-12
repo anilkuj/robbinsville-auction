@@ -37,6 +37,7 @@ export default function RecentSoldPlayers({ players, currentPool, teams }) {
                                 bgcolor: 'background.paper',
                                 border: '1px solid',
                                 borderColor: 'divider',
+                                borderLeft: `4px solid ${team?.color || 'divider'}`,
                                 display: 'grid',
                                 gridTemplateColumns: 'minmax(0, 1fr) auto auto',
                                 gap: 1.5,

@@ -204,7 +204,7 @@ export default function AuctionPage() {
                       <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
                         Bid History
                       </Typography>
-                      <BidHistory history={currentBid?.history} />
+                      <BidHistory history={currentBid?.history} teams={teams} />
                     </Paper>
                     <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={teams} />
                   </Box>
@@ -328,9 +328,9 @@ function MobileHeader({ user, auctionState, connected }) {
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
-    <AppBar position="sticky" sx={{ display: { md: 'none' } }}>
+    <AppBar position="sticky" sx={{ display: { md: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
       <Toolbar sx={{ justifyContent: 'space-between', minHeight: '52px !important', px: 2 }}>
-        <Typography fontWeight={800} color="primary">🏏 RPL</Typography>
+        <Typography fontWeight={800} sx={{ color: team?.color || 'primary.main' }}>🏏 RPL</Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           {team && (
             <Box sx={{ textAlign: 'right' }}>

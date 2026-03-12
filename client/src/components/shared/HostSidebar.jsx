@@ -64,6 +64,7 @@ export default function HostSidebar({ width = 300 }) {
                                 p: 1,
                                 borderRadius: 1.5,
                                 borderColor: isLeading ? 'success.main' : 'divider',
+                                borderLeft: `4px solid ${team.color || 'divider'}`,
                                 boxShadow: isLeading ? '0 0 0 1px #22c55e40' : 'none',
                             }}
                         >
@@ -78,7 +79,7 @@ export default function HostSidebar({ width = 300 }) {
 
                             <Box sx={{ height: 6, display: 'flex', borderRadius: 3, overflow: 'hidden', bgcolor: 'background.default', mb: 0.5 }}>
                                 {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
-                                {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: 'success.main', opacity: 0.85 }} />}
+                                {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: team.color || 'success.main', opacity: 0.85 }} />}
                             </Box>
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

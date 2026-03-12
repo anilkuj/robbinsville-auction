@@ -150,6 +150,7 @@ function getPublicState() {
       ownerIsPlayer: team.ownerIsPlayer || false,
       ownerPlayerIds: team.ownerPlayerIds || (team.ownerPlayerId ? [team.ownerPlayerId] : []),
       ownerName: team.ownerName || null,
+      color: team.color || null,
     };
   }
   return { ...state, teams };

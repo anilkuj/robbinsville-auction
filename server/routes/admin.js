@@ -345,7 +345,9 @@ function createAdminRouter(io) {
   });
 
   // Save league config (teams + pools + global settings)
-  router.post('/league-config', authenticate, requireAdmin, (req, res) => {
+  const TEAM_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+
+router.post('/league-config', authenticate, requireAdmin, (req, res) => {
     const state = getState();
 
     if (state.phase !== 'SETUP') {
@@ -461,13 +463,33 @@ function createAdminRouter(io) {
       }),
     };
 
-    // Update teams — preserve budgets/rosters for existing teams, init new ones
     const newTeams = {};
-    for (const [id, t] of Object.entries(teams)) {
+    for (let i = 0; i < teamEntries.length; i++) {
+      const [id, t] = teamEntries[i];
+      const defaultColor = TEAM_COLORS[i % TEAM_COLORS.length];
+      
       if (state.teams[id]) {
-        newTeams[id] = { ...state.teams[id], name: String(t.name).trim(), password: t.password || 'team123', ownerIsPlayer: t.ownerIsPlayer || false, ownerName: t.ownerName || '', ownerPlayerIds: t.ownerPlayerIds || [] };
+        newTeams[id] = { 
+          ...state.teams[id], 
+          name: String(t.name).trim(), 
+          password: t.password || 'team123', 
+          ownerIsPlayer: t.ownerIsPlayer || false, 
+          ownerName: t.ownerName || '', 
+          ownerPlayerIds: t.ownerPlayerIds || [],
+          color: t.color || state.teams[id].color || defaultColor
+        };
       } else {
-        newTeams[id] = { id: String(t.id).trim(), name: String(t.name).trim(), password: t.password || 'team123', budget: state.leagueConfig.startingBudget, roster: [], ownerIsPlayer: t.ownerIsPlayer || false, ownerName: t.ownerName || '', ownerPlayerIds: t.ownerPlayerIds || [] };
+        newTeams[id] = { 
+          id: String(t.id).trim(), 
+          name: String(t.name).trim(), 
+          password: t.password || 'team123', 
+          budget: state.leagueConfig.startingBudget, 
+          roster: [], 
+          ownerIsPlayer: t.ownerIsPlayer || false, 
+          ownerName: t.ownerName || '', 
+          ownerPlayerIds: t.ownerPlayerIds || [],
+          color: t.color || defaultColor
+        };
       }
     }
     state.teams = newTeams;
@@ -601,13 +623,20 @@ function createAdminRouter(io) {
 
   // Update team passwords and/or dashboard PIN (works in any phase)
   router.post('/update-passwords', authenticate, requireAdmin, (req, res) => {
-    const { teams, dashboardPin, hostPin, spectatorEnabled } = req.body;
+    const { teams, colors, dashboardPin, hostPin, spectatorEnabled } = req.body;
     const state = getState();
 
     if (teams) {
       for (const [teamId, password] of Object.entries(teams)) {
         if (state.teams[teamId] && typeof password === 'string' && password.trim()) {
           state.teams[teamId].password = password.trim();
+        }
+      }
+    }
+    if (colors) {
+      for (const [teamId, color] of Object.entries(colors)) {
+        if (state.teams[teamId] && typeof color === 'string' && color.startsWith('#')) {
+          state.teams[teamId].color = color;
         }
       }
     }

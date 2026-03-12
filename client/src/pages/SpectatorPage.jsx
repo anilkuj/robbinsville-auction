@@ -10,19 +10,6 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 
-const TEAM_COLORS = [
-  '#3b82f6', // Blue
-  '#ef4444', // Red
-  '#10b981', // Emerald
-  '#f59e0b', // Amber
-  '#8b5cf6', // Violet
-  '#ec4899', // Pink
-  '#06b6d4', // Cyan
-  '#f97316', // Orange
-  '#84cc16', // Lime
-  '#6366f1', // Indigo
-];
-
 export default function SpectatorPage() {
   // Auth state
   const [pinRequired, setPinRequired] = useState(null);
@@ -213,8 +200,8 @@ export default function SpectatorPage() {
         gap: 1.5,
         px: 1
       }}>
-        {teamList.map((team, idx) => (
-          <TeamCard key={team.id} team={team} color={TEAM_COLORS[idx % TEAM_COLORS.length]} allPlayers={state.players || []} />
+        {teamList.map((team) => (
+          <TeamCard key={team.id} team={team} color={team.color || '#3b82f6'} allPlayers={state.players || []} />
         ))}
       </Box>
     </Box>

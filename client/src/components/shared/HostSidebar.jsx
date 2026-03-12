@@ -87,7 +87,7 @@ export default function HostSidebar({ width = 300 }) {
                                     {Math.round(spentPct)}% spent
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
-                                    {team.roster?.length || 0} / {auctionState?.leagueConfig?.squadSize || 18}
+                                    {(team.roster?.length || 0) + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !team.roster?.some(rp => rp.playerId === oid)).length : 0)} / {auctionState?.leagueConfig?.squadSize || 18}
                                 </Typography>
                             </Box>
                         </Paper>

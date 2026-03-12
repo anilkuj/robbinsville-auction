@@ -269,7 +269,7 @@ function TeamCard({ team, color, allPlayers }) {
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
             <Typography variant="caption" sx={{ color: color, fontWeight: 900, fontSize: '0.75rem' }}>
-              {roster.length}
+              {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)}
             </Typography>
             <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase' }}>
               Players

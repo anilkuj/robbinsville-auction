@@ -444,7 +444,7 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
             </Box>
           )}
         </Box>
-        <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', ml: 1 }}>{roster.length} / {squadSize} players</Typography>
+        <Typography variant="caption" color="text.disabled" sx={{ whiteSpace: 'nowrap', ml: 1 }}>{roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)} / {squadSize} players</Typography>
       </Box>
 
       <Box sx={{ px: 2, py: 1.5, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, borderBottom: '1px solid', borderColor: 'divider' }}>

@@ -70,7 +70,9 @@ export default function Sidebar({ width }) {
 
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
             <Typography variant="caption" color="text.disabled">Squad</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>{roster.length} / {squadSize}</Typography>
+            <Typography variant="caption" color="text.secondary" fontWeight={600}>
+              {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)} / {squadSize}
+            </Typography>
           </Box>
         </Paper>
       )}

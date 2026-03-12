@@ -578,6 +578,7 @@ function createAdminRouter(io) {
     state.timerRemainingOnPause = 0;
     state.unsoldPlayers = [];
     state.lastSoldPlayerId = null;
+    state.commentary = [];
 
     clearAuctionTimer();
     saveState();
@@ -822,6 +823,7 @@ function createAdminRouter(io) {
     state.currentPlayerIndex = s.currentPlayerIndex ?? null;
     state.currentBid = s.currentBid || { amount: 0, teamId: null, history: [] };
     state.unsoldPlayers = s.unsoldPlayers || [];
+    state.commentary = s.commentary || [];
 
     // If importing mid-auction, pause the timer so admin can review before resuming
     if (state.phase === 'LIVE') {
@@ -872,6 +874,7 @@ function createAdminRouter(io) {
     state.timerPaused = false;
     state.timerRemainingOnPause = 0;
     state.unsoldPlayers = [];
+    state.commentary = [];
 
     clearAuctionTimer();
     saveState();

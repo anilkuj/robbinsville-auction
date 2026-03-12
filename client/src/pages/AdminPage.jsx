@@ -989,6 +989,8 @@ function SettingsTab({ auctionState, adminAction }) {
   const [passwords, setPasswords] = useState({});
   const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
   const [hostPin, setHostPin] = useState(settings.hostPin || '');
+  const [revealedData, setRevealedData] = useState(null);
+  const [showRevealModal, setShowRevealModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState(null);
 
@@ -1017,7 +1019,20 @@ function SettingsTab({ auctionState, adminAction }) {
 
       {/* Team Passwords */}
       <Box>
-        <SectionTitle>Team Passwords</SectionTitle>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <SectionTitle sx={{ mb: 0 }}>Team Passwords</SectionTitle>
+          {!revealedData && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="primary"
+              onClick={() => setShowRevealModal(true)}
+              sx={{ fontSize: '0.75rem', height: 24 }}
+            >
+              Reveal Passwords
+            </Button>
+          )}
+        </Box>
         {teamList.length === 0 ? (
           <Typography color="text.disabled" fontSize="0.85rem">No teams configured yet. Set up teams in League Setup first.</Typography>
         ) : (
@@ -1049,14 +1064,30 @@ function SettingsTab({ auctionState, adminAction }) {
                     </Box>
                   )}
                 </Box>
-                <TextField
-                  size="small"
-                  type="text"
-                  placeholder="Leave empty to keep current"
-                  value={passwords[team.id] || ''}
-                  onChange={e => setPasswords(prev => ({ ...prev, [team.id]: e.target.value }))}
-                />
-              </Box>
+                  <TextField
+                    size="small"
+                    type="text"
+                    placeholder="Leave empty to keep current"
+                    value={passwords[team.id] || ''}
+                    onChange={e => setPasswords(prev => ({ ...prev, [team.id]: e.target.value }))}
+                  />
+                  {revealedData?.teams?.[team.id] && (
+                    <Typography
+                      variant="caption"
+                      color="primary"
+                      sx={{
+                        gridColumn: '2 / 3',
+                        mt: -0.5,
+                        pl: 1,
+                        fontSize: '0.75rem',
+                        fontWeight: 600,
+                        fontFamily: 'monospace'
+                      }}
+                    >
+                      Current: {revealedData.teams[team.id].password}
+                    </Typography>
+                  )}
+                </Box>
             ))}
             <Typography variant="caption" color="text.disabled" sx={{ pl: 0.5 }}>
               Leave a field empty to keep the existing password unchanged.
@@ -1101,11 +1132,29 @@ function SettingsTab({ auctionState, adminAction }) {
             inputProps={{ maxLength: 20 }}
             sx={{ width: 220 }}
           />
-          <Typography variant="caption" color={settings.hostPin ? 'warning.main' : 'text.disabled'}>
-            {settings.hostPin ? '● PIN active' : '○ Open access'}
-          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="caption" color={settings.hostPin ? 'warning.main' : 'text.disabled'}>
+              {settings.hostPin ? '● PIN active' : '○ Open access'}
+            </Typography>
+            {revealedData && (
+              <Typography variant="caption" color="primary" sx={{ fontWeight: 600, fontFamily: 'monospace' }}>
+                Current PIN: {revealedData.hostPin || '(none)'}
+              </Typography>
+            )}
+          </Box>
         </Box>
       </Box>
+
+      {/* Reveal Password Dialog */}
+      {showRevealModal && (
+        <ConfirmAdminPasswordDialog
+          onClose={() => setShowRevealModal(false)}
+          onSuccess={(data) => {
+            setRevealedData(data);
+            setShowRevealModal(false);
+          }}
+        />
+      )}
 
       {/* Save */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1604,5 +1653,58 @@ function ReviewItem({ label, value }) {
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1 }}>{label}</Typography>
       <Typography variant="body2" fontWeight={600}>{value ?? '—'}</Typography>
     </Box>
+  );
+}
+
+function ConfirmAdminPasswordDialog({ onClose, onSuccess }) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  async function handleConfirm() {
+    setError('');
+    setLoading(true);
+    try {
+      const res = await axios.post('/api/admin/reveal-passwords', { password });
+      onSuccess(res.data);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Invalid password or connection error');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle>Admin Verification</DialogTitle>
+      <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        <Typography variant="body2" color="text.secondary">
+          Please enter the Admin password to reveal team owner passwords.
+        </Typography>
+        <TextField
+          autoFocus
+          fullWidth
+          size="small"
+          label="Admin Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleConfirm()}
+          error={!!error}
+          helperText={error}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">Cancel</Button>
+        <Button
+          onClick={handleConfirm}
+          variant="contained"
+          disabled={!password || loading}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+        >
+          Confirm
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }

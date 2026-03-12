@@ -619,6 +619,27 @@ function createAdminRouter(io) {
     res.json({ message: 'Passwords updated successfully' });
   });
 
+  // Reveal all team passwords and PINS (requires admin password)
+  router.post('/reveal-passwords', authenticate, requireAdmin, (req, res) => {
+    const { password } = req.body;
+    const state = getState();
+
+    if (!password || password !== config.admin.password) {
+      return res.status(401).json({ error: 'Invalid admin password' });
+    }
+
+    const teams = {};
+    for (const [id, team] of Object.entries(state.teams)) {
+      teams[id] = { name: team.name, password: team.password };
+    }
+
+    res.json({
+      teams,
+      dashboardPin: state.settings.dashboardPin,
+      hostPin: state.settings.hostPin
+    });
+  });
+
   // Load test data
   router.post('/load-test-data', authenticate, requireAdmin, (req, res) => {
     try {

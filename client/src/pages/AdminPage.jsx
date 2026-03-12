@@ -40,6 +40,7 @@ import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Switch from '@mui/material/Switch';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 
@@ -50,6 +51,12 @@ export default function AdminPage() {
   const { user, logout } = useAuth();
   const [tab, setTab] = useState('Auction Controls');
   const [showReviewDialog, setShowReviewDialog] = useState(false);
+  const [showSimulationModal, setShowSimulationModal] = useState(false);
+  const [showLoadTestModal, setShowLoadTestModal] = useState(false);
+  const [showFullResetModal, setShowFullResetModal] = useState(false);
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [importData, setImportData] = useState(null);
+  const [showRollbackModal, setShowRollbackModal] = useState(false);
 
   if (!auctionState) {
     return (
@@ -62,8 +69,10 @@ export default function AdminPage() {
     );
   }
 
-  const { phase } = auctionState;
-  const player = auctionState.players?.[auctionState.currentPlayerIndex] ?? null;
+  const { phase, players = [], teams = {} } = auctionState;
+  const player = players[auctionState.currentPlayerIndex] ?? null;
+  const isSetup = phase === 'SETUP';
+  const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -116,7 +125,25 @@ export default function AdminPage() {
             <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
                 {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} onImported={() => setShowReviewDialog(true)} />}
-                {tab === 'Auction Controls' && <AuctionControlsTab auctionState={auctionState} adminAction={adminAction} onImported={() => setShowReviewDialog(true)} />}
+                {tab === 'Auction Controls' && (
+                  <AuctionControlsTab 
+                    auctionState={auctionState} 
+                    adminAction={adminAction} 
+                    onImported={() => setShowReviewDialog(true)}
+                    showLoadTestModal={showLoadTestModal}
+                    setShowLoadTestModal={setShowLoadTestModal}
+                    showFullResetModal={showFullResetModal}
+                    setShowFullResetModal={setShowFullResetModal}
+                    showResetModal={showResetModal}
+                    setShowResetModal={setShowResetModal}
+                    importData={importData}
+                    setImportData={setImportData}
+                    showRollbackModal={showRollbackModal}
+                    setShowRollbackModal={setShowRollbackModal}
+                    showSimulationModal={showSimulationModal}
+                    setShowSimulationModal={setShowSimulationModal}
+                  />
+                )}
                 {tab === 'Commentary' && <CommentaryFeed commentary={auctionState.commentary} />}
                 {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
                 {tab === 'Settings' && <SettingsTab auctionState={auctionState} adminAction={adminAction} />}
@@ -787,7 +814,15 @@ function LeagueSetupTab({ auctionState, onImported }) {
 
 // ─── Auction Controls Tab ─────────────────────────────────────────────────────
 
-function AuctionControlsTab({ auctionState, adminAction, onImported }) {
+function AuctionControlsTab({ 
+  auctionState, adminAction, onImported, 
+  showLoadTestModal, setShowLoadTestModal, 
+  showFullResetModal, setShowFullResetModal, 
+  showResetModal, setShowResetModal, 
+  importData, setImportData, 
+  showRollbackModal, setShowRollbackModal,
+  showSimulationModal, setShowSimulationModal
+}) {
   const { phase, players, currentPlayerIndex, currentBid, teams } = auctionState;
 
   const isSetup = phase === 'SETUP';
@@ -796,11 +831,6 @@ function AuctionControlsTab({ auctionState, adminAction, onImported }) {
   const sold = players.filter(p => p.status === 'SOLD').length;
   const unsold = players.filter(p => p.status === 'UNSOLD').length;
 
-  const [showLoadTestModal, setShowLoadTestModal] = useState(false);
-  const [showFullResetModal, setShowFullResetModal] = useState(false);
-  const [showResetModal, setShowResetModal] = useState(false);
-  const [importData, setImportData] = useState(null);
-  const [showRollbackModal, setShowRollbackModal] = useState(false);
   const [copiedWA, setCopiedWA] = useState(false);
 
   const hasExistingData = players.length > 0 || Object.keys(teams).length > 0;
@@ -952,6 +982,16 @@ function AuctionControlsTab({ auctionState, adminAction, onImported }) {
             >
               🧪 Load Test Data
             </Button>
+
+            <Button
+              variant="outlined"
+              color="success"
+              size="small"
+              sx={{ fontWeight: 700 }}
+              onClick={() => setShowSimulationModal(true)}
+            >
+              🔄 Run Full Simulation
+            </Button>
           </Box>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pt: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -973,6 +1013,7 @@ function AuctionControlsTab({ auctionState, adminAction, onImported }) {
 
       {showLoadTestModal && <LoadTestDataModal hasExistingData={hasExistingData} isSetup={isSetup} onClose={() => setShowLoadTestModal(false)} />}
       {showFullResetModal && <FullResetModal onClose={() => setShowFullResetModal(false)} />}
+      {showSimulationModal && <RunSimulationModal adminAction={adminAction} onClose={() => setShowSimulationModal(false)} />}
       {showResetModal && <ResetAuctionModal onClose={() => setShowResetModal(false)} />}
       {importData && <ImportStateModal importedState={importData} onClose={() => setImportData(null)} />}
       {showRollbackModal && <RollbackModal auctionState={auctionState} onClose={() => setShowRollbackModal(false)} />}
@@ -989,6 +1030,7 @@ function SettingsTab({ auctionState, adminAction }) {
   const [passwords, setPasswords] = useState({});
   const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
   const [hostPin, setHostPin] = useState(settings.hostPin || '');
+  const [spectatorEnabled, setSpectatorEnabled] = useState(settings.spectatorEnabled ?? true);
   const [revealedData, setRevealedData] = useState(null);
   const [showRevealModal, setShowRevealModal] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -996,15 +1038,19 @@ function SettingsTab({ auctionState, adminAction }) {
 
   useEffect(() => { setDashPin(settings.dashboardPin || ''); }, [settings.dashboardPin]);
   useEffect(() => { setHostPin(settings.hostPin || ''); }, [settings.hostPin]);
+  useEffect(() => { setSpectatorEnabled(settings.spectatorEnabled ?? true); }, [settings.spectatorEnabled]);
   useEffect(() => { setPasswords({}); }, [Object.keys(teams).join(',')]);
 
-  const hasChanges = Object.values(passwords).some(p => p.trim()) || dashPin !== (settings.dashboardPin || '') || hostPin !== (settings.hostPin || '');
+  const hasChanges = Object.values(passwords).some(p => p.trim()) || 
+                     dashPin !== (settings.dashboardPin || '') || 
+                     hostPin !== (settings.hostPin || '') ||
+                     spectatorEnabled !== (settings.spectatorEnabled ?? true);
 
   async function save() {
     setSaving(true);
     setMsg(null);
     try {
-      await axios.post('/api/admin/update-passwords', { teams: passwords, dashboardPin: dashPin, hostPin });
+      await axios.post('/api/admin/update-passwords', { teams: passwords, dashboardPin: dashPin, hostPin, spectatorEnabled });
       setPasswords({});
       setMsg({ type: 'ok', text: 'Settings saved!' });
     } catch (err) {
@@ -1143,6 +1189,29 @@ function SettingsTab({ auctionState, adminAction }) {
             )}
           </Box>
         </Box>
+      </Box>
+
+      {/* Spectator Screen Toggle */}
+      <Box>
+        <SectionTitle>Spectator Screen</SectionTitle>
+        <Typography color="text.secondary" fontSize="0.82rem" mb={1.5}>
+          Enable or disable the real-time spectator view at <code>/spectator</code>. Use this to block access if the server is under heavy load.
+        </Typography>
+        <Paper variant="outlined" sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', bgcolor: spectatorEnabled ? 'rgba(22, 163, 74, 0.05)' : 'rgba(220, 38, 38, 0.05)', borderColor: spectatorEnabled ? 'success.main' : 'error.main', borderStyle: spectatorEnabled ? 'solid' : 'dashed' }}>
+          <Box>
+            <Typography variant="body2" fontWeight={700} color={spectatorEnabled ? 'success.main' : 'error.main'}>
+              {spectatorEnabled ? '✓ SPECTATOR SCREEN ENABLED' : '✕ SPECTATOR SCREEN BLOCKED'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {spectatorEnabled ? 'Anyone with the link (and PIN if set) can view rosters.' : 'All spectators will see a "Blocked" message.'}
+            </Typography>
+          </Box>
+          <Switch
+            checked={spectatorEnabled}
+            onChange={(e) => setSpectatorEnabled(e.target.checked)}
+            color="success"
+          />
+        </Paper>
       </Box>
 
       {/* Reveal Password Dialog */}
@@ -1427,6 +1496,54 @@ function FullResetModal({ onClose }) {
         <Button onClick={onClose} color="inherit">Cancel</Button>
         <Button onClick={handleReset} variant="contained" color="error" disabled={!password || loading} startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}>
           {loading ? 'Deleting…' : '☠ Permanently Delete All Data'}
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+function RunSimulationModal({ adminAction, onClose }) {
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  function handleRun() {
+    setLoading(true);
+    adminAction('admin:runFullSimulation', { password });
+    setTimeout(onClose, 1000);
+  }
+
+  return (
+    <Dialog open onClose={onClose} maxWidth="xs" fullWidth>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        🔄 Full Simulation
+      </DialogTitle>
+      <DialogContent>
+        <Alert severity="warning" sx={{ mb: 2, '& .MuiAlert-message': { width: '100%' } }}>
+          <Typography fontWeight={700} fontSize="0.82rem" mb={0.5}>Run fresh simulation?</Typography>
+          <Typography fontSize="0.78rem">This will <strong>RESET</strong> the entire auction and re-simulate all bidding. Rankings and owner averages will be recalculated.</Typography>
+        </Alert>
+        <TextField
+          type="password"
+          label="Admin password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && password && handleRun()}
+          autoFocus
+          size="small"
+          fullWidth
+          helperText="Requires Admin password to proceed"
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} color="inherit">Cancel</Button>
+        <Button
+          onClick={handleRun}
+          variant="contained"
+          color="success"
+          disabled={!password || loading}
+          startIcon={loading ? <CircularProgress size={16} color="inherit" /> : null}
+        >
+          {loading ? 'Running…' : 'Run Simulation'}
         </Button>
       </DialogActions>
     </Dialog>

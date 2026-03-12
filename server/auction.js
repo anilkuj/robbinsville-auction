@@ -24,37 +24,47 @@ function computeMaxBid(budget, rosterSize, squadSize, minBid) {
 // case-insensitive) equals "owner" (case-insensitive value).
 function isOwner(player) {
   if (!player.extra) return false;
-  const typeKey = Object.keys(player.extra).find(k => String(k).trim().toLowerCase() === 'type' || String(k).trim().toLowerCase() === 'player_type');
-  return typeKey ? String(player.extra[typeKey]).trim().toLowerCase() === 'owner' : false;
+  const keys = Object.keys(player.extra);
+  const typeKey = keys.find(k => {
+    const lowKey = k.trim().toLowerCase();
+    return lowKey === 'type' || lowKey === 'player_type';
+  });
+  if (!typeKey) return false;
+  return String(player.extra[typeKey]).trim().toLowerCase() === 'owner';
 }
 
-// Average soldFor of non-owner SOLD players in the given pool.
-function getPoolAverage(players, poolId) {
+// Average soldFor of non-owner SOLD players in the same "tens" rank bracket.
+// Bracket for rank 38 is 31-40 (sortOrder 30-39).
+function getBracketAverage(players, targetSortOrder) {
+  const bracketStart = Math.floor(targetSortOrder / 10) * 10;
+  const bracketEnd = bracketStart + 9;
+  
   const sold = players.filter(p =>
-    p.pool === poolId && p.status === 'SOLD' && !isOwner(p)
+    p.sortOrder >= bracketStart && 
+    p.sortOrder <= bracketEnd && 
+    p.status === 'SOLD' && 
+    !isOwner(p)
   );
+  
   if (sold.length === 0) return 0;
   return Math.round(sold.reduce((s, p) => s + p.soldFor, 0) / sold.length);
 }
 
-// Recalculate the pool average and push it to all owner players in that pool.
-// Owner players get status SOLD automatically (no budget deduction).
-// Team resolved via: (1) League Setup ownerPlayerId, (2) CSV extra.team column.
-function syncOwnerAverages(state, poolId) {
-  const avg = getPoolAverage(state.players, poolId);
-  const owners = state.players.filter(p => p.pool === poolId && isOwner(p));
+// Recalculate average and push it to owner players.
+// Note: We now update ALL owners universally because brackets can span multiple pools.
+function syncOwnerAverages(state) {
+  const owners = state.players.filter(p => isOwner(p));
   if (owners.length === 0) return;
 
   for (const owner of owners) {
+    const avg = getBracketAverage(state.players, owner.sortOrder);
+    
     if (avg === 0) {
-      // No sold non-owner players remain (e.g. last sold player was re-auctioned).
-      // Revert owner back to PENDING and remove from roster.
       if (owner.status === 'SOLD') {
         if (owner.soldTo && state.teams[owner.soldTo]) {
           const team = state.teams[owner.soldTo];
           const idx = team.roster.findIndex(r => r.playerId === owner.id);
           if (idx !== -1) {
-            // Refund the old price to the budget
             team.budget += team.roster[idx].price;
             team.roster.splice(idx, 1);
           }
@@ -68,29 +78,30 @@ function syncOwnerAverages(state, poolId) {
 
     owner.soldFor = avg;
 
-    if (owner.status !== 'SOLD') {
-      // First time being resolved — mark SOLD and assign to team.
-      owner.status = 'SOLD';
+    // Team resolution priority:
+    // 1. League Setup ownerPlayerIds (admin explicitly linked this player to a team)
+    // 2. CSV extra.team column (case-insensitive key + value match)
+    let team = Object.values(state.teams).find(t => t.ownerPlayerIds && t.ownerPlayerIds.includes(owner.id));
 
-      // Team resolution priority:
-      // 1. League Setup ownerPlayerIds (admin explicitly linked this player to a team)
-      // 2. CSV extra.team column (case-insensitive key + value match)
-      let team = Object.values(state.teams).find(t => t.ownerPlayerIds && t.ownerPlayerIds.includes(owner.id));
-
-      if (!team) {
-        const teamKey = Object.keys(owner.extra || {}).find(k => {
-          const kl = String(k).trim().toLowerCase();
-          return kl.startsWith('team') || kl === 'soldto';
-        });
-        if (teamKey) {
-          const teamName = String(owner.extra[teamKey]).replace(/\s+/g, ' ').trim().toLowerCase();
-          team = Object.values(state.teams).find(t => t.name.replace(/\s+/g, ' ').trim().toLowerCase() === teamName);
-        }
+    if (!team) {
+      const teamKey = Object.keys(owner.extra || {}).find(k => {
+        const kl = String(k).trim().toLowerCase();
+        return kl.startsWith('team') || kl === 'soldto';
+      });
+      if (teamKey) {
+        const teamName = String(owner.extra[teamKey]).replace(/\s+/g, ' ').trim().toLowerCase();
+        team = Object.values(state.teams).find(t => t.name.replace(/\s+/g, ' ').trim().toLowerCase() === teamName);
       }
+    }
 
-      if (team && !team.roster.find(r => r.playerId === owner.id)) {
-        owner.soldTo = team.id;
-        team.budget -= avg; // Deduct the new price from budget
+    if (team) {
+      owner.status = 'SOLD';
+      owner.soldTo = team.id;
+      
+      const entryIdx = team.roster.findIndex(r => r.playerId === owner.id);
+      if (entryIdx === -1) {
+        // Missing from roster — add it
+        team.budget -= avg;
         team.roster.push({
           playerId: owner.id,
           playerName: owner.name,
@@ -99,17 +110,12 @@ function syncOwnerAverages(state, poolId) {
           isOwner: true,
           ...(owner.extra && { extra: owner.extra }),
         });
-      }
-    } else {
-      // Already sold — update roster entry price and adjust budget for the difference.
-      if (owner.soldTo && state.teams[owner.soldTo]) {
-        const team = state.teams[owner.soldTo];
-        const entry = team.roster.find(r => r.playerId === owner.id);
-        if (entry) {
-          const diff = avg - entry.price;
-          team.budget -= diff; // Deduct the difference (if avg increased, diff > 0, budget decreases. if avg decreased, diff < 0, budget increases)
-          entry.price = avg;
-        }
+      } else {
+        // Already in roster — update price
+        const entry = team.roster[entryIdx];
+        const diff = avg - entry.price;
+        team.budget -= diff;
+        entry.price = avg;
       }
     }
   }
@@ -245,7 +251,7 @@ function startPlayer(io, playerIndex) {
   if (idx === -1 || idx >= state.players.length) {
     // All non-owner players done — do a final owner average sync before ENDED
     const poolIds = [...new Set(state.players.map(p => p.pool))];
-    for (const poolId of poolIds) syncOwnerAverages(state, poolId);
+    syncOwnerAverages(state);
 
     state.phase = 'ENDED';
     state.currentPlayerIndex = null;
@@ -261,7 +267,7 @@ function startPlayer(io, playerIndex) {
     const nextIdx = findNextPendingIndex(idx + 1, randomize);
     if (nextIdx === -1) {
       const poolIds = [...new Set(state.players.map(p => p.pool))];
-      for (const poolId of poolIds) syncOwnerAverages(state, poolId);
+      syncOwnerAverages(state);
 
       state.phase = 'ENDED';
       state.currentPlayerIndex = null;
@@ -313,8 +319,8 @@ function processSold(io) {
     });
   }
 
-  // Recalculate owner averages for this pool
-  syncOwnerAverages(state, player.pool);
+  // Recalculate owner averages
+  syncOwnerAverages(state);
 
   const soldEvent = {
     player: { ...player },
@@ -389,6 +395,144 @@ function resumeTimer(io) {
   return true;
 }
 
+// --- Full Simulation Logic ----------------------------------------------------
+
+function runFullSimulation(state) {
+  const SQUAD_SIZE = state.leagueConfig.squadSize || 18;
+  const MIN_BID = state.leagueConfig.minBid || 1000;
+  const SPILLOVER_IDS = state.leagueConfig.spilloverPlayerIds || [];
+
+  const normalize = (str) => str.replace(/\s+/g, ' ').trim().toLowerCase();
+
+  // 1. Reset State
+  state.phase = 'ENDED';
+  state.currentPlayerIndex = null;
+  state.lastSoldPlayerId = null;
+  state.unsoldPlayers = [];
+  state.commentary = [{
+    id: Date.now().toString(),
+    type: 'system',
+    text: '🔄 Full auction simulation executed by admin.',
+    timestamp: Date.now()
+  }];
+  
+  const teamIds = Object.keys(state.teams);
+  teamIds.forEach(tid => {
+    state.teams[tid].budget = state.leagueConfig.startingBudget || 50000;
+    state.teams[tid].roster = [];
+  });
+
+  // Ensure ALL players are reset for a fresh simulation
+  state.players.forEach(p => {
+    p.status = 'PENDING';
+    p.soldTo = null;
+    p.soldFor = null;
+  });
+
+  // 2. Correct sortOrder based on UI logic (Pool + Average Points desc)
+  const poolOrder = state.leagueConfig.pools.map(p => p.id);
+  state.players.sort((a, b) => {
+    const ai = poolOrder.indexOf(a.pool);
+    const bi = poolOrder.indexOf(b.pool);
+    if (ai !== bi) return ai - bi;
+    const ap = parseInt(a.extra?.average_points || '0', 10);
+    const bp = parseInt(b.extra?.average_points || '0', 10);
+    if (ap !== bp) return bp - ap;
+    return a.name.localeCompare(b.name);
+  });
+  state.players.forEach((p, i) => { p.sortOrder = i; });
+
+  // 3. Pre-assign Owners
+  for (const p of state.players) {
+    if (isOwner(p)) {
+      const teamKey = Object.keys(p.extra || {}).find(k => k.toLowerCase().startsWith('team') || k === 'soldto');
+      if (teamKey) {
+        const teamName = normalize(p.extra[teamKey]);
+        const team = Object.values(state.teams).find(t => normalize(t.name) === teamName);
+        if (team) {
+          p.status = 'SOLD';
+          p.soldTo = team.id;
+        }
+      }
+    } else {
+      p.status = 'PENDING';
+      p.soldFor = 0;
+      p.soldTo = null;
+    }
+  }
+
+  // 4. Main Simulation Loop
+  const squadLimitMap = {}; // Current counts
+  teamIds.forEach(id => squadLimitMap[id] = 0);
+
+  for (const p of state.players) {
+    if (isOwner(p)) {
+      syncOwnerAverages(state);
+      continue;
+    }
+
+    if (SPILLOVER_IDS.includes(p.id)) {
+      const eligibleTeams = teamIds.filter(tid => state.teams[tid].roster.length < SQUAD_SIZE);
+      const tid = (eligibleTeams.length > 0) ? eligibleTeams[0] : teamIds[0];
+      const team = state.teams[tid];
+      p.status = 'SOLD';
+      p.soldTo = tid;
+      p.soldFor = 0;
+      team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: 0 });
+    } else {
+      let price;
+      if (p.sortOrder < 20) {
+        price = p.basePrice + 2000 + Math.floor(Math.random() * 20) * 100;
+      } else if (p.sortOrder < 40) {
+        price = p.basePrice + 1000 + Math.floor(Math.random() * 10) * 100;
+      } else {
+        price = p.basePrice + Math.floor(Math.random() * 5) * 100;
+      }
+
+      let eligibleTeams = teamIds.filter(tid => {
+        const team = state.teams[tid];
+        const remainingSlots = SQUAD_SIZE - team.roster.length;
+        if (remainingSlots <= 0) return false;
+        const mustKeep = (remainingSlots - 1) * MIN_BID;
+        return team.budget - price >= mustKeep;
+      });
+
+      if (eligibleTeams.length === 0) {
+        price = p.basePrice;
+        eligibleTeams = teamIds.filter(tid => {
+          const team = state.teams[tid];
+          const remainingSlots = SQUAD_SIZE - team.roster.length;
+          if (remainingSlots <= 0) return false;
+          const mustKeep = (remainingSlots - 1) * MIN_BID;
+          return team.budget - price >= mustKeep;
+        });
+      }
+
+      if (eligibleTeams.length > 0) {
+        eligibleTeams.sort((a,b) => state.teams[b].budget - state.teams[a].budget);
+        const tid = eligibleTeams[0];
+        const team = state.teams[tid];
+        p.status = 'SOLD';
+        p.soldTo = tid;
+        p.soldFor = price;
+        team.budget -= price;
+        team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: price });
+      } else {
+        // Force sell to team with most budget among those with room (or even room + 1 for overflow)
+        const tid = teamIds.sort((a,b) => (state.teams[b].budget - state.teams[a].budget))[0];
+        const team = state.teams[tid];
+        p.status = 'SOLD';
+        p.soldTo = tid;
+        p.soldFor = price;
+        team.budget -= price;
+        team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: price });
+      }
+    }
+    syncOwnerAverages(state);
+  }
+  syncOwnerAverages(state);
+}
+
 module.exports = {
   computeMaxBid,
   getPublicState,
@@ -404,4 +548,5 @@ module.exports = {
   syncOwnerAverages,
   syncPoolCounts,
   addCommentary,
+  runFullSimulation,
 };

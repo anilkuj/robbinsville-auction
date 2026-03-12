@@ -7,6 +7,7 @@ import AuctionPage from './pages/AuctionPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
 import DashboardPage from './pages/DashboardPage.jsx';
 import HostPage from './pages/HostPage.jsx';
+import SpectatorPage from './pages/SpectatorPage.jsx';
 import ProtectedRoute from './components/shared/ProtectedRoute.jsx';
 import { audioSystem } from './utils/audioSystem.js';
 import { useAuction } from './contexts/AuctionContext.jsx';
@@ -67,6 +68,7 @@ export default function App() {
               }
             />
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/spectator" element={<SpectatorPage />} />
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </AuctionProvider>

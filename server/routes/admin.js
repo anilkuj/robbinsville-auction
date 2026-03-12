@@ -97,7 +97,7 @@ function createAdminRouter(io) {
 
     // Recalculate owner averages for all affected pools
     for (const poolId of affectedPools) {
-      syncOwnerAverages(state, poolId);
+      syncOwnerAverages(state);
     }
 
     // Recalculate pool counts to keep League Setup in sync
@@ -221,11 +221,14 @@ function createAdminRouter(io) {
         };
       });
 
-      // Sort by pool order then name
+      // Sort by pool order then average_points (desc) then name
       players.sort((a, b) => {
         const ai = poolOrder.indexOf(a.pool);
         const bi = poolOrder.indexOf(b.pool);
         if (ai !== bi) return ai - bi;
+        const ap = parseInt(a.extra?.average_points || '0', 10);
+        const bp = parseInt(b.extra?.average_points || '0', 10);
+        if (ap !== bp) return bp - ap;
         return a.name.localeCompare(b.name);
       });
       players.forEach((p, i) => { p.sortOrder = i; });
@@ -598,7 +601,7 @@ function createAdminRouter(io) {
 
   // Update team passwords and/or dashboard PIN (works in any phase)
   router.post('/update-passwords', authenticate, requireAdmin, (req, res) => {
-    const { teams, dashboardPin, hostPin } = req.body;
+    const { teams, dashboardPin, hostPin, spectatorEnabled } = req.body;
     const state = getState();
 
     if (teams) {
@@ -613,6 +616,9 @@ function createAdminRouter(io) {
     }
     if (hostPin !== undefined) {
       state.settings.hostPin = String(hostPin).trim();
+    }
+    if (spectatorEnabled !== undefined) {
+      state.settings.spectatorEnabled = Boolean(spectatorEnabled);
     }
 
     saveState();
@@ -778,7 +784,7 @@ function createAdminRouter(io) {
     }
 
     // Recalculate owner averages for this pool (one less sold player now)
-    syncOwnerAverages(state, player.pool);
+    syncOwnerAverages(state);
 
     // Update lastSoldPlayerId to the next most recent sold player
     const remainingSold = state.players

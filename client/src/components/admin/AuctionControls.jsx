@@ -159,6 +159,8 @@ export default function AuctionControls() {
           ▶ Next Player
         </Button>
 
+
+
         {isLive && !timerPaused && !awaitingHammer && (
           <Button variant="contained" color="warning" onClick={() => adminAction('admin:pauseTimer')}>
             ⏸ Pause

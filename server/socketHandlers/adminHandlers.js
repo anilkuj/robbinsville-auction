@@ -1,5 +1,6 @@
 const { getState } = require('../state');
 const { saveState } = require('../persistence');
+const config = require('../config');
 const {
   getPublicState,
   startPlayer,
@@ -12,6 +13,7 @@ const {
   isOwner,
   syncOwnerAverages,
   addCommentary,
+  runFullSimulation,
 } = require('../auction');
 const { z } = require('zod');
 
@@ -40,6 +42,7 @@ const settingsSchema = z.object({
   dashboardPin: z.string().optional(),
   requireBidConfirm: z.boolean().optional(),
   randomizePool: z.boolean().optional(),
+  spectatorEnabled: z.boolean().optional(),
 });
 
 function registerAdminHandlers(io, socket) {
@@ -163,8 +166,8 @@ function registerAdminHandlers(io, socket) {
       }
     }
 
-    // Recalculate owner averages for this pool (pool avg changed now that player is PENDING)
-    syncOwnerAverages(state, prevPool);
+    // Recalculate owner averages (pool avg changed now that player is PENDING)
+    syncOwnerAverages(state);
 
     saveState();
 
@@ -301,8 +304,8 @@ function registerAdminHandlers(io, socket) {
     const unsoldIdx = state.unsoldPlayers.indexOf(playerId);
     if (unsoldIdx !== -1) state.unsoldPlayers.splice(unsoldIdx, 1);
 
-    // Recalculate owner averages for this pool
-    syncOwnerAverages(state, player.pool);
+    // Recalculate owner averages
+    syncOwnerAverages(state);
 
     state.lastSoldPlayerId = player.id;
     saveState();
@@ -364,8 +367,8 @@ function registerAdminHandlers(io, socket) {
       if (entry) entry.price = amount;
     }
 
-    // Recalculate owner averages for this pool
-    syncOwnerAverages(state, player.pool);
+    // Recalculate owner averages
+    syncOwnerAverages(state);
 
     saveState();
     io.emit('state:full', getPublicState());
@@ -377,7 +380,7 @@ function registerAdminHandlers(io, socket) {
       socket.emit('admin:error', { message: 'Invalid settings payload' });
       return;
     }
-    const { timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool } = parsed.data;
+    const { timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool, spectatorEnabled } = parsed.data;
 
     const state = getState();
 
@@ -402,6 +405,9 @@ function registerAdminHandlers(io, socket) {
     if (randomizePool !== undefined) {
       state.settings.randomizePool = Boolean(randomizePool);
     }
+    if (spectatorEnabled !== undefined) {
+      state.settings.spectatorEnabled = Boolean(spectatorEnabled);
+    }
 
     saveState();
     io.emit('auction:settingsChanged', getPublicState());
@@ -418,6 +424,17 @@ function registerAdminHandlers(io, socket) {
         s.disconnect(true);
       }
     }
+  });
+  
+  socket.on('admin:runFullSimulation', ({ password } = {}) => {
+    if (!password || password !== config.admin.password) {
+      socket.emit('admin:error', { error: 'Invalid admin password for simulation' });
+      return;
+    }
+    const state = getState();
+    runFullSimulation(state);
+    saveState();
+    io.emit('state:full', getPublicState());
   });
 }
 

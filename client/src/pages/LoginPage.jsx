@@ -19,7 +19,6 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdminLogin = searchParams.get('admin') === '1';
-  const [isHostLogin, setIsHostLogin] = useState(false);
   const [teams, setTeams] = useState([]);
   const [username, setUsername] = useState(isAdminLogin ? 'admin' : '');
   const [password, setPassword] = useState('');
@@ -49,7 +48,7 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      const u = isHostLogin ? 'host' : username.trim();
+      const u = username.trim();
       const userData = await login(u, password);
       if (userData.role === 'admin') navigate('/admin', { replace: true });
       else if (userData.role === 'host') navigate('/host', { replace: true });
@@ -90,14 +89,6 @@ export default function LoginPage() {
                 autoFocus
                 fullWidth
               />
-            ) : isHostLogin ? (
-              <TextField
-                label="Host Username"
-                value="host"
-                disabled
-                fullWidth
-                sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#94a3b8' } }}
-              />
             ) : teams.length > 0 ? (
               <FormControl fullWidth size="small">
                 <InputLabel>Team</InputLabel>
@@ -125,13 +116,12 @@ export default function LoginPage() {
             )}
 
             <TextField
-              label={isHostLogin ? "Host PIN (optional)" : "Password"}
+              label="Password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder={isHostLogin ? "Enter PIN or leave blank" : "Enter password"}
-              required={!isHostLogin}
-              autoFocus={isHostLogin}
+              placeholder="Enter password"
+              required
               fullWidth
             />
 
@@ -149,21 +139,6 @@ export default function LoginPage() {
             >
               {loading ? 'Signing in…' : 'Sign In'}
             </Button>
-
-            {!isAdminLogin && (
-              <Button
-                variant="text"
-                color="secondary"
-                onClick={() => {
-                  setIsHostLogin(!isHostLogin);
-                  setError('');
-                  setPassword('');
-                }}
-                sx={{ textTransform: 'none', mt: 1 }}
-              >
-                {isHostLogin ? 'Return to Team Login' : 'Join as Host'}
-              </Button>
-            )}
           </Box>
         </CardContent>
       </Card>

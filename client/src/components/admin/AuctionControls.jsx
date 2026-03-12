@@ -33,7 +33,7 @@ export default function AuctionControls() {
   const [msTeam, setMsTeam] = useState('');
   const [msAmount, setMsAmount] = useState('');
   const [msLocalError, setMsLocalError] = useState('');
-
+  
   // Hammer confirmation state
   const [showHammerConfirm, setShowHammerConfirm] = useState(false);
 

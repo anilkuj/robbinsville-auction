@@ -11,6 +11,7 @@ import LinearProgress from '@mui/material/LinearProgress';
 import IconButton from '@mui/material/IconButton';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import TeamLogo from '../shared/TeamLogo.jsx';
 import { poolColor as themePoolColor } from '../../theme.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
@@ -190,7 +191,7 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
     document.addEventListener('mouseup', onUp);
   }, [rightWidth]);
 
-  const { phase, teams, leagueConfig, players, currentPlayerIndex } = state;
+  const { phase, teams = {}, leagueConfig = {}, players = [], currentPlayerIndex, currentBid } = state || {};
   const startingBudget = leagueConfig?.startingBudget ?? 0;
   const squadSize = leagueConfig?.squadSize ?? 0;
   const currentPlayer = (phase === 'LIVE' || phase === 'PAUSED') ? players?.[currentPlayerIndex] : null;
@@ -216,10 +217,10 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" color="text.disabled">Current Bid</Typography>
             <Typography fontWeight={800} color="success.main" fontSize="1.1rem">
-              {state.currentBid?.amount?.toLocaleString()} pts
+              {currentBid?.amount?.toLocaleString()} pts
             </Typography>
             {state.currentBid?.teamId && (
-              <Typography variant="caption" color="text.secondary">— {teams[state.currentBid.teamId]?.name}</Typography>
+              <Typography variant="caption" color="text.secondary">— {teams[currentBid?.teamId]?.name}</Typography>
             )}
           </Box>
           {phase === 'PAUSED' && (
@@ -246,7 +247,7 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
           </Box>
 
           <Box sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
-            <BudgetChart teams={teams} startingBudget={startingBudget} preparedBid={preparedBid} currentUser={currentUser} currentBid={state.currentBid} />
+            <BudgetChart teams={teams} startingBudget={startingBudget} preparedBid={preparedBid} currentUser={currentUser} currentBid={currentBid} />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(320px, 1fr))' }, gap: 2 }}>
               {teamList.map(team => (
@@ -436,7 +437,8 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
     }}>
       <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-          <Typography fontWeight={700} sx={{ color: team.color || 'inherit' }}>🏏 {team.name}</Typography>
+          <TeamLogo team={team} size={28} border={false} />
+          <Typography fontWeight={700} sx={{ color: team.color || 'inherit' }}>{team.name}</Typography>
           {isLeading && <Chip label="● LEADING" size="small" color="success" sx={{ height: 20, fontSize: '0.62rem' }} />}
           {team.isOnline && (
             <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>

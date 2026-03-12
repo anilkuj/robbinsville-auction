@@ -1,7 +1,9 @@
 import React from 'react';
+import rplLogo from '../../assets/rpl-logo.jpg';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { formatPts } from '../../utils/budgetCalc.js';
+import TeamLogo from './TeamLogo.jsx';
 import { poolColor } from '../../theme.js';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -12,6 +14,7 @@ import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function Sidebar({ width }) {
   const { user, logout } = useAuth();
@@ -47,14 +50,36 @@ export default function Sidebar({ width }) {
         top: 0,
       }}
     >
-      <Typography fontWeight={800} color="primary" sx={{ textAlign: 'center', pb: 1.5, borderBottom: '1px solid', borderColor: 'divider', color: team?.color || 'primary.main' }}>
-        🏏 RPL Auction
-      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+        >
+          <Box 
+            component="img" 
+            src={rplLogo} 
+            sx={{ height: 60, width: 'auto', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} 
+          />
+        </motion.div>
+        <Box sx={{ textAlign: 'center' }}>
+          <Typography fontWeight={950} sx={{ letterSpacing: '0.05em', fontSize: '1.2rem', lineHeight: 1.1 }}>
+            RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
+            AUCTION SYSTEM
+          </Typography>
+        </Box>
+      </Box>
 
       {team && (
         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
-          <Typography variant="overline" color="text.disabled">Your Team</Typography>
-          <Typography fontWeight={700} sx={{ mt: 0.25, color: team.color || 'white' }}>{team.name}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+            <TeamLogo team={team} size={28} border={false} />
+            <Typography fontWeight={700} sx={{ color: team.color || 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {team.name}
+            </Typography>
+          </Box>
 
           <Typography variant="overline" color="text.disabled" display="block" sx={{ mt: 1.5 }}>Budget Remaining</Typography>
           <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
@@ -86,7 +111,10 @@ export default function Sidebar({ width }) {
 
       {roster.length > 0 && (
         <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
-          <Typography variant="overline" color="text.disabled">My Squad</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+            <TeamLogo team={team} size={24} border={false} />
+            <Typography variant="overline" color="text.disabled" fontWeight={800}>My Squad</Typography>
+          </Box>
           <List dense disablePadding sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
             {roster.map((r, i) => (
               <ListItem

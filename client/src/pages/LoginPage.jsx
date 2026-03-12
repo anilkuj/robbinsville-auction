@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import rplLogo from '../assets/rpl-logo.jpg';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Box from '@mui/material/Box';
@@ -13,6 +14,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -67,90 +69,164 @@ export default function LoginPage() {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #0a0f1e 0%, #141428 100%)',
+      position: 'relative',
+      overflow: 'hidden',
+      background: '#0b0e14',
       p: 2,
     }}>
-      <Card sx={{ width: '100%', maxWidth: 400, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }} elevation={24}>
-        <CardContent sx={{ p: 4 }}>
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <Typography variant="h2" sx={{ fontSize: '3rem', mb: 0.5 }}>🏏</Typography>
-            <Typography variant="h5" fontWeight={900} color="text.primary">RPL Auction</Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Robbinsville Premier League
-            </Typography>
-          </Box>
-          <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {isAdminLogin ? (
-              <TextField
-                label="Username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                required
-                autoFocus
-                fullWidth
-              />
-            ) : isHostLogin ? (
-              <TextField
-                label="Host Username"
-                value="host"
-                disabled
-                fullWidth
-                sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#94a3b8' } }}
-              />
-            ) : teams.length > 0 ? (
-              <FormControl fullWidth size="small">
-                <InputLabel>Team</InputLabel>
-                <Select
-                  label="Team"
-                  value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  required
-                  autoFocus
-                  sx={{ background: '#0a0f1e' }}
-                >
-                  {teams.map(t => <MenuItem key={t.id} value={t.name}>{t.name}</MenuItem>)}
-                </Select>
-              </FormControl>
-            ) : (
-              <TextField
-                label="Team"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                placeholder="Enter your team name"
-                required
-                autoFocus
-                fullWidth
-              />
-            )}
+      {/* Background Decorative Elements */}
+      <Box sx={{
+        position: 'absolute',
+        top: '-10%',
+        left: '-10%',
+        width: '40%',
+        height: '40%',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(245, 158, 11, 0.08) 0%, transparent 70%)',
+        zIndex: 0,
+      }} />
+      <Box sx={{
+        position: 'absolute',
+        bottom: '-10%',
+        right: '-10%',
+        width: '50%',
+        height: '50%',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(124, 58, 237, 0.05) 0%, transparent 70%)',
+        zIndex: 0,
+      }} />
 
-            <TextField
-              label={isHostLogin ? "Host PIN (optional)" : "Password"}
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder={isHostLogin ? "Enter PIN or leave blank" : "Enter password"}
-              required={!isHostLogin}
-              autoFocus={isHostLogin}
-              fullWidth
-            />
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        style={{ width: '100%', maxWidth: 400, zIndex: 1 }}
+      >
+        <Card className="glass-panel" sx={{ border: '1px solid rgba(255,255,255,0.08)' }} elevation={0}>
+          <CardContent sx={{ p: 4 }}>
+            <Box sx={{ textAlign: 'center', mb: 4 }}>
+              <motion.div
+                initial={{ scale: 0, rotate: -10 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 20 }}
+              >
+                <Box 
+                  component="img" 
+                  src={rplLogo} 
+                  sx={{ 
+                    height: 100, 
+                    width: 'auto', 
+                    mb: 2,
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                  }} 
+                />
+              </motion.div>
+              <Typography variant="h4" fontWeight={900} color="text.primary" sx={{ letterSpacing: '0.02em', mb: 0.5 }}>
+                RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
+                Robbinsville Premier League
+              </Typography>
+            </Box>
+            
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={isAdminLogin ? 'admin' : isHostLogin ? 'host' : 'team'}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                  {isAdminLogin ? (
+                    <TextField
+                      label="Admin Username"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      required
+                      autoFocus
+                      fullWidth
+                    />
+                  ) : isHostLogin ? (
+                    <TextField
+                      label="Host Username"
+                      value="host"
+                      disabled
+                      fullWidth
+                      sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#94a3b8' } }}
+                    />
+                  ) : teams.length > 0 ? (
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Select Your Team</InputLabel>
+                      <Select
+                        label="Select Your Team"
+                        value={username}
+                        onChange={e => setUsername(e.target.value)}
+                        required
+                        autoFocus
+                        MenuProps={{
+                          PaperProps: {
+                            className: 'glass-panel',
+                            sx: { mt: 1, maxHeight: 300 }
+                          }
+                        }}
+                      >
+                        {teams.map(t => <MenuItem key={t.id} value={t.name}>{t.name}</MenuItem>)}
+                      </Select>
+                    </FormControl>
+                  ) : (
+                    <TextField
+                      label="Team Name"
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      placeholder="Enter identity"
+                      required
+                      autoFocus
+                      fullWidth
+                    />
+                  )}
 
-            {error && <Alert severity="error" sx={{ py: 0.5 }}>{error}</Alert>}
+                  <TextField
+                    label={isHostLogin ? "Access PIN" : "Security Key"}
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder={isHostLogin ? "Enter 4-digit PIN" : "Enter password"}
+                    required={!isHostLogin}
+                    fullWidth
+                  />
 
-            <Button
-              type="submit"
-              variant="contained"
-              color="primary"
-              size="large"
-              disabled={loading}
-              fullWidth
-              sx={{ mt: 1, py: 1.5 }}
-              startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
+                  {error && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                      <Alert severity="error" sx={{ py: 0, border: '1px solid rgba(239, 68, 68, 0.2)', bgcolor: 'rgba(239, 68, 68, 0.05)' }}>{error}</Alert>
+                    </motion.div>
+                  )}
+
+                  <Button
+                    type="submit"
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    disabled={loading}
+                    fullWidth
+                    sx={{ 
+                      mt: 1, 
+                      py: 1.8, 
+                      fontSize: '1rem',
+                      boxShadow: '0 8px 16px rgba(245, 158, 11, 0.25)' 
+                    }}
+                    startIcon={loading ? <CircularProgress size={20} color="inherit" /> : null}
+                  >
+                    {loading ? 'Authenticating…' : 'Access Auction'}
+                  </Button>
+                </Box>
+              </motion.div>
+            </AnimatePresence>
+          </CardContent>
+        </Card>
+      </motion.div>
     </Box>
   );
 }

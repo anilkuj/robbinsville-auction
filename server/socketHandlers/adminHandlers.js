@@ -291,12 +291,19 @@ function registerAdminHandlers(io, socket) {
     player.soldTo = teamId;
     player.soldFor = amount;
 
+    // Track sale order
+    const soldPlayers = state.players.filter(p => p.status === 'SOLD');
+    player.saleIndex = soldPlayers.length; // Already includes current
+    player.soldAt = Date.now();
+
     team.budget -= amount;
     team.roster.push({
       playerId: player.id,
       playerName: player.name,
       pool: player.pool,
       price: amount,
+      saleIndex: player.saleIndex,
+      soldAt: player.soldAt,
       ...(player.extra && { extra: player.extra }),
     });
 

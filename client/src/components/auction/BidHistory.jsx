@@ -3,6 +3,7 @@ import { formatPts } from '../../utils/budgetCalc.js';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
+import TeamLogo from '../shared/TeamLogo.jsx';
 import Typography from '@mui/material/Typography';
 
 export default function BidHistory({ history = [], teams = {} }) {
@@ -37,13 +38,16 @@ export default function BidHistory({ history = [], teams = {} }) {
             justifyContent: 'space-between',
           }}
         >
-          <Typography
-            variant="body2"
-            fontWeight={i === 0 ? 700 : 400}
-            sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.secondary' }}
-          >
-            {entry.teamName}
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <TeamLogo team={teams[entry.teamId]} size={20} border={false} />
+            <Typography
+              variant="body2"
+              fontWeight={i === 0 ? 700 : 400}
+              sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.secondary' }}
+            >
+              {entry.teamName}
+            </Typography>
+          </Box>
           <Typography
             variant="body2"
             fontWeight={600}

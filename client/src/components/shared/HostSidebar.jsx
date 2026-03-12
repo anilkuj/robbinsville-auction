@@ -1,6 +1,8 @@
 import React from 'react';
+import rplLogo from '../../assets/rpl-logo.jpg';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { formatPts } from '../../utils/budgetCalc.js';
+import TeamLogo from './TeamLogo.jsx';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
@@ -9,6 +11,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 import Button from '@mui/material/Button';
 import { useAuth } from '../../contexts/AuthContext.jsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function HostSidebar({ width = 300 }) {
     const { auctionState, connected } = useAuction();
@@ -37,13 +40,26 @@ export default function HostSidebar({ width = 300 }) {
                 top: 0,
             }}
         >
-            <Box sx={{ pb: 1.5, borderBottom: '1px solid', borderColor: 'divider', textAlign: 'center' }}>
-                <Typography fontWeight={800} color="primary" sx={{ mb: 0.5 }}>
-                    🏏 RPL Auction Host
-                </Typography>
-                <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    Teams Budget Overview
-                </Typography>
+            <Box sx={{ pb: 3, borderBottom: '1px solid', borderColor: 'divider', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+                <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                >
+                    <Box 
+                        component="img" 
+                        src={rplLogo} 
+                        sx={{ height: 64, width: 'auto', borderRadius: '8px', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }} 
+                    />
+                </motion.div>
+                <Box>
+                    <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
+                        RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
+                        HOST COMMAND CENTER
+                    </Typography>
+                </Box>
             </Box>
 
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, flex: 1 }}>
@@ -68,10 +84,13 @@ export default function HostSidebar({ width = 300 }) {
                                 boxShadow: isLeading ? '0 0 0 1px #22c55e40' : 'none',
                             }}
                         >
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 0.5 }}>
-                                <Typography fontWeight={700} fontSize="0.85rem" noWrap title={team.name} sx={{ maxWidth: '65%' }}>
-                                    {team.name}
-                                </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+                                    <TeamLogo team={team} size={24} border={false} />
+                                    <Typography fontWeight={700} fontSize="0.85rem" noWrap title={team.name}>
+                                        {team.name}
+                                    </Typography>
+                                </Box>
                                 <Typography fontWeight={800} color={isLeading ? 'warning.main' : 'success.main'} fontSize="0.85rem">
                                     {formatPts(effectiveRemaining)}
                                 </Typography>

@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import rplLogo from '../assets/rpl-logo.jpg';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import AuctionControls from '../components/admin/AuctionControls.jsx';
+import AuctionRecap from '../components/admin/AuctionRecap.jsx';
 import PlayerImport from '../components/admin/PlayerImport.jsx';
 import UnsoldList from '../components/admin/UnsoldList.jsx';
 import PlayerCard from '../components/auction/PlayerCard.jsx';
@@ -12,6 +15,7 @@ import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
 import BidHistory from '../components/auction/BidHistory.jsx';
 import { formatPts } from '../utils/budgetCalc.js';
+import TeamLogo from '../components/shared/TeamLogo.jsx';
 import { getAvgPointsKey } from '../utils/playerSort.js';
 import DashboardView, { RemainingPlayersPane } from '../components/admin/DashboardView.jsx';
 import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
@@ -49,7 +53,7 @@ const TABS = ['League Setup', 'Auction Controls', 'Commentary', 'Player Data', '
 export default function AdminPage() {
   const { auctionState, connected, adminAction } = useAuction();
   const { user, logout } = useAuth();
-  const [tab, setTab] = useState('Auction Controls');
+  const [currentTab, setCurrentTab] = useState(1); // Default to Auction Controls (index 1)
   const [showReviewDialog, setShowReviewDialog] = useState(false);
   const [showSimulationModal, setShowSimulationModal] = useState(false);
   const [showLoadTestModal, setShowLoadTestModal] = useState(false);
@@ -57,10 +61,21 @@ export default function AdminPage() {
   const [showResetModal, setShowResetModal] = useState(false);
   const [importData, setImportData] = useState(null);
   const [showRollbackModal, setShowRollbackModal] = useState(false);
+  
+  // Recap State
+  const [showRecapConfig, setShowRecapConfig] = useState(false);
+  const [showRecapView, setShowRecapView] = useState(false);
+  const [recapTitle, setRecapTitle] = useState('1ST ROUND RECAP');
+  const [recapRange, setRecapRange] = useState('1-16');
 
   if (!auctionState) {
     return (
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 2 }}>
+        <Box 
+          component="img" 
+          src={rplLogo} 
+          sx={{ height: 120, width: 'auto', mb: 2, borderRadius: '8px', opacity: 0.5 }} 
+        />
         <Typography color="text.disabled">Connecting to auction…</Typography>
         <Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ borderColor: 'divider', color: 'text.secondary' }}>
           Sign Out
@@ -77,10 +92,21 @@ export default function AdminPage() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AppBar position="static">
-        <Toolbar sx={{ justifyContent: 'space-between', minHeight: 52 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography sx={{ fontSize: '1.3rem' }}>🏏</Typography>
-            <Typography fontWeight={800} color="primary">RPL Admin</Typography>
+        <Toolbar sx={{ justifyContent: 'space-between', minHeight: 72 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box 
+              component="img" 
+              src={rplLogo} 
+              sx={{ height: 44, width: 'auto', borderRadius: '6px' }} 
+            />
+            <Box>
+              <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
+                RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+              </Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
+                ADMIN CONTROL SUITE
+              </Typography>
+            </Box>
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
@@ -113,19 +139,29 @@ export default function AdminPage() {
         {/* Main panel */}
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', pr: { xs: '48px', lg: 0 } }}>
           {/* Global Commentary Banner (optional, but let's stick to the tab for now as requested) */}
-          <Paper square sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
-            <Tabs value={tab} onChange={(_, v) => setTab(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
-              {TABS.map(t => <Tab key={t} label={t} value={t} sx={{ fontSize: '0.85rem', minHeight: 48 }} />)}
-            </Tabs>
-          </Paper>
+        <Paper elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider', bgcolor: 'transparent' }}>
+          <Tabs 
+            value={currentTab} 
+            onChange={(_, v) => setCurrentTab(v)} 
+            variant="scrollable" 
+            scrollButtons="auto"
+            sx={{
+              '& .MuiTabs-indicator': { height: 4, borderRadius: '4px 4px 0 0' }
+            }}
+          >
+            {TABS.map((label) => (
+              <Tab key={label} label={label} sx={{ fontWeight: 800, letterSpacing: '0.05em' }} />
+            ))}
+          </Tabs>
+        </Paper>
 
-          {tab === 'Dashboard' ? (
+          {TABS[currentTab] === 'Dashboard' ? (
             <DashboardView state={auctionState} />
           ) : (
             <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, overflow: 'hidden' }}>
               <Box sx={{ flex: 1, overflowY: 'auto', p: 2.5 }}>
-                {tab === 'League Setup' && <LeagueSetupTab auctionState={auctionState} onImported={() => setShowReviewDialog(true)} />}
-                {tab === 'Auction Controls' && (
+                {TABS[currentTab] === 'League Setup' && <LeagueSetupTab auctionState={auctionState} onImported={() => setShowReviewDialog(true)} />}
+                {TABS[currentTab] === 'Auction Controls' && (
                   <AuctionControlsTab 
                     auctionState={auctionState} 
                     adminAction={adminAction} 
@@ -142,14 +178,15 @@ export default function AdminPage() {
                     setShowRollbackModal={setShowRollbackModal}
                     showSimulationModal={showSimulationModal}
                     setShowSimulationModal={setShowSimulationModal}
+                    onShowRecap={() => setShowRecapConfig(true)}
                   />
                 )}
-                {tab === 'Commentary' && <CommentaryFeed commentary={auctionState.commentary} />}
-                {tab === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
-                {tab === 'Settings' && <SettingsTab auctionState={auctionState} adminAction={adminAction} />}
+                {TABS[currentTab] === 'Commentary' && <CommentaryFeed commentary={auctionState.commentary} />}
+                {TABS[currentTab] === 'Player Data' && <PlayerDataTab auctionState={auctionState} adminAction={adminAction} />}
+                {TABS[currentTab] === 'Settings' && <SettingsTab auctionState={auctionState} adminAction={adminAction} />}
               </Box>
 
-              {tab === 'Auction Controls' && (
+              {TABS[currentTab] === 'Auction Controls' && (
                 <RemainingPlayersPane
                   players={auctionState.players || []}
                   pools={auctionState.leagueConfig?.pools || []}
@@ -162,6 +199,63 @@ export default function AdminPage() {
           )}
         </Box>
       </Box>
+
+      {/* Recap Configuration Dialog */}
+      <Dialog open={showRecapConfig} onClose={() => setShowRecapConfig(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>Auction Recap Settings</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <TextField
+            label="Recap Title"
+            fullWidth
+            value={recapTitle}
+            onChange={e => setRecapTitle(e.target.value)}
+            placeholder="e.g., 1ST ROUND RECAP"
+          />
+          <TextField
+            label="Pick Range (e.g., 1-16)"
+            fullWidth
+            value={recapRange}
+            onChange={e => setRecapRange(e.target.value)}
+            placeholder="1-16"
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setShowRecapConfig(false)} color="inherit">Cancel</Button>
+          <Button 
+            variant="contained" 
+            color="primary" 
+            onClick={() => {
+              setShowRecapConfig(false);
+              setShowRecapView(true);
+            }}
+            disabled={!recapRange.includes('-')}
+          >
+            Generate Recap
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Recap Full-Screen View */}
+      <Dialog 
+        fullScreen 
+        open={showRecapView} 
+        onClose={() => setShowRecapView(false)}
+      >
+        <Box sx={{ bgcolor: 'black', minHeight: '100vh', position: 'relative' }}>
+          <Button 
+            onClick={() => setShowRecapView(false)} 
+            sx={{ position: 'absolute', top: 20, right: 20, zIndex: 10, color: 'white', border: '1px solid rgba(255,255,255,0.3)' }}
+          >
+            Close Recap
+          </Button>
+          <AuctionRecap 
+            title={recapTitle} 
+            range={recapRange} 
+            soldPlayers={players} 
+            teams={teams} 
+          />
+        </Box>
+      </Dialog>
 
       <PostImportReviewDialog
         open={showReviewDialog}
@@ -202,13 +296,14 @@ function LeagueSetupTab({ auctionState, onImported }) {
     const t = JSON.parse(JSON.stringify(auctionState.teams));
     if (Object.keys(t).length === 0) {
       const init = {};
-      const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366 Indigo'];
+      const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+      const shuffled = [...DEFAULT_COLORS].sort(() => Math.random() - 0.5);
       for (let i = 1; i <= 10; i++) {
         init[`team_${i}`] = { 
           id: `team_${i}`, 
           name: `Team ${i}`, 
           password: 'team123',
-          color: DEFAULT_COLORS[(i - 1) % DEFAULT_COLORS.length]
+          color: shuffled[(i - 1) % shuffled.length]
         };
       }
       return init;
@@ -272,7 +367,9 @@ function LeagueSetupTab({ auctionState, onImported }) {
 
   function addTeam() {
     const id = `team_${Date.now()}`;
-    setTeams(prev => ({ ...prev, [id]: { id, name: '', password: 'team123' } }));
+    const DEFAULT_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+    const randomColor = DEFAULT_COLORS[Math.floor(Math.random() * DEFAULT_COLORS.length)];
+    setTeams(prev => ({ ...prev, [id]: { id, name: '', password: 'team123', color: randomColor } }));
   }
 
   function removeTeam(id) {
@@ -827,9 +924,10 @@ function AuctionControlsTab({
   showResetModal, setShowResetModal, 
   importData, setImportData, 
   showRollbackModal, setShowRollbackModal,
-  showSimulationModal, setShowSimulationModal
+  showSimulationModal, setShowSimulationModal,
+  onShowRecap
 }) {
-  const { phase, players, currentPlayerIndex, currentBid, teams } = auctionState;
+  const { phase, players = [], currentPlayerIndex, currentBid, teams = {} } = auctionState;
 
   const isSetup = phase === 'SETUP';
   const player = players?.[currentPlayerIndex] ?? null;
@@ -1002,13 +1100,14 @@ function AuctionControlsTab({
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pt: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
             {isSetup && auctionState.lastSoldPlayerId && (() => {
-              const lsp = auctionState.players.find(p => p.id === auctionState.lastSoldPlayerId);
+              const lsp = (auctionState.players || []).find(p => p.id === auctionState.lastSoldPlayerId);
               return lsp ? (
                 <Button variant="outlined" size="small" sx={{ borderColor: 'secondary.main', color: 'secondary.main' }} onClick={() => setShowRollbackModal(true)} title={`Rollback: ${lsp.name}`}>
                   ↩ Rollback: {lsp.name}
                 </Button>
               ) : null;
             })()}
+            <Button variant="contained" color="primary" size="small" onClick={onShowRecap}>🏆 Auction Recap</Button>
             <Button variant="contained" color="error" size="small" onClick={() => setShowResetModal(true)}>⚠ Reset Auction</Button>
             <Button variant="outlined" color="error" size="small" onClick={() => setShowFullResetModal(true)} sx={{ borderStyle: 'dashed' }}>
               ☠ Full Reset
@@ -1031,10 +1130,11 @@ function AuctionControlsTab({
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
 function SettingsTab({ auctionState, adminAction }) {
-  const { teams, settings } = auctionState;
+  const { teams = {}, settings = {} } = auctionState;
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
   const [passwords, setPasswords] = useState({});
   const [colors, setColors] = useState({});
+  const [logos, setLogos] = useState({});
   const [dashPin, setDashPin] = useState(settings.dashboardPin || '');
   const [hostPin, setHostPin] = useState(settings.hostPin || '');
   const [spectatorEnabled, setSpectatorEnabled] = useState(settings.spectatorEnabled ?? true);
@@ -1046,10 +1146,11 @@ function SettingsTab({ auctionState, adminAction }) {
   useEffect(() => { setDashPin(settings.dashboardPin || ''); }, [settings.dashboardPin]);
   useEffect(() => { setHostPin(settings.hostPin || ''); }, [settings.hostPin]);
   useEffect(() => { setSpectatorEnabled(settings.spectatorEnabled ?? true); }, [settings.spectatorEnabled]);
-  useEffect(() => { setPasswords({}); setColors({}); }, [Object.keys(teams).join(',')]);
+  useEffect(() => { setPasswords({}); setColors({}); setLogos({}); }, [Object.keys(teams).join(',')]);
 
   const hasChanges = Object.values(passwords).some(p => p.trim()) || 
                      Object.keys(colors).length > 0 ||
+                     Object.keys(logos).length > 0 ||
                      dashPin !== (settings.dashboardPin || '') || 
                      hostPin !== (settings.hostPin || '') ||
                      spectatorEnabled !== (settings.spectatorEnabled ?? true);
@@ -1061,12 +1162,14 @@ function SettingsTab({ auctionState, adminAction }) {
       await axios.post('/api/admin/update-passwords', { 
         teams: passwords, 
         colors, 
+        logos,
         dashboardPin: dashPin, 
         hostPin, 
         spectatorEnabled 
       });
       setPasswords({});
       setColors({});
+      setLogos({});
       setMsg({ type: 'ok', text: 'Settings saved!' });
     } catch (err) {
       setMsg({ type: 'err', text: err.response?.data?.error || 'Save failed' });
@@ -1098,13 +1201,14 @@ function SettingsTab({ auctionState, adminAction }) {
           <Typography color="text.disabled" fontSize="0.85rem">No teams configured yet. Set up teams in League Setup first.</Typography>
         ) : (
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 60px 1fr', gap: 1, px: 0.5 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 60px 80px 1fr', gap: 1, px: 0.5 }}>
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>Team Name</Typography>
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', textAlign: 'center' }}>Color</Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', textAlign: 'center' }}>Logo</Typography>
               <Typography variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase' }}>New Password</Typography>
             </Box>
             {teamList.map(team => (
-              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 60px 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
+              <Box key={team.id} sx={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 60px 80px 1fr', gap: 1, bgcolor: 'background.default', p: 1, borderRadius: 1, alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
                   <Typography fontSize="0.88rem">{team.name}</Typography>
                   {team.isOnline && (
@@ -1129,7 +1233,7 @@ function SettingsTab({ auctionState, adminAction }) {
                 <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                   <input
                     type="color"
-                    value={colors[team.id] || team.color || '#3b82f6'}
+                    value={colors[team.id] || team.color || '#cccccc'}
                     onChange={e => setColors(prev => ({ ...prev, [team.id]: e.target.value }))}
                     style={{
                       width: 32,
@@ -1142,6 +1246,41 @@ function SettingsTab({ auctionState, adminAction }) {
                     }}
                     title="Choose team color"
                   />
+                </Box>
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ position: 'relative', cursor: 'pointer' }} onClick={() => document.getElementById(`logo-input-${team.id}`).click()}>
+                    <TeamLogo team={{ ...team, logo: logos[team.id] || team.logo, color: colors[team.id] || team.color }} size={32} />
+                    <Box sx={{ 
+                      position: 'absolute', inset: 0, bgcolor: 'rgba(0,0,0,0.5)', borderRadius: '50%',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, '&:hover': { opacity: 1 }
+                    }}>
+                      <Typography sx={{ color: 'white', fontSize: '0.6rem', fontWeight: 'bold' }}>EDIT</Typography>
+                    </Box>
+                  </Box>
+                  <input
+                    id={`logo-input-${team.id}`}
+                    type="file"
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => setLogos(prev => ({ ...prev, [team.id]: reader.result }));
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                  />
+                  {(logos[team.id] || team.logo) && (
+                    <Button 
+                      size="small" 
+                      color="error" 
+                      sx={{ minWidth: 'auto', p: 0, fontSize: '0.6rem' }} 
+                      onClick={() => setLogos(prev => ({ ...prev, [team.id]: null }))}
+                    >
+                      CLEAR
+                    </Button>
+                  )}
                 </Box>
                   <TextField
                     size="small"

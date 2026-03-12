@@ -4,6 +4,7 @@ import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
+import TeamLogo from '../shared/TeamLogo.jsx';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -43,7 +44,7 @@ export default function BidDisplay({ currentBid, teams, player }) {
       </AnimatePresence>
       {hasBid && leadingTeam && (
         <Chip
-          icon={<EmojiEventsIcon sx={{ fontSize: '0.9rem !important' }} />}
+          icon={<TeamLogo team={leadingTeam} size={20} border={false} />}
           label={leadingTeam.name}
           size="small"
           color="success"

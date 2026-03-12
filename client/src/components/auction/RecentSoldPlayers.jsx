@@ -6,6 +6,7 @@ import Typography from '@mui/material/Typography';
 import List from '@mui/material/List';
 import ListItem from '@mui/material/ListItem';
 import Chip from '@mui/material/Chip';
+import TeamLogo from '../shared/TeamLogo.jsx';
 
 export default function RecentSoldPlayers({ players, currentPool, teams }) {
     if (!players || !currentPool || !teams) return null;
@@ -63,9 +64,12 @@ export default function RecentSoldPlayers({ players, currentPool, teams }) {
                                         />
                                     )}
                                 </Box>
-                                <Typography variant="caption" color="text.secondary" noWrap>
-                                    {teamName}
-                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+                                    <TeamLogo team={team} size={20} border={false} />
+                                    <Typography variant="caption" color="text.secondary" noWrap>
+                                        {teamName}
+                                    </Typography>
+                                </Box>
                             </Box>
 
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -1,4 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
+import rplLogo from '../assets/rpl-logo.jpg';
+import { motion, AnimatePresence } from 'framer-motion';
 import { io } from 'socket.io-client';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
@@ -9,6 +11,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import TeamLogo from '../components/shared/TeamLogo.jsx';
 
 export default function SpectatorPage() {
   // Auth state
@@ -105,48 +108,58 @@ export default function SpectatorPage() {
 
   if (pinRequired && !spectatorToken) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'linear-gradient(135deg, #0a0f1e 0%, #141428 100%)', p: 2 }}>
-        <Card sx={{ width: '100%', maxWidth: 360, bgcolor: '#1e293b', color: 'white', borderRadius: 4, border: '1px solid rgba(255,255,255,0.1)' }} elevation={24}>
-          <CardContent sx={{ p: 4 }}>
-            <Box sx={{ textAlign: 'center', mb: 3 }}>
-              <Typography sx={{ fontSize: '2.5rem', mb: 1 }}>🏏</Typography>
-              <Typography variant="h5" fontWeight={900} color="white">SPECTATOR LOGIN</Typography>
-              <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
-                Enter the PIN to view live rosters
-              </Typography>
-            </Box>
-            <Box component="form" onSubmit={handlePinSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <TextField
-                type="password"
-                placeholder="Enter PIN"
-                value={pinInput}
-                onChange={e => setPinInput(e.target.value)}
-                autoFocus
-                fullWidth
-                error={!!pinError}
-                inputProps={{ style: { textAlign: 'center', letterSpacing: '0.2em', color: 'white' } }}
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
-                    '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
-                  }
-                }}
-              />
-              {pinError && <Alert severity="error" sx={{ bgcolor: 'rgba(211, 47, 47, 0.1)', color: '#ff8a80', border: '1px solid rgba(211, 47, 47, 0.2)' }}>{pinError}</Alert>}
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                disabled={!pinInput || pinLoading}
-                fullWidth
-                sx={{ py: 1.5, fontWeight: 800, bgcolor: 'primary.main', '&:hover': { bgcolor: 'primary.dark' } }}
-              >
-                {pinLoading ? <CircularProgress size={24} color="inherit" /> : 'ENTER SPECTATOR VIEW'}
-              </Button>
-            </Box>
-          </CardContent>
-        </Card>
+      <Box sx={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        bgcolor: '#0b0e14',
+        p: 2 
+      }}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card className="glass-panel" sx={{ width: '100%', maxWidth: 360, color: 'white', border: '1px solid rgba(255,255,255,0.08)' }} elevation={0}>
+            <CardContent sx={{ p: 4 }}>
+              <Box sx={{ textAlign: 'center', mb: 3 }}>
+                <Box 
+                  component="img" 
+                  src={rplLogo} 
+                  sx={{ height: 80, width: 'auto', mb: 1.5, borderRadius: '8px' }} 
+                />
+                <Typography variant="h5" fontWeight={900} color="white">SPECTATOR LOGIN</Typography>
+                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                  Enter the PIN to view live rosters
+                </Typography>
+              </Box>
+              <Box component="form" onSubmit={handlePinSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <TextField
+                  type="password"
+                  placeholder="Enter PIN"
+                  value={pinInput}
+                  onChange={e => setPinInput(e.target.value)}
+                  autoFocus
+                  fullWidth
+                  error={!!pinError}
+                  inputProps={{ style: { textAlign: 'center', letterSpacing: '0.2em', color: 'white' } }}
+                />
+                {pinError && <Alert severity="error" sx={{ bgcolor: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.1)' }}>{pinError}</Alert>}
+                <Button
+                  type="submit"
+                  variant="contained"
+                  size="large"
+                  disabled={!pinInput || pinLoading}
+                  fullWidth
+                  sx={{ py: 1.5 }}
+                >
+                  {pinLoading ? <CircularProgress size={24} color="inherit" /> : 'ENTER SPECTATOR VIEW'}
+                </Button>
+              </Box>
+            </CardContent>
+          </Card>
+        </motion.div>
       </Box>
     );
   }
@@ -168,13 +181,20 @@ export default function SpectatorPage() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0b0e14', p: { xs: 1, md: 2 } }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
-        <Box>
-          <Typography variant="h4" fontWeight={950} color="white" sx={{ letterSpacing: '-0.04em', mb: 0, fontSize: { xs: '1.2rem', md: '2rem' } }}>
-            RPL <Box component="span" sx={{ color: 'primary.main' }}>ROSTERS</Box>
-          </Typography>
-          <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6rem' }}>
-            Live Feed • {teamList.length} Teams
-          </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <Box 
+            component="img" 
+            src={rplLogo} 
+            sx={{ height: 60, width: 'auto', borderRadius: '4px' }} 
+          />
+          <Box>
+            <Typography variant="h4" fontWeight={950} color="white" sx={{ letterSpacing: '0.05em', mb: 0, fontSize: { xs: '1.2rem', md: '2rem' } }}>
+              RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+            </Typography>
+            <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6rem' }}>
+              High-Speed Feed • {teamList.length} Teams
+            </Typography>
+          </Box>
         </Box>
         <Box sx={{ textAlign: 'right' }}>
           <Chip
@@ -197,12 +217,22 @@ export default function SpectatorPage() {
       <Box sx={{ 
         display: 'grid', 
         gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, 1fr)' }, 
-        gap: 1.5,
-        px: 1
+        gap: 2,
+        px: 1,
+        transition: 'all 0.5s'
       }}>
-        {teamList.map((team) => (
-          <TeamCard key={team.id} team={team} color={team.color || '#3b82f6'} allPlayers={state.players || []} />
-        ))}
+        <AnimatePresence>
+          {teamList.map((team, idx) => (
+            <motion.div
+              key={team.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: idx * 0.05, duration: 0.5 }}
+            >
+              <TeamCard team={team} color={team.color || '#3b82f6'} allPlayers={state.players || []} />
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </Box>
     </Box>
   );
@@ -263,17 +293,20 @@ function TeamCard({ team, color, allPlayers }) {
       '&:hover': { borderColor: color, transform: 'translateY(-2px)' }
     }}>
       <CardContent sx={{ p: 0 }}>
-        <Box sx={{ p: 1.5, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)' }}>
-          <Typography variant="body1" fontWeight={950} color="white" noWrap sx={{ letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '1rem' }}>
-            {team.name}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-            <Typography variant="caption" sx={{ color: color, fontWeight: 900, fontSize: '0.75rem' }}>
-              {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)}
+        <Box sx={{ p: 1.5, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <TeamLogo team={team} size={36} border={false} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="body1" fontWeight={950} color="white" noWrap sx={{ letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '1rem' }}>
+              {team.name}
             </Typography>
-            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase' }}>
-              Players
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
+              <Typography variant="caption" sx={{ color: color, fontWeight: 900, fontSize: '0.75rem' }}>
+                {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)}
+              </Typography>
+              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                Players
+              </Typography>
+            </Box>
           </Box>
         </Box>
 

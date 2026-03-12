@@ -1,4 +1,6 @@
 import React, { useState, useCallback } from 'react';
+import rplLogo from '../assets/rpl-logo.jpg';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import HostSidebar from '../components/shared/HostSidebar.jsx';
@@ -23,8 +25,23 @@ import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 
 export default function HostPage() {
     const { user } = useAuth();
-    const { auctionState } = useAuction();
+    const { auctionState, connected } = useAuction();
     const [rightWidth, setRightWidth] = useState(380);
+    
+    const { phase, players = [], teams = {}, leagueConfig = {}, settings = {}, currentBid, currentPool, currentPlayerIndex } = auctionState || {};
+    const player = players[currentPlayerIndex] ?? null;
+    
+    // Determine the relevant pool for the "Recently Sold" display
+    let displayPool = currentPool || player?.pool;
+    if (!displayPool && players.length > 0) {
+        const soldPlayers = players.filter(p => p.status === 'SOLD');
+        if (soldPlayers.length > 0) {
+            displayPool = soldPlayers[soldPlayers.length - 1].pool;
+        } else {
+            displayPool = 'A1'; // Fallback
+        }
+    }
+
     const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
     const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
 
@@ -46,33 +63,51 @@ export default function HostPage() {
         document.body.style.cursor = 'col-resize';
     }, [rightWidth]);
 
-    const phase = auctionState?.phase;
-    const player = phase === 'LIVE' ? auctionState?.players?.[auctionState?.currentPlayerIndex] : null;
-    const currentBid = auctionState?.currentBid;
-    const settings = auctionState?.settings;
-    const leagueConfig = auctionState?.leagueConfig;
-
-    // Determine the relevant pool for the "Recently Sold" display
-    let currentPool = player?.pool;
-    if (!currentPool && auctionState?.players) {
-        // If in SETUP phase (no active player), find the last player that was sold
-        const soldPlayers = auctionState.players.filter(p => p.status === 'SOLD');
-        if (soldPlayers.length > 0) {
-            // The last sold player is the one processed most recently
-            currentPool = soldPlayers[soldPlayers.length - 1].pool;
-        }
-    }
 
     return (
         <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden', bgcolor: 'background.default' }}>
 
             {/* Left Sidebar - Host View */}
             <Box className="desktop-sidebar" sx={{ display: { xs: 'none', md: 'flex' } }}>
-                <HostSidebar width={280} />
+                <HostSidebar width={320} />
             </Box>
 
             {/* Main Content Area */}
             <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                {/* Prominent Header */}
+                <Box sx={{ 
+                    p: 2, 
+                    px: 3, 
+                    borderBottom: '1px solid', 
+                    borderColor: 'divider', 
+                    background: 'rgba(17, 24, 39, 0.8)',
+                    backdropFilter: 'blur(12px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    minHeight: 80
+                }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box 
+                            component="img" 
+                            src={rplLogo} 
+                            sx={{ height: 48, width: 'auto', borderRadius: '6px' }} 
+                        />
+                        <Box>
+                            <Typography variant="h5" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
+                                RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
+                                AUCTION BROADCAST HUB
+                            </Typography>
+                        </Box>
+                    </Box>
+                    <Box sx={{ textAlign: 'right' }}>
+                        <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>CONTROL STATUS</Typography>
+                        <Typography variant="h6" fontWeight={950} color="primary" sx={{ lineHeight: 1 }}>{auctionState?.phase || 'READY'}</Typography>
+                    </Box>
+                </Box>
+
                 <Box sx={{ flex: 1, overflowY: 'auto', p: { xs: 1.5, sm: 3, md: 4 }, display: 'flex', flexDirection: 'column' }}>
 
                     <Box sx={{ maxWidth: currentTab === 0 ? 1200 : '100%', mx: 'auto', width: '100%', mt: { md: 2 } }}>
@@ -109,12 +144,12 @@ export default function HostPage() {
                         {/* Live Auction Tab */}
                         {currentTab === 0 && (
                             <>
-                                {auctionState && <PhaseBar phase={phase} />}
+                                {auctionState && <PhaseBar phase={auctionState.phase} />}
 
-                                {phase === 'LIVE' && player && (
+                                {(auctionState?.phase === 'LIVE' || auctionState?.phase === 'PAUSED') && player && (
                                     <>
                                         <PlayerCard player={player} />
-                                        <PlayerExtraData player={player} visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
+                                        <PlayerExtraData player={player} visibleKeys={String(auctionState?.leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
                                         <Box sx={{ mt: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
 
                                             {/* Timer and Bid Display */}
@@ -123,13 +158,13 @@ export default function HostPage() {
                                                     timerEndsAt={auctionState.timerEndsAt}
                                                     timerPaused={auctionState.timerPaused}
                                                     timerRemainingOnPause={auctionState.timerRemainingOnPause}
-                                                    timerSeconds={settings?.timerSeconds ?? 30}
-                                                    endMode={settings?.endMode ?? 'timer'}
+                                                    timerSeconds={auctionState?.settings?.timerSeconds ?? 30}
+                                                    endMode={auctionState?.settings?.endMode ?? 'timer'}
                                                 />
                                                 <Box sx={{ flex: 1 }}>
                                                     <BidDisplay
-                                                        currentBid={currentBid}
-                                                        teams={auctionState.teams}
+                                                        currentBid={auctionState?.currentBid}
+                                                        teams={auctionState?.teams}
                                                         player={player}
                                                     />
                                                 </Box>
@@ -145,11 +180,11 @@ export default function HostPage() {
                                                 <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
                                                     Bid History
                                                 </Typography>
-                                                <BidHistory history={currentBid?.history} />
+                                                <BidHistory history={auctionState?.currentBid?.history} />
                                             </Paper>
 
                                             {/* Recently Sold */}
-                                            <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={auctionState.teams} />
+                                            <RecentSoldPlayers players={players} currentPool={displayPool} teams={teams} />
                                         </Box>
                                     </>
                                 )}
@@ -165,7 +200,7 @@ export default function HostPage() {
                                                 </Typography>
                                             )}
                                         </Paper>
-                                        <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={auctionState.teams} />
+                                        <RecentSoldPlayers players={players} currentPool={displayPool} teams={teams} />
                                     </>
                                 )}
 

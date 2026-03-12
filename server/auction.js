@@ -108,6 +108,8 @@ function syncOwnerAverages(state) {
           pool: owner.pool,
           price: avg,
           isOwner: true,
+          saleIndex: owner.saleIndex || 0,
+          soldAt: owner.soldAt || Date.now(),
           ...(owner.extra && { extra: owner.extra }),
         });
       } else {
@@ -151,6 +153,7 @@ function getPublicState() {
       ownerPlayerIds: team.ownerPlayerIds || (team.ownerPlayerId ? [team.ownerPlayerId] : []),
       ownerName: team.ownerName || null,
       color: team.color || null,
+      logo: team.logo || null,
     };
   }
   return { ...state, teams };
@@ -311,13 +314,20 @@ function processSold(io) {
   const team = state.teams[teamId];
   if (team) {
     team.budget -= amount;
-    team.roster.push({
-      playerId: player.id,
-      playerName: player.name,
-      pool: player.pool,
-      price: amount,
-      ...(player.extra && { extra: player.extra }),
-    });
+    // Track sale order
+  const soldPlayers = state.players.filter(p => p.status === 'SOLD');
+  player.saleIndex = soldPlayers.length; // Already includes current
+  player.soldAt = Date.now();
+
+  team.roster.push({
+    playerId: player.id,
+    playerName: player.name,
+    pool: player.pool,
+    price: amount,
+    saleIndex: player.saleIndex,
+    soldAt: player.soldAt,
+    ...(player.extra && { extra: player.extra }),
+  });
   }
 
   // Recalculate owner averages
@@ -444,6 +454,7 @@ function runFullSimulation(state) {
   state.players.forEach((p, i) => { p.sortOrder = i; });
 
   // 3. Pre-assign Owners
+  let saleCounter = 0;
   for (const p of state.players) {
     if (isOwner(p)) {
       const teamKey = Object.keys(p.extra || {}).find(k => k.toLowerCase().startsWith('team') || k === 'soldto');
@@ -451,14 +462,19 @@ function runFullSimulation(state) {
         const teamName = normalize(p.extra[teamKey]);
         const team = Object.values(state.teams).find(t => normalize(t.name) === teamName);
         if (team) {
+          saleCounter++;
           p.status = 'SOLD';
           p.soldTo = team.id;
+          p.saleIndex = saleCounter;
+          p.soldAt = Date.now();
         }
       }
     } else {
       p.status = 'PENDING';
       p.soldFor = 0;
       p.soldTo = null;
+      p.saleIndex = null;
+      p.soldAt = null;
     }
   }
 
@@ -468,7 +484,7 @@ function runFullSimulation(state) {
 
   for (const p of state.players) {
     if (isOwner(p)) {
-      syncOwnerAverages(state);
+      // Owners already handled in step 3, but sync averages
       continue;
     }
 
@@ -476,10 +492,20 @@ function runFullSimulation(state) {
       const eligibleTeams = teamIds.filter(tid => state.teams[tid].roster.length < SQUAD_SIZE);
       const tid = (eligibleTeams.length > 0) ? eligibleTeams[0] : teamIds[0];
       const team = state.teams[tid];
+      saleCounter++;
       p.status = 'SOLD';
       p.soldTo = tid;
       p.soldFor = 0;
-      team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: 0 });
+      p.saleIndex = saleCounter;
+      p.soldAt = Date.now();
+      team.roster.push({ 
+        playerId: p.id, 
+        playerName: p.name, 
+        pool: p.pool, 
+        price: 0, 
+        saleIndex: p.saleIndex, 
+        soldAt: p.soldAt 
+      });
     } else {
       let price;
       if (p.sortOrder < 20) {
@@ -513,24 +539,44 @@ function runFullSimulation(state) {
         eligibleTeams.sort((a,b) => state.teams[b].budget - state.teams[a].budget);
         const tid = eligibleTeams[0];
         const team = state.teams[tid];
+        saleCounter++;
         p.status = 'SOLD';
         p.soldTo = tid;
         p.soldFor = price;
+        p.saleIndex = saleCounter;
+        p.soldAt = Date.now();
         team.budget -= price;
-        team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: price });
+        team.roster.push({ 
+          playerId: p.id, 
+          playerName: p.name, 
+          pool: p.pool, 
+          price: price, 
+          saleIndex: p.saleIndex, 
+          soldAt: p.soldAt 
+        });
       } else {
         // Force sell to team with most budget among those with room (or even room + 1 for overflow)
         const tid = teamIds.sort((a,b) => (state.teams[b].budget - state.teams[a].budget))[0];
         const team = state.teams[tid];
+        saleCounter++;
         p.status = 'SOLD';
         p.soldTo = tid;
         p.soldFor = price;
+        p.saleIndex = saleCounter;
+        p.soldAt = Date.now();
         team.budget -= price;
-        team.roster.push({ playerId: p.id, playerName: p.name, pool: p.pool, price: price });
+        team.roster.push({ 
+          playerId: p.id, 
+          playerName: p.name, 
+          pool: p.pool, 
+          price: price, 
+          saleIndex: p.saleIndex, 
+          soldAt: p.soldAt 
+        });
       }
     }
-    syncOwnerAverages(state);
   }
+  // 5. Final pass for owner averages
   syncOwnerAverages(state);
 }
 

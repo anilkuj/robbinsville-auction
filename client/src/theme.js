@@ -18,30 +18,91 @@ export function poolColor(poolId) {
 const theme = createTheme({
   palette: {
     mode: 'dark',
-    primary:    { main: '#f59e0b' },
-    secondary:  { main: '#7c3aed' },
-    success:    { main: '#22c55e' },
-    error:      { main: '#ef4444' },
-    background: { default: '#0a0f1e', paper: '#141428' },
-    text:       { primary: '#f1f5f9', secondary: '#94a3b8', disabled: '#475569' },
-    divider: '#1e293b',
+    primary: { 
+      main: '#f59e0b',
+      light: '#fbbf24',
+      dark: '#d97706',
+    },
+    secondary: { 
+      main: '#8b5cf6',
+      light: '#a78bfa',
+      dark: '#7c3aed',
+    },
+    success: { main: '#10b981' },
+    error: { main: '#ef4444' },
+    background: { 
+      default: '#0b0e14', 
+      paper: '#111827',
+    },
+    text: { 
+      primary: '#f8fafc', 
+      secondary: '#94a3b8', 
+      disabled: '#475569',
+    },
+    divider: 'rgba(255, 255, 255, 0.06)',
   },
   typography: {
-    fontFamily: "'Roboto', -apple-system, sans-serif",
-    h1: { fontWeight: 900 },
-    h2: { fontWeight: 800 },
-    h3: { fontWeight: 700 },
+    fontFamily: "'Inter', sans-serif",
+    h1: { fontFamily: "'Outfit', sans-serif", fontWeight: 900 },
+    h2: { fontFamily: "'Outfit', sans-serif", fontWeight: 800 },
+    h3: { fontFamily: "'Outfit', sans-serif", fontWeight: 800 },
+    h4: { fontFamily: "'Outfit', sans-serif", fontWeight: 700 },
+    h5: { fontFamily: "'Outfit', sans-serif", fontWeight: 700 },
+    h6: { fontFamily: "'Outfit', sans-serif", fontWeight: 700 },
+    button: { fontWeight: 700, letterSpacing: '0.02em' },
   },
-  shape: { borderRadius: 10 },
+  shape: { borderRadius: 12 },
   components: {
     MuiButton: {
       styleOverrides: {
-        root: { textTransform: 'none', fontWeight: 700 },
+        root: { 
+          textTransform: 'none', 
+          borderRadius: 8,
+          transition: 'all 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-1px)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+          },
+        },
         containedPrimary: {
-          background: 'linear-gradient(135deg, #f59e0b, #ef4444)',
-          boxShadow: '0 4px 20px #f59e0b30',
-          '&:hover': { background: 'linear-gradient(135deg, #fbbf24, #f87171)', boxShadow: '0 4px 24px #f59e0b50' },
-          '&.Mui-disabled': { background: '#1e293b', color: '#475569', boxShadow: 'none' },
+          background: 'linear-gradient(135deg, #f59e0b 0%, #ef4444 100%)',
+          boxShadow: '0 4px 14px 0 rgba(245, 158, 11, 0.39)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          '&:hover': { 
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f87171 100%)',
+            boxShadow: '0 6px 20px rgba(245, 158, 11, 0.5)',
+          },
+        },
+        outlined: {
+          borderColor: 'rgba(255,255,255,0.12)',
+          '&:hover': {
+            borderColor: '#f59e0b',
+            background: 'rgba(245, 158, 11, 0.04)',
+          },
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          backgroundColor: '#111827',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 16,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+        },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: {
+          backgroundImage: 'none',
+          '&.MuiPaper-elevation24': {
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          },
         },
       },
     },
@@ -50,46 +111,51 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            background: '#0a0f1e',
-            '& fieldset': { borderColor: '#334155' },
-            '&:hover fieldset': { borderColor: '#475569' },
+            background: '#0b0e14',
+            borderRadius: 8,
+            '& fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+            '&:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
             '&.Mui-focused fieldset': { borderColor: '#f59e0b' },
           },
         },
       },
     },
-    MuiPaper: {
-      styleOverrides: { root: { backgroundImage: 'none' } },
-    },
-    MuiTab: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          fontWeight: 500,
-          '&.Mui-selected': { color: '#f59e0b', fontWeight: 700 },
-        },
-      },
-    },
-    MuiTabs: {
-      styleOverrides: {
-        indicator: { backgroundColor: '#f59e0b' },
-      },
-    },
-    MuiChip: {
-      styleOverrides: { root: { fontWeight: 700 } },
-    },
     MuiAppBar: {
       styleOverrides: {
-        root: { background: '#141428', borderBottom: '1px solid #1e293b', boxShadow: 'none' },
+        root: { 
+          background: 'rgba(17, 24, 39, 0.8)',
+          backdropFilter: 'blur(12px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.06)', 
+          boxShadow: 'none',
+        },
       },
     },
     MuiCssBaseline: {
       styleOverrides: {
         '*': { boxSizing: 'border-box' },
-        'html, body, #root': { margin: 0, padding: 0, minHeight: '100vh' },
-        '::-webkit-scrollbar': { width: '6px', height: '6px' },
-        '::-webkit-scrollbar-track': { background: '#0a0f1e' },
-        '::-webkit-scrollbar-thumb': { background: '#334155', borderRadius: '3px' },
+        'html, body, #root': { 
+          margin: 0, 
+          padding: 0, 
+          minHeight: '100vh',
+          backgroundColor: '#0b0e14',
+        },
+        body: {
+          backgroundImage: 'radial-gradient(circle at 50% 0%, rgba(245, 158, 11, 0.05) 0%, transparent 70%)',
+          backgroundAttachment: 'fixed',
+        },
+        '::-webkit-scrollbar': { width: '5px', height: '5px' },
+        '::-webkit-scrollbar-track': { background: '#0b0e14' },
+        '::-webkit-scrollbar-thumb': { 
+          background: '#334155', 
+          borderRadius: '10px',
+          '&:hover': { background: '#475569' },
+        },
+        '.glass-panel': {
+          background: 'rgba(255, 255, 255, 0.03)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255, 255, 255, 0.06)',
+          borderRadius: 16,
+        },
       },
     },
   },

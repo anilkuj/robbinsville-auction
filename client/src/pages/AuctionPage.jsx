@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import rplLogo from '../assets/rpl-logo.jpg';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Sidebar from '../components/shared/Sidebar.jsx';
@@ -31,12 +32,28 @@ import { formatPts } from '../utils/budgetCalc.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../utils/playerSort.js';
 import RemainingPlayersPanel from '../components/auction/RemainingPlayersPanel.jsx';
 import PhaseBar from '../components/auction/PhaseBar.jsx';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuctionPage() {
   const { auctionState, connected, lastEvent, preparedBid } = useAuction();
   const { user } = useAuth();
+  
+  const { phase, players = [], teams = {}, leagueConfig = {}, settings = {}, currentBid, currentPool, currentPlayerIndex } = auctionState || {};
+  const player = players[currentPlayerIndex] ?? null;
+  
+  // Determine display pool at top-level
+  let displayPool = currentPool || player?.pool;
+  if (!displayPool && players.length > 0) {
+    const soldPlayers = players.filter(p => p.status === 'SOLD');
+    if (soldPlayers.length > 0) {
+      displayPool = soldPlayers[soldPlayers.length - 1].pool;
+    } else {
+      displayPool = 'A1'; // Fallback
+    }
+  }
+
   const [toast, setToast] = useState(null);
-  const [leftWidth, setLeftWidth] = useState(240);
+  const [leftWidth, setLeftWidth] = useState(280);
   const [rightWidth, setRightWidth] = useState(380);
   const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
   const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
@@ -45,7 +62,7 @@ export default function AuctionPage() {
     if (!lastEvent) return;
     if (lastEvent.type === 'sold') {
       const { player, teamName, amount } = lastEvent.data;
-      setToast({ type: 'sold', msg: `🏆 ${player.name} sold to ${teamName} for ${amount.toLocaleString()} pts` });
+      setToast({ type: 'sold', msg: `🏆 ${player.name} sold to ${teamName} for ${amount?.toLocaleString()} pts` });
     } else if (lastEvent.type === 'unsold') {
       const { player } = lastEvent.data;
       setToast({ type: 'unsold', msg: `❌ ${player.name} went unsold` });
@@ -79,31 +96,15 @@ export default function AuctionPage() {
     document.addEventListener('mouseup', onUp);
   }, [rightWidth]);
 
-  const phase = auctionState?.phase;
-  const player = auctionState?.players?.[auctionState?.currentPlayerIndex] ?? null;
-  const currentBid = auctionState?.currentBid;
-  const teams = auctionState?.teams;
-  const settings = auctionState?.settings;
-  const leagueConfig = auctionState?.leagueConfig;
-  const myTeam = auctionState?.teams?.[user?.teamId];
+  const myTeam = teams?.[user?.teamId];
   const roster = [...(myTeam?.roster ?? [])].sort((a, b) => {
-    const isAOwner = myTeam.ownerPlayerIds && myTeam.ownerPlayerIds.includes(a.playerId);
-    const isBOwner = myTeam.ownerPlayerIds && myTeam.ownerPlayerIds.includes(b.playerId);
+    const isAOwner = myTeam?.ownerPlayerIds && myTeam.ownerPlayerIds.includes(a.playerId);
+    const isBOwner = myTeam?.ownerPlayerIds && myTeam.ownerPlayerIds.includes(b.playerId);
     if (isAOwner && !isBOwner) return -1;
     if (!isAOwner && isBOwner) return 1;
     return b.price - a.price;
   });
 
-  // Determine the relevant pool for the "Recently Sold" display
-  let currentPool = player?.pool;
-  if (!currentPool && auctionState?.players) {
-    // If in SETUP phase (no active player), find the last player that was sold
-    const soldPlayers = auctionState.players.filter(p => p.status === 'SOLD');
-    if (soldPlayers.length > 0) {
-      // The last sold player is the one processed most recently
-      currentPool = soldPlayers[soldPlayers.length - 1].pool;
-    }
-  }
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', userSelect: 'none' }}>
@@ -128,35 +129,92 @@ export default function AuctionPage() {
         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, pr: { xs: '48px', lg: 0 } }}>
           <MobileHeader user={user} auctionState={auctionState} connected={connected} />
 
-          {toast && (
-            <Paper sx={{
-              position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
-              bgcolor: toast.type === 'sold' ? '#14532d' : '#1e293b',
-              border: '1px solid',
-              borderColor: toast.type === 'sold' ? 'success.main' : 'error.main',
-              color: toast.type === 'sold' ? 'success.main' : 'error.main',
-              borderRadius: 2.5, px: 3, py: 1.5,
-              fontSize: '0.9rem', fontWeight: 600, zIndex: 1000,
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-              maxWidth: '90vw', textAlign: 'center',
-            }}>
-              {toast.msg}
-            </Paper>
-          )}
+          {/* New Prominent Branding Header */}
+          <Box sx={{ 
+            display: { xs: 'none', md: 'flex' }, 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            px: 3, 
+            py: 2, 
+            borderBottom: '1px solid', 
+            borderColor: 'divider',
+            bgcolor: 'background.paper' 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <Box 
+                component="img" 
+                src={rplLogo} 
+                sx={{ height: 50, width: 'auto', borderRadius: '6px' }} 
+              />
+              <Box>
+                <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
+                  ROBBINSVILLE PREMIER LEAGUE 2026
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                  Member Portal • {myTeam?.name}
+                </Typography>
+              </Box>
+            </Box>
+            <Box sx={{ textAlign: 'right' }}>
+              <Typography variant="h5" fontWeight={900} color="success.main">
+                {formatPts(myTeam?.budget || 0)}
+              </Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>REMAINING BUDGET</Typography>
+            </Box>
+          </Box>
 
-          <Paper square sx={{
+          <AnimatePresence>
+            {toast && (
+              <motion.div
+                initial={{ opacity: 0, y: -20, x: '-50%' }}
+                animate={{ opacity: 1, y: 0, x: '-50%' }}
+                exit={{ opacity: 0, y: -20, x: '-50%' }}
+                style={{ position: 'fixed', top: 16, left: '50%', zIndex: 1000 }}
+              >
+                <Paper sx={{
+                  bgcolor: toast.type === 'sold' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(30, 41, 59, 0.8)',
+                  backdropFilter: toast.type === 'sold' ? 'blur(12px)' : 'none',
+                  border: '1px solid',
+                  borderColor: toast.type === 'sold' ? 'success.main' : 'divider',
+                  color: toast.type === 'sold' ? 'success.main' : 'error.main',
+                  borderRadius: 3, px: 3, py: 1.5,
+                  fontSize: '0.95rem', fontWeight: 800,
+                  boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
+                  maxWidth: '90vw', textAlign: 'center',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  {toast.msg}
+                </Paper>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <Paper elevation={0} sx={{
             borderBottom: '1px solid',
             borderColor: 'divider',
             mb: 2,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            bgcolor: 'transparent',
+            px: 2
           }}>
-            <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
-              <Tab label="Live Auction" />
-              <Tab label="Commentary" />
-              <Tab label="Player Data" />
-              <Tab label="Dashboard" />
+            <Tabs 
+              value={currentTab} 
+              onChange={(_, v) => setCurrentTab(v)} 
+              variant="scrollable" 
+              scrollButtons="auto" 
+              sx={{ 
+                flex: 1,
+                minHeight: 64,
+                '& .MuiTabs-indicator': { height: 4, borderRadius: '4px 4px 0 0' }
+              }}
+            >
+              <Tab label="Live Auction" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
+              <Tab label="Commentary" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
+              <Tab label="Player Data" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
+              <Tab label="Dashboard" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
             </Tabs>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <PlayerStats players={auctionState?.players} />
@@ -206,7 +264,7 @@ export default function AuctionPage() {
                       </Typography>
                       <BidHistory history={currentBid?.history} teams={teams} />
                     </Paper>
-                    <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={teams} />
+                    <RecentSoldPlayers players={players} currentPool={displayPool} teams={teams} />
                   </Box>
                 )}
 
@@ -221,7 +279,7 @@ export default function AuctionPage() {
                         </Typography>
                       )}
                     </Paper>
-                    <RecentSoldPlayers players={auctionState.players} currentPool={currentPool} teams={teams} />
+                    <RecentSoldPlayers players={players} currentPool={displayPool} teams={teams} />
                   </>
                 )}
 
@@ -243,6 +301,7 @@ export default function AuctionPage() {
                   <Paper className="mobile-roster" sx={{ mt: 2, overflow: 'hidden' }}>
                     <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="overline" color="text.secondary" fontWeight={600}>My Squad</Typography>
+                      <Typography variant="caption" color="text.secondary">{teams[currentBid?.teamId]?.name}</Typography>
                       <Typography variant="caption" color="text.disabled">{roster.length} player{roster.length !== 1 ? 's' : ''}</Typography>
                     </Box>
                     <Box sx={{ py: 0.5 }}>
@@ -329,26 +388,28 @@ function MobileHeader({ user, auctionState, connected }) {
   const { logout } = useAuth();
   return (
     <AppBar position="sticky" sx={{ display: { md: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
-      <Toolbar sx={{ justifyContent: 'space-between', minHeight: '52px !important', px: 2 }}>
-        <Typography fontWeight={800} sx={{ color: team?.color || 'primary.main' }}>🏏 RPL</Typography>
+      <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important', px: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box 
+            component="img" 
+            src={rplLogo} 
+            sx={{ height: 36, width: 'auto', borderRadius: '6px' }} 
+          />
+          <Typography fontWeight={900} sx={{ fontSize: '1.2rem', letterSpacing: '0.02em' }}>RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box></Typography>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {team && (
             <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="caption" color="text.primary" fontWeight={600} display="block">{team.name}</Typography>
-              <Typography variant="caption" color="success.main">{formatPts(team.budget)}</Typography>
+              <Typography variant="caption" color="success.main" sx={{ fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{formatPts(team.budget)}</Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{team.name.toUpperCase()}</Typography>
             </Box>
           )}
-          <Button
-            size="small"
-            variant="outlined"
-            color="inherit"
-            startIcon={<DashboardIcon sx={{ fontSize: '0.85rem !important' }} />}
-            onClick={() => window.open('/dashboard', 'rpl-dashboard', 'width=1280,height=800,resizable=yes')}
-            sx={{ borderColor: 'divider', color: 'text.secondary', fontSize: '0.7rem', py: 0.25, px: 0.75, minWidth: 0 }}
+          <motion.div
+            animate={{ opacity: connected ? [0.4, 1, 0.4] : 1 }}
+            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
           >
-            Dashboard
-          </Button>
-          <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+            <FiberManualRecordIcon sx={{ fontSize: 12, color: connected ? 'success.main' : 'error.main' }} />
+          </motion.div>
         </Box>
       </Toolbar>
     </AppBar>

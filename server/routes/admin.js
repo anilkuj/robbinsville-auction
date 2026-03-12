@@ -463,10 +463,11 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
       }),
     };
 
+    const shuffledColors = [...TEAM_COLORS].sort(() => Math.random() - 0.5);
     const newTeams = {};
     for (let i = 0; i < teamEntries.length; i++) {
       const [id, t] = teamEntries[i];
-      const defaultColor = TEAM_COLORS[i % TEAM_COLORS.length];
+      const defaultColor = shuffledColors[i % shuffledColors.length];
       
       if (state.teams[id]) {
         newTeams[id] = { 
@@ -476,7 +477,8 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
           ownerIsPlayer: t.ownerIsPlayer || false, 
           ownerName: t.ownerName || '', 
           ownerPlayerIds: t.ownerPlayerIds || [],
-          color: t.color || state.teams[id].color || defaultColor
+          color: t.color || state.teams[id].color || defaultColor,
+          logo: state.teams[id].logo || null
         };
       } else {
         newTeams[id] = { 
@@ -488,7 +490,8 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
           ownerIsPlayer: t.ownerIsPlayer || false, 
           ownerName: t.ownerName || '', 
           ownerPlayerIds: t.ownerPlayerIds || [],
-          color: t.color || defaultColor
+          color: t.color || defaultColor,
+          logo: null
         };
       }
     }
@@ -623,7 +626,7 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
 
   // Update team passwords and/or dashboard PIN (works in any phase)
   router.post('/update-passwords', authenticate, requireAdmin, (req, res) => {
-    const { teams, colors, dashboardPin, hostPin, spectatorEnabled } = req.body;
+    const { teams, colors, logos, dashboardPin, hostPin, spectatorEnabled } = req.body;
     const state = getState();
 
     if (teams) {
@@ -637,6 +640,13 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
       for (const [teamId, color] of Object.entries(colors)) {
         if (state.teams[teamId] && typeof color === 'string' && color.startsWith('#')) {
           state.teams[teamId].color = color;
+        }
+      }
+    }
+    if (logos) {
+      for (const [teamId, logo] of Object.entries(logos)) {
+        if (state.teams[teamId] && (typeof logo === 'string' || logo === null)) {
+          state.teams[teamId].logo = logo;
         }
       }
     }
@@ -720,11 +730,14 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
       const owner2Id = uuidv4();
       const owner3Id = uuidv4();
 
+      const TEST_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1'];
+      const shuffled = [...TEST_COLORS].sort(() => Math.random() - 0.5);
+
       // Set teams
       state.teams = {
-        team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner1Id] },
-        team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner2Id] },
-        team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner3Id] },
+        team_1: { id: 'team_1', name: 'Team Alpha', password: 'alpha123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner1Id], color: shuffled[0] },
+        team_2: { id: 'team_2', name: 'Team Beta', password: 'beta123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner2Id], color: shuffled[1] },
+        team_3: { id: 'team_3', name: 'Team Gamma', password: 'gamma123', budget: 45000, roster: [], ownerIsPlayer: true, ownerPlayerIds: [owner3Id], color: shuffled[2] },
       };
 
       // Build players sorted by pool order then name

@@ -81,14 +81,10 @@ registerSocketHandlers(io);
   }
 
   server.listen(config.port, () => {
-    const adminPwd = config.admin.password;
-    const maskedPwd = adminPwd ? `${adminPwd[0]}***${adminPwd[adminPwd.length - 1]} (${adminPwd.length} chars)` : 'NOT SET';
-    
     console.log(`\n🏏 Robbinsville Auction Server`);
     console.log(`   Port: ${config.port}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   Admin Login: username=admin, password=${maskedPwd}`);
-    console.log(`   Admin Pwd Source: ${process.env.ADMIN_PASSWORD ? 'Environment Variable (ADMIN_PASSWORD)' : 'Fallback Default (admin123)'}`);
+    console.log(`   Admin password: ${config.admin.password}`);
     console.log(`   State file/kv: ${config.redisUrl ? 'Upstash Redis' : config.stateFile}\n`);
   });
 })();

@@ -1,6 +1,6 @@
 {
   "name": "robbinsville-auction",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Robbinsville Premier League IPL-style player auction app",
   "scripts": {
     "install:all": "npm install --legacy-peer-deps && npm install --prefix server --legacy-peer-deps && npm install --prefix client --legacy-peer-deps",

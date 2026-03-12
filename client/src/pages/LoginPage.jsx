@@ -19,14 +19,15 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isAdminLogin = searchParams.get('admin') === '1';
+  const isHostLogin = searchParams.get('host') === '1';
   const [teams, setTeams] = useState([]);
-  const [username, setUsername] = useState(isAdminLogin ? 'admin' : '');
+  const [username, setUsername] = useState(isAdminLogin ? 'admin' : isHostLogin ? 'host' : '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isAdminLogin) return;
+    if (isAdminLogin || isHostLogin) return;
     fetch('/api/public/teams')
       .then(r => r.json())
       .then(data => {
@@ -78,7 +79,6 @@ export default function LoginPage() {
               Robbinsville Premier League
             </Typography>
           </Box>
-
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {isAdminLogin ? (
               <TextField
@@ -88,6 +88,14 @@ export default function LoginPage() {
                 required
                 autoFocus
                 fullWidth
+              />
+            ) : isHostLogin ? (
+              <TextField
+                label="Host Username"
+                value="host"
+                disabled
+                fullWidth
+                sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#94a3b8' } }}
               />
             ) : teams.length > 0 ? (
               <FormControl fullWidth size="small">
@@ -116,12 +124,13 @@ export default function LoginPage() {
             )}
 
             <TextField
-              label="Password"
+              label={isHostLogin ? "Host PIN (optional)" : "Password"}
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              placeholder="Enter password"
-              required
+              placeholder={isHostLogin ? "Enter PIN or leave blank" : "Enter password"}
+              required={!isHostLogin}
+              autoFocus={isHostLogin}
               fullWidth
             />
 

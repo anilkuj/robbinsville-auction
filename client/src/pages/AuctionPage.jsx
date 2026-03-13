@@ -481,7 +481,7 @@ function MobileHeader({ user, auctionState, connected, onMenuClick, onHistoryCli
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
-    <AppBar position="sticky" sx={{ display: { md: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
+    <AppBar position="sticky" sx={{ display: { lg: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
       <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important', px: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
           <IconButton size="small" onClick={onMenuClick} sx={{ color: 'text.primary', mr: 0.5 }}>

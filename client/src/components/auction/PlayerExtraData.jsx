@@ -23,11 +23,11 @@ export default function PlayerExtraData({ player, visibleKeys = [], size = 'norm
                 sm: entries.length > 2 ? 'repeat(2, 1fr)' : '1fr', 
                 md: `repeat(${Math.min(entries.length, isBig ? 3 : 4)}, 1fr)` 
             }, 
-            gap: isBig ? 3 : 1.5 
+            gap: { xs: 0.75, sm: 1.5 } 
         }}>
             {entries.map(([k, v]) => (
                 <Paper key={k} sx={{ 
-                    p: isBig ? 3 : 2, 
+                    p: { xs: 1, sm: isBig ? 3 : 2 }, 
                     bgcolor: 'rgba(30, 41, 59, 0.4)',
                     backdropFilter: 'blur(8px)',
                     border: '1px solid',
@@ -48,16 +48,16 @@ export default function PlayerExtraData({ player, visibleKeys = [], size = 'norm
                         textTransform: 'uppercase', 
                         letterSpacing: isBig ? '0.1em' : '0.1em', 
                         fontWeight: 900, 
-                        fontSize: isBig ? '0.62rem' : '0.65rem',
-                        mb: 0.5
+                        fontSize: { xs: '0.55rem', sm: isBig ? '0.62rem' : '0.65rem' },
+                        mb: 0.25
                     }}>
                         {k}
                     </Typography>
                     <Typography variant={isBig ? "body2" : "body1"} sx={{ 
                         fontWeight: 950, 
                         color: 'primary.main', // All Orange as requested
-                        lineHeight: 1.1,
-                        fontSize: isBig ? '0.9rem' : 'inherit',
+                        lineHeight: 1,
+                        fontSize: { xs: '0.8rem', sm: isBig ? '0.9rem' : 'inherit' },
                         textShadow: isBig ? '0 0 8px rgba(245, 158, 11, 0.15)' : 'none'
                     }}>
                         {v}

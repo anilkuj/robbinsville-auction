@@ -119,7 +119,7 @@ export default function AuctionPage() {
         <Sidebar isDrawer onClose={() => setIsLeftDrawerOpen(false)} />
       </Drawer>
 
-      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, flex: 1, overflow: 'hidden' }}>
         {/* Left sidebar (Desktop) */}
         {phase !== 'ENDED' && (
           <Box sx={{ display: { xs: 'none', lg: 'flex' }, position: 'relative' }}>
@@ -245,7 +245,7 @@ export default function AuctionPage() {
             </Box>
           </Paper>
 
-          <Box sx={{ flex: 1, p: 2, width: '100%' }}>
+          <Box sx={{ flex: 1, p: { xs: 1.25, sm: 2 }, width: '100%', overflowX: 'hidden' }}>
 
             {currentTab === 1 && <CommentaryFeed commentary={auctionState?.commentary} />}
 
@@ -266,19 +266,33 @@ export default function AuctionPage() {
                 )}
 
                 {(phase === 'LIVE' || phase === 'PAUSED') && player && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 1, sm: 2 }, mt: { xs: 0, sm: 1 } }}>
                     <PlayerCard player={player} size="normal" />
                     <PlayerExtraData player={player} size="normal" visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
-                    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
-                      <CountdownTimer
-                        timerEndsAt={auctionState.timerEndsAt}
-                        timerPaused={auctionState.timerPaused}
-                        timerRemainingOnPause={auctionState.timerRemainingOnPause}
-                        timerSeconds={settings?.timerSeconds ?? 30}
-                        endMode={settings?.endMode ?? 'timer'}
-                      />
-                      <Box sx={{ flex: 1 }}>
-                        <BidDisplay currentBid={currentBid} teams={teams} player={player} />
+                    <Box sx={{ 
+                      display: 'flex', 
+                      gap: { xs: 1, sm: 2 }, 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      flexDirection: { xs: 'column', xsm: 'row' } // Custom breakpoint or just column on mobile
+                    }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: 2, 
+                        width: '100%',
+                        justifyContent: 'center'
+                      }}>
+                        <CountdownTimer
+                          timerEndsAt={auctionState.timerEndsAt}
+                          timerPaused={auctionState.timerPaused}
+                          timerRemainingOnPause={auctionState.timerRemainingOnPause}
+                          timerSeconds={settings?.timerSeconds ?? 30}
+                          endMode={settings?.endMode ?? 'timer'}
+                        />
+                        <Box sx={{ flex: 1 }}>
+                          <BidDisplay currentBid={currentBid} teams={teams} player={player} />
+                        </Box>
                       </Box>
                     </Box>
                     {user.role === 'team' && <BidButton />}
@@ -356,7 +370,7 @@ export default function AuctionPage() {
               />
             )}
 
-            <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0, position: 'relative' }}>
+            <Box sx={{ display: { xs: 'none', lg: 'flex' }, width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0, position: 'relative' }}>
                 {((phase === 'LIVE' || phase === 'PAUSED') && player && isRightPaneOpen) ? (
                     <Paper sx={{ width: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
                         <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

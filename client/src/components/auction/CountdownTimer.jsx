@@ -16,9 +16,13 @@ function getColor(pct) {
 
 export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainingOnPause, timerSeconds = 30, endMode = 'timer', size = 'normal' }) {
   const isBig = size === 'big';
-  const displaySize = isBig ? 130 : 120;
-  const stroke = isBig ? 8.5 : 8;
-  const r = (displaySize - stroke) / 2;
+  const displaySize = isBig ? 130 : { xs: 100, sm: 120 };
+  const stroke = isBig ? 8.5 : { xs: 7, sm: 8 };
+  // Helper for responsive values
+  const getVal = (v) => typeof v === 'object' ? (v.xs || v.sm) : v;
+  const dSize = getVal(displaySize);
+  const strk = getVal(stroke);
+  const r = (dSize - strk) / 2;
   const circ = 2 * Math.PI * r;
 
   const remaining = useCountdown(timerEndsAt, timerPaused, timerRemainingOnPause);
@@ -43,15 +47,15 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
       animate={warningState ? { scale: [1, 1.1, 1] } : { scale: 1 }}
       transition={warningState ? { repeat: Infinity, duration: 1 } : {}}
     >
-      <svg width={displaySize} height={displaySize} style={{ transform: 'rotate(-90deg)' }}>
+      <svg width={dSize} height={dSize} style={{ transform: 'rotate(-90deg)' }}>
         {/* Track */}
-        <circle cx={displaySize / 2} cy={displaySize / 2} r={r} fill="none" stroke="#1e293b" strokeWidth={stroke} />
+        <circle cx={dSize / 2} cy={dSize / 2} r={r} fill="none" stroke="#1e293b" strokeWidth={strk} />
         {/* Progress */}
         <circle
-          cx={displaySize / 2} cy={displaySize / 2} r={r}
+          cx={dSize / 2} cy={dSize / 2} r={r}
           fill="none"
           stroke={color}
-          strokeWidth={stroke}
+          strokeWidth={strk}
           strokeDasharray={circ}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
@@ -63,14 +67,14 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
           textAnchor="middle"
           dominantBaseline="central"
           fill={color}
-          fontSize={isBig ? (awaitingHammer ? '1.7rem' : '2.5rem') : (awaitingHammer ? '1.6rem' : '2rem')}
+          fontSize={isBig ? (awaitingHammer ? '1.7rem' : '2.5rem') : (awaitingHammer ? { xs: '1.2rem', sm: '1.6rem' } : { xs: '1.5rem', sm: '2rem' })}
           fontWeight="900"
           style={{ transform: 'rotate(90deg)', transformOrigin: 'center', fontFamily: 'monospace' }}
         >
           {timerPaused ? '⏸' : awaitingHammer ? '🔨' : remaining}
         </text>
       </svg>
-      <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: isBig ? '0.8rem' : '0.75rem', fontWeight: 700 }}>
+      <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: isBig ? '0.8rem' : { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 700 }}>
         {timerPaused ? 'PAUSED' : awaitingHammer ? 'HAMMER?' : 'seconds'}
       </span>
     </motion.div>

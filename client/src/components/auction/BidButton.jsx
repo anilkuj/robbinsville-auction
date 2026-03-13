@@ -111,10 +111,16 @@ export default function BidButton() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: { xs: 0.5, sm: 1 }, width: '100%', maxWidth: 340 }}>
         {!disabled && (
-          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'flex-start', width: '100%', maxWidth: 320 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: 1 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 0.5, sm: 1.5 }, 
+            alignItems: { xs: 'center', sm: 'flex-start' }, 
+            width: '100%' 
+          }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%', flex: 1 }}>
               <Button
                 variant="outlined"
                 sx={{ minWidth: 40, px: 0, height: 40 }}
@@ -156,16 +162,27 @@ export default function BidButton() {
                 +
               </Button>
             </Box>
-            <Typography variant="caption" color="text.disabled" sx={{ lineHeight: 1.6, pt: '6px' }}>
-              Min: {formatPts(minNextBid)}<br />
-              Max: {formatPts(maxBid)}
-            </Typography>
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: { xs: 'row', sm: 'column' }, 
+              gap: { xs: 2, sm: 0 },
+              minWidth: { xs: '100%', sm: 80 },
+              justifyContent: 'center',
+              mt: { xs: 0.5, sm: 0 }
+            }}>
+              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                MIN: {formatPts(minNextBid)}
+              </Typography>
+              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
+                MAX: {formatPts(maxBid)}
+              </Typography>
+            </Box>
           </Box>
         )}
 
-        <Box sx={{ minHeight: 42, width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Box sx={{ minHeight: { xs: 20, sm: 42 }, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
           {customError && (
-            <Typography variant="caption" color="error">
+            <Typography variant="caption" color="error" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
               {customError}
             </Typography>
           )}
@@ -178,7 +195,12 @@ export default function BidButton() {
           onClick={handleBidClick}
           disabled={disabled || !!customError}
           fullWidth
-          sx={{ maxWidth: 320, py: 1.5, fontSize: '1.1rem' }}
+          sx={{ 
+            maxWidth: 320, 
+            py: { xs: 1.25, sm: 1.5 }, 
+            fontSize: { xs: '1rem', sm: '1.1rem' },
+            boxShadow: '0 4px 14px 0 rgba(0,118,255,0.39)'
+          }}
         >
           {disabled ? (disabledReason || '—') : `BID ${formatPts(effectiveBid)}`}
         </Button>

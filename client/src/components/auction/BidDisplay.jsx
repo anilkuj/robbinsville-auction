@@ -15,8 +15,8 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
   const hasBid = !!currentBid?.teamId;
 
   return (
-    <Paper sx={{ p: isBig ? { xs: '0.8rem 1rem', md: '1.25rem 1.75rem' } : '1rem 1.25rem', textAlign: 'center', bgcolor: 'background.default', borderRadius: isBig ? 2 : 1 }}>
-      <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em', fontSize: isBig ? '0.8rem' : '0.75rem', fontWeight: 800 }}>
+    <Paper sx={{ p: isBig ? { xs: '0.8rem 1rem', md: '1.25rem 1.75rem' } : { xs: '0.5rem 0.75rem', sm: '1rem 1.25rem' }, textAlign: 'center', bgcolor: 'background.default', borderRadius: isBig ? 2 : 1 }}>
+      <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em', fontSize: isBig ? '0.8rem' : { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 800, mb: 0.5, display: 'block' }}>
         {hasBid ? 'Highest Bid' : 'Opening Bid'}
       </Typography>
 
@@ -36,8 +36,8 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
               color: hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main',
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.02em',
-              lineHeight: 1.1,
-              fontSize: isBig ? { xs: '1.25rem', md: '1.5rem' } : 'inherit',
+              lineHeight: 1,
+              fontSize: isBig ? { xs: '1.25rem', md: '1.5rem' } : { xs: '1.4rem', sm: '2.125rem' }, // h4 is usually 2.125rem
               textShadow: isBig ? `0 0 10px ${hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main'}20` : 'none'
             }}
           >
@@ -45,10 +45,10 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
           </Typography>
         </motion.div>
       </AnimatePresence>
-      <Box sx={{ minHeight: isBig ? 56 : 40, mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Box sx={{ minHeight: isBig ? 56 : { xs: 24, sm: 40 }, mt: { xs: 0.5, sm: 1 }, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {hasBid && leadingTeam && (
           <Chip
-            icon={<TeamLogo team={leadingTeam} size={isBig ? 32 : 20} border={false} />}
+            icon={<TeamLogo team={leadingTeam} size={isBig ? 32 : { xs: 16, sm: 20 }} border={false} />}
             label={leadingTeam.name}
             size={isBig ? "big" : "small"}
             color="success"
@@ -57,11 +57,11 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
               fontWeight: 900, 
               borderColor: leadingTeam?.color || 'success.main',
               color: leadingTeam?.color || 'success.main',
-              fontSize: isBig ? '1rem' : '0.8rem',
+              fontSize: isBig ? '1rem' : { xs: '0.65rem', sm: '0.8rem' },
               px: isBig ? 1.5 : 0,
               py: isBig ? 2.5 : 0,
               borderRadius: isBig ? 3 : 2,
-              height: isBig ? 40 : 24,
+              height: isBig ? 40 : { xs: 20, sm: 24 },
               '& .MuiChip-icon': {
                 color: leadingTeam?.color || 'success.main'
               }
@@ -69,7 +69,7 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
           />
         )}
         {!hasBid && (
-          <Typography variant={isBig ? "body1" : "caption"} color="text.disabled" fontWeight={700}>
+          <Typography variant={isBig ? "body1" : "caption"} color="text.disabled" fontWeight={700} sx={{ fontSize: { xs: '0.65rem', sm: 'inherit' } }}>
             No bids yet
           </Typography>
         )}

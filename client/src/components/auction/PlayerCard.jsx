@@ -29,8 +29,8 @@ export default function PlayerCard({ player, size = 'normal' }) {
       transition: 'all 0.3s ease',
       bgcolor: 'background.paper',
     }}>
-      <CardContent sx={{ position: 'relative', py: isBig ? 2 : 2, px: isBig ? 1.5 : 2 }}>
-        <Box sx={{ mb: isBig ? 3 : 1 }}>
+      <CardContent sx={{ position: 'relative', py: { xs: 1, sm: isBig ? 2 : 2 }, px: { xs: 1.5, sm: isBig ? 1.5 : 2 } }}>
+        <Box sx={{ mb: { xs: 0.5, sm: isBig ? 3 : 1 } }}>
           <Chip
             label={`POOL ${player.pool}`}
             size={isBig ? 'medium' : 'small'}
@@ -38,26 +38,27 @@ export default function PlayerCard({ player, size = 'normal' }) {
                 bgcolor: color, 
                 color: '#fff', 
                 fontWeight: 900, 
-                fontSize: isBig ? '1rem' : '0.7rem',
-                px: isBig ? 1.5 : 0.5,
+                fontSize: { xs: '0.6rem', sm: isBig ? '1rem' : '0.7rem' },
+                px: { xs: 0.25, sm: isBig ? 1.5 : 0.5 },
+                height: { xs: 18, sm: 'auto' },
                 boxShadow: isBig ? `0 0 20px ${color}` : 'none'
             }}
           />
         </Box>
         <Typography variant={isBig ? 'h6' : 'h6'} fontWeight={950} sx={{ 
             lineHeight: 1.1, 
-            mb: isBig ? 0.75 : 0.5, 
+            mb: { xs: 0.25, sm: isBig ? 0.75 : 0.5 }, 
             textTransform: 'uppercase',
             letterSpacing: isBig ? '0.01em' : 'normal',
             textShadow: isBig ? `0 0 10px ${color}30` : 'none',
-            fontSize: isBig ? { xs: '1.1rem', sm: '1.3rem' } : 'inherit',
+            fontSize: { xs: '0.95rem', sm: isBig ? '1.3rem' : '1.1rem' },
             color: '#fff'
         }}>
           {player.name}
         </Typography>
-        <Typography variant={isBig ? 'caption' : 'caption'} color="text.secondary" sx={{ fontWeight: 800, fontSize: isBig ? '0.7rem' : '0.7rem' }}>
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, fontSize: { xs: '0.65rem', sm: '0.7rem' } }}>
           BASE PRICE:{' '}
-          <Box component="span" sx={{ color: color, fontWeight: 950, fontSize: isBig ? { xs: '0.9rem', sm: '1.05rem' } : '1.1rem', ml: 1 }}>
+          <Box component="span" sx={{ color: color, fontWeight: 950, fontSize: { xs: '0.9rem', sm: isBig ? '1.05rem' : '1.1rem' }, ml: 1 }}>
             {formatPts(player.basePrice)}
           </Box>
         </Typography>
@@ -77,8 +78,8 @@ export default function PlayerCard({ player, size = 'normal' }) {
                 color: '#ef4444',
                 backgroundColor: 'rgba(255,255,255,0.9)',
                 boxShadow: '0 8px 16px rgba(239, 68, 68, 0.35)',
-                fontSize: isBig ? '1.8rem' : '2rem',
-                border: isBig ? '5px solid #ef4444' : '4px solid #ef4444',
+                fontSize: { xs: '1.2rem', sm: isBig ? '1.8rem' : '2rem' },
+                border: { xs: '3px solid #ef4444', sm: isBig ? '5px solid #ef4444' : '4px solid #ef4444' },
                 fontWeight: 900,
                 textTransform: 'uppercase',
                 pointerEvents: 'none',

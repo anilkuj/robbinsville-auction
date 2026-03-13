@@ -3,6 +3,18 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const config = require('../config');
 const { getState } = require('../state');
+
+function kickSession(io, userId, role) {
+  if (!io) return;
+  console.log(`[Auth] Checking for existing sessions to kick for ${role}:${userId}`);
+  for (const [_, socket] of io.sockets.sockets) {
+    if (socket.user && socket.user.role === role && socket.user.id === userId) {
+      console.log(`[Auth] Kicking existing session for ${role}:${userId} (Socket: ${socket.id})`);
+      socket.disconnect(true);
+    }
+  }
+}
+
 module.exports = (io) => {
   router.post('/login', (req, res) => {
     const { username, password } = req.body;
@@ -41,20 +53,7 @@ module.exports = (io) => {
       const nameMatch = team.name.toLowerCase() === username.toLowerCase();
       const idMatch = teamId === username;
       if ((nameMatch || idMatch) && team.password === password) {
-        // Check if team is already connected
-        let isAlreadyLoggedIn = false;
-        if (io) {
-          for (const [_, socket] of io.sockets.sockets) {
-            if (socket.user && socket.user.role === 'team' && socket.user.id === teamId) {
-              isAlreadyLoggedIn = true;
-              break;
-            }
-          }
-        }
-
-        if (isAlreadyLoggedIn) {
-          return res.status(403).json({ error: 'Team is already logged in. Please wait until they log out or ask Admin to clear the session.' });
-        }
+        kickSession(io, teamId, 'team');
 
         const token = jwt.sign(
           { id: teamId, username: team.name, role: 'team', name: team.name, teamId },

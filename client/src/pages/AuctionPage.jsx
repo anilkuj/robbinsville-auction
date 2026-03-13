@@ -152,9 +152,9 @@ export default function AuctionPage() {
             open={isRightDrawerOpen}
             onClose={() => setIsRightDrawerOpen(false)}
             sx={{ display: { lg: 'none' } }}
-            PaperProps={{ sx: { width: { xs: '85vw', sm: 400 }, bgcolor: 'background.paper' } }}
+            PaperProps={{ sx: { width: { xs: '75vw', sm: 320 }, bgcolor: 'background.paper' } }}
           >
-            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Box sx={{ p: 1.5, px: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 56 }}>
                 <Typography variant="overline" fontWeight={900} color="primary">Auction Intelligence</Typography>
                 <Button size="small" onClick={() => setIsRightDrawerOpen(false)}>Close</Button>
             </Box>
@@ -200,7 +200,7 @@ export default function AuctionPage() {
                 sx={{ height: 50, width: 'auto', borderRadius: '6px' }} 
               />
               <Box>
-                <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
+                <Typography variant="h6" fontWeight={900} sx={{ letterSpacing: '0.05em', lineHeight: 1.1, color: 'primary.main' }}>
                   ROBBINSVILLE PREMIER LEAGUE 2026
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -209,22 +209,28 @@ export default function AuctionPage() {
               </Box>
             </Box>
             <Box sx={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Chip 
+                label={auctionState?.phase || 'READY'} 
+                color={
+                  auctionState?.phase === 'LIVE' ? 'success' : 
+                  auctionState?.phase === 'PAUSED' ? 'warning' : 
+                  auctionState?.phase === 'ENDED' ? 'error' : 'default'
+                }
+                sx={{ 
+                  fontWeight: 900, 
+                  borderRadius: '6px',
+                  height: 32,
+                  px: 1,
+                  fontSize: '0.9rem',
+                  letterSpacing: '0.05em'
+                }} 
+              />
               <Box>
                 <Typography variant="h5" fontWeight={900} color="success.main">
                   {formatPts(myTeam?.budget || 0)}
                 </Typography>
                 <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>REMAINING BUDGET</Typography>
               </Box>
-              <Button 
-                variant="outlined" 
-                color="inherit" 
-                size="small" 
-                startIcon={<LogoutIcon />} 
-                onClick={logout}
-                sx={{ borderColor: 'divider', color: 'text.secondary', fontWeight: 700, px: 2 }}
-              >
-                Sign Out
-              </Button>
             </Box>
           </Box>
 
@@ -481,38 +487,46 @@ function MobileHeader({ user, auctionState, connected, onMenuClick, onHistoryCli
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
-    <AppBar position="sticky" sx={{ display: { lg: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
+    <AppBar position="sticky" sx={{ 
+      display: { lg: 'none' }, 
+      bgcolor: 'background.paper',
+      color: 'text.primary',
+      borderBottom: `2px solid ${team?.color || 'transparent'}`,
+      boxShadow: 'none'
+    }}>
       <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important', px: 2 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <IconButton size="small" onClick={onMenuClick} sx={{ color: 'text.primary', mr: 0.5 }}>
             <MenuIcon />
           </IconButton>
-          <Box 
-            component="img" 
-            src={rplLogo} 
-            sx={{ height: 36, width: 'auto', borderRadius: '6px' }} 
-          />
-          <Typography fontWeight={950} sx={{ fontSize: '1.2rem', letterSpacing: '0.02em' }}>RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box></Typography>
+          <Typography fontWeight={950} sx={{ fontSize: '1.1rem', letterSpacing: '0.01em', color: 'primary.main' }}>RPL 2026</Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <IconButton size="small" onClick={onHistoryClick} sx={{ color: 'primary.main', bgcolor: 'rgba(56, 189, 248, 0.1)' }}>
-            <HistoryIcon fontSize="small" />
-          </IconButton>
+          <Chip 
+            label={team ? formatPts(team.budget) : (auctionState?.phase || 'READY')} 
+            color={
+              auctionState?.phase === 'LIVE' ? 'success' : 
+              auctionState?.phase === 'PAUSED' ? 'warning' : 
+              auctionState?.phase === 'ENDED' ? 'error' : 'default'
+            }
+            sx={{ 
+              fontWeight: 900, 
+              borderRadius: '6px',
+              height: 28,
+              px: 0.5,
+              fontSize: '0.75rem',
+              letterSpacing: '0.02em',
+              mr: 0.5
+            }} 
+          />
           {team && (
             <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="caption" color="success.main" sx={{ fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{formatPts(team?.budget || 0)}</Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{(team.name || '').toUpperCase()}</Typography>
             </Box>
           )}
-          <ThemeToggle />
-          <motion.div
-            animate={{ opacity: connected ? [0.4, 1, 0.4] : 1 }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <FiberManualRecordIcon sx={{ fontSize: 12, color: connected ? 'success.main' : 'error.main' }} />
-          </motion.div>
-          <IconButton size="small" onClick={logout} sx={{ color: 'text.secondary', ml: 0.5 }}>
-            <LogoutIcon fontSize="small" />
+          <IconButton size="small" onClick={onHistoryClick} sx={{ color: 'primary.main', bgcolor: 'rgba(56, 189, 248, 0.1)' }}>
+            <HistoryIcon fontSize="small" />
           </IconButton>
         </Box>
       </Toolbar>

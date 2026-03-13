@@ -21,6 +21,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import SearchIcon from '@mui/icons-material/Search';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import InputAdornment from '@mui/material/InputAdornment';
+import { useTheme, alpha } from '@mui/material/styles';
 
 function playerIsOwner(player) {
     if (!player.extra) return false;
@@ -29,6 +30,9 @@ function playerIsOwner(player) {
 }
 
 export default function PlayerDataTab({ auctionState, adminAction, readOnly = false }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+
     if (!auctionState) {
         return (
             <Box sx={{ textAlign: 'center', p: 6, color: 'text.disabled' }}>
@@ -107,9 +111,21 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     }
 
     const statusCfg = {
-        PENDING: { color: '#f59e0b', bg: '#451a03', label: 'Pending' },
-        SOLD: { color: '#22c55e', bg: '#14532d', label: 'Sold' },
-        UNSOLD: { color: '#ef4444', bg: '#3b0a0a', label: 'Unsold' },
+        PENDING: { 
+            color: isDark ? '#f59e0b' : '#c2410c', 
+            bg: isDark ? '#451a03' : '#fff7ed', 
+            label: 'Pending' 
+        },
+        SOLD: { 
+            color: isDark ? '#22c55e' : '#15803d', 
+            bg: isDark ? '#14532d' : '#f0fdf4', 
+            label: 'Sold' 
+        },
+        UNSOLD: { 
+            color: isDark ? '#ef4444' : '#b91c1c', 
+            bg: isDark ? '#3b0a0a' : '#fef2f2', 
+            label: 'Unsold' 
+        },
     };
 
     const toggleEdit = () => {
@@ -160,10 +176,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     };
 
     const poolClr = (poolId) => {
-        if (poolId?.startsWith('A')) return { color: '#f59e0b', bg: '#1c0d00', border: '#f59e0b40' };
-        if (poolId?.startsWith('B')) return { color: '#60a5fa', bg: '#0d1c35', border: '#3b82f640' };
-        if (poolId?.startsWith('C')) return { color: '#a78bfa', bg: '#150d2e', border: '#8b5cf640' };
-        return { color: '#94a3b8', bg: '#0f1a2e', border: '#64748b40' };
+        if (poolId?.startsWith('A')) return { color: isDark ? '#f59e0b' : '#c2410c', bg: isDark ? '#1c0d00' : '#fff7ed', border: isDark ? '#f59e0b40' : '#f59e0b40' };
+        if (poolId?.startsWith('B')) return { color: isDark ? '#60a5fa' : '#1d4ed8', bg: isDark ? '#0d1c35' : '#eff6ff', border: isDark ? '#3b82f640' : '#3b82f640' };
+        if (poolId?.startsWith('C')) return { color: isDark ? '#a78bfa' : '#6d28d9', bg: isDark ? '#150d2e' : '#f5f3ff', border: isDark ? '#8b5cf640' : '#8b5cf640' };
+        return { color: theme.palette.text.secondary, bg: isDark ? '#0f1a2e' : '#f8fafc', border: theme.palette.divider };
     };
 
     function handleSort(col) {
@@ -205,8 +221,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     });
 
     const sortIndicator = (col) => {
-        if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: 3, fontSize: '0.6rem' }}>⇅</span>;
-        return <span style={{ color: '#94a3b8', marginLeft: 3, fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
+        if (sortCol !== col) return <span style={{ color: theme.palette.text.disabled, marginLeft: 3, fontSize: '0.6rem' }}>⇅</span>;
+        return <span style={{ color: theme.palette.primary.main, marginLeft: 3, fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
     };
 
     if (sortCol) {
@@ -238,9 +254,9 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
         return (
             <th key={col} style={{
                 padding: '0.55rem 0.25rem', textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
-                color: sortCol === col ? '#cbd5e1' : '#64748b', fontWeight: 700, fontSize: '0.68rem',
+                color: sortCol === col ? theme.palette.text.primary : theme.palette.text.secondary, fontWeight: 700, fontSize: '0.68rem',
                 textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
-                borderBottom: '1px solid #1e293b', userSelect: 'none',
+                borderBottom: `1px solid ${theme.palette.divider}`, userSelect: 'none',
                 ...(opts.first && { paddingLeft: '1rem' }), ...(opts.right && { paddingRight: '1rem' }),
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: opts.right ? 'flex-end' : opts.center ? 'center' : 'flex-start' }}>
@@ -365,10 +381,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
             </Box>
 
             {/* Table */}
-            <Box sx={{ overflowX: 'auto', borderRadius: 2, border: '1px solid #1e293b' }}>
+            <Box sx={{ overflowX: 'auto', borderRadius: 2, border: '1px solid', borderColor: 'divider' }}>
                 <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 600, fontSize: '0.82rem' }}>
                     <thead>
-                        <tr style={{ background: '#0f172a', position: 'sticky', top: 0, zIndex: 1 }}>
+                        <tr style={{ background: theme.palette.background.paper, position: 'sticky', top: 0, zIndex: 1 }}>
                             {thSort('#', '#', { first: true })}
                             {thSort('name', 'Player Name')}
                             {thSort('pool', 'Pool')}
@@ -391,7 +407,9 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
                             const soldTeam = p.soldTo ? teams[p.soldTo] : null;
                             const isSpillover = spillovers.includes(p.id);
-                            const rowBg = isSpillover ? '#270a0a' : (i % 2 === 0 ? '#0f172a' : '#0a111e');
+                            const rowBg = isSpillover 
+                                ? (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)')
+                                : (i % 2 === 0 ? theme.palette.background.paper : theme.palette.background.default);
 
                             const isChanged = (field) => {
                                 if (field === 'extra') return !!changes.extra;
@@ -399,8 +417,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             };
 
                             const cellStyle = (field) => ({
-                                background: isChanged(field) ? '#422006' : 'transparent',
-                                border: isChanged(field) ? '1px solid #f59e0b40' : 'none',
+                                background: isChanged(field) ? (isDark ? '#422006' : '#fffbeb') : 'transparent',
+                                border: isChanged(field) ? `1px solid ${isDark ? '#f59e0b40' : '#f59e0b80'}` : 'none',
                                 borderRadius: 4,
                                 width: '100%',
                                 boxSizing: 'border-box'
@@ -411,8 +429,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                     onMouseEnter={e => !isEditing && (e.currentTarget.style.background = '#162032')}
                                     onMouseLeave={e => !isEditing && (e.currentTarget.style.background = rowBg)}
                                 >
-                                    <TD first style={{ color: '#475569' }}>{i + 1}</TD>
-                                    <TD style={{ color: '#f1f5f9', fontWeight: 500, ...cellStyle('name') }}>
+                                    <TD first theme={theme} style={{ color: theme.palette.text.disabled }}>{i + 1}</TD>
+                                    <TD theme={theme} style={{ color: theme.palette.text.primary, fontWeight: 500, ...cellStyle('name') }}>
                                         {isEditing ? (
                                             <input
                                                 style={{ background: 'transparent', border: 'none', color: 'inherit', width: '100%', padding: '0.1rem' }}
@@ -431,10 +449,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             </span>
                                         )}
                                     </TD>
-                                    <TD style={cellStyle('pool')}>
+                                    <TD theme={theme} style={cellStyle('pool')}>
                                         {isEditing ? (
                                             <select
-                                                style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                                                style={{ background: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}`, color: theme.palette.text.primary, borderRadius: 4, padding: '2px 4px', width: '100%' }}
                                                 value={currentPoolId}
                                                 onChange={e => handleFieldChange(p.id, 'pool', e.target.value)}
                                             >
@@ -448,10 +466,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                     </TD>
                                     {!readOnly && (
                                         <>
-                                            <TD center style={cellStyle('status')}>
+                                            <TD center theme={theme} style={cellStyle('status')}>
                                                 {isEditing ? (
                                                     <select
-                                                        style={{ background: '#0f172a', border: '1px solid #334155', color: '#cbd5e1', borderRadius: 4, padding: '2px 4px', width: '100%' }}
+                                                        style={{ background: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}`, color: theme.palette.text.primary, borderRadius: 4, padding: '2px 4px', width: '100%' }}
                                                         value={changes.status !== undefined ? changes.status : p.status}
                                                         onChange={e => handleFieldChange(p.id, 'status', e.target.value)}
                                                     >
@@ -463,8 +481,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                                     <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
                                                 )}
                                             </TD>
-                                            <TD style={{ color: '#cbd5e1' }}>{soldTeam?.name ?? '—'}</TD>
-                                            <TD right style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
+                                            <TD theme={theme} style={{ color: theme.palette.text.primary }}>{soldTeam?.name ?? '—'}</TD>
+                                            <TD right theme={theme} style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
                                                 {isEditing && (changes.status === 'SOLD' || (!changes.status && p.status === 'SOLD')) ? (
                                                     <input
                                                         type="number"
@@ -488,7 +506,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                     {extraKeys.map(k => {
                                         const extraVal = changes.extra && changes.extra[k] !== undefined ? changes.extra[k] : (p.extra?.[k] ?? '');
                                         return (
-                                            <TD key={k} style={{ color: '#94a3b8', ...cellStyle(`extra_${k}`) }}>
+                                            <TD key={k} theme={theme} style={{ color: theme.palette.text.secondary, ...cellStyle(`extra_${k}`) }}>
                                                 {isEditing ? (
                                                     <input
                                                         style={{ background: 'transparent', border: 'none', color: 'inherit', width: '100%' }}
@@ -501,7 +519,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             </TD>
                                         );
                                     })}
-                                    <TD right style={{ color: '#94a3b8', whiteSpace: 'nowrap', ...cellStyle('basePrice') }}>
+                                    <TD right theme={theme} style={{ color: theme.palette.text.secondary, whiteSpace: 'nowrap', ...cellStyle('basePrice') }}>
                                         {isEditing ? (
                                             <input
                                                 type="number"
@@ -547,12 +565,12 @@ function TH({ children, first, right, center }) {
     );
 }
 
-function TD({ children, first, right, center, style = {} }) {
+function TD({ children, first, right, center, style = {}, theme }) {
     return (
         <td style={{
             padding: '0.55rem 0.75rem',
             textAlign: right ? 'right' : center ? 'center' : 'left',
-            borderBottom: '1px solid #1e293b',
+            borderBottom: `1px solid ${theme?.palette.divider || '#1e293b'}`,
             whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
             ...(first && { paddingLeft: '1rem' }),
             ...(right && { paddingRight: '1rem' }),
@@ -616,8 +634,8 @@ function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
             disableAutoFocusItem
             PaperProps={{
                 sx: { 
-                    bgcolor: '#1e293b', color: '#fff', minWidth: 220, maxHeight: 450,
-                    border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                    bgcolor: 'background.paper', color: 'text.primary', minWidth: 220, maxHeight: 450,
+                    border: '1px solid', borderColor: 'divider', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                     mt: 1
                 }
             }}
@@ -633,10 +651,10 @@ function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
                     InputProps={{
                         startAdornment: (
                             <InputAdornment position="start">
-                                <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem' }} />
+                                <SearchIcon sx={{ color: 'text.disabled', fontSize: '1rem' }} />
                             </InputAdornment>
                         ),
-                        sx: { color: '#fff', fontSize: '0.8rem', bgcolor: 'rgba(0,0,0,0.2)' }
+                        sx: { fontSize: '0.8rem' }
                     }}
                 />
             </Box>

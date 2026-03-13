@@ -31,8 +31,10 @@ import HistoryIcon from '@mui/icons-material/History';
 import IconButton from '@mui/material/IconButton';
 import Drawer from '@mui/material/Drawer';
 import Chip from '@mui/material/Chip';
+import { useTheme, alpha } from '@mui/material/styles';
 
 export default function HostPage() {
+    const theme = useTheme();
     const { user, logout } = useAuth();
     const { auctionState, connected } = useAuction();
     const [rightWidth, setRightWidth] = useState(380);
@@ -124,33 +126,80 @@ export default function HostPage() {
                         px: 3, 
                         borderBottom: '1px solid', 
                         borderColor: 'divider', 
-                        background: 'rgba(17, 24, 39, 0.8)',
-                        backdropFilter: 'blur(12px)',
+                        bgcolor: 'background.paper',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
-                        minHeight: 80
+                        minHeight: { xs: 64, lg: 80 }
                     }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, lg: 2 } }}>
                             <IconButton 
                                 size="small" 
                                 onClick={() => setIsLeftDrawerOpen(true)} 
-                                sx={{ color: 'white', display: { lg: 'none' } }}
+                                sx={{ color: 'text.primary', display: { lg: 'none' } }}
                             >
                                 <MenuIcon />
                             </IconButton>
                             <Box 
                                 component="img" 
                                 src={rplLogo} 
-                                sx={{ height: 48, width: 'auto', borderRadius: '6px' }} 
+                                sx={{ height: 48, width: 'auto', borderRadius: '6px', display: { xs: 'none', lg: 'block' } }} 
                             />
-                            <Box>
-                                <Typography variant="h5" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
-                                    RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
-                                </Typography>
-                            </Box>
+                            <Typography 
+                                fontWeight={950} 
+                                sx={{ 
+                                    fontSize: { xs: '1.1rem', lg: '1.5rem' }, 
+                                    letterSpacing: { xs: '0.01em', lg: '0.05em' }, 
+                                    lineHeight: 1.1, 
+                                    color: 'primary.main' 
+                                }}
+                            >
+                                RPL 2026
+                            </Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 } }}>
+                            {/* Mobile/iPad: Detailed Color-Coded Stats */}
+                            <Box sx={{ display: { xs: 'flex', lg: 'none' }, alignItems: 'center', gap: 1, px: 1, py: 0.5, borderRadius: '6px', border: '1px solid', borderColor: 'divider', bgcolor: alpha(theme.palette.background.default, 0.5) }}>
+                                {(() => {
+                                    const sold = auctionState?.players?.filter(p => p.status === 'SOLD').length || 0;
+                                    const rem = auctionState?.players?.filter(p => p.status === 'PENDING').length || 0;
+                                    const unsold = auctionState?.players?.filter(p => p.status === 'UNSOLD').length || 0;
+                                    return (
+                                        <>
+                                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 900, color: 'success.main', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                                                <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.main' }} /> S:{sold}
+                                            </Typography>
+                                            <Box sx={{ width: '1px', height: 12, bgcolor: 'divider' }} />
+                                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 900, color: 'info.main', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                                                <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'info.main' }} /> R:{rem}
+                                            </Typography>
+                                            <Box sx={{ width: '1px', height: 12, bgcolor: 'divider' }} />
+                                            <Typography sx={{ fontSize: '0.7rem', fontWeight: 900, color: 'error.main', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                                                <Box component="span" sx={{ width: 6, height: 6, borderRadius: '50%', bgcolor: 'error.main' }} /> U:{unsold}
+                                            </Typography>
+                                        </>
+                                    );
+                                })()}
+                            </Box>
+
+                            {/* Desktop: Standard Phase/Remaining Chip */}
+                            <Chip 
+                                label={`REM: ${auctionState?.players?.filter(p => p.status === 'PENDING').length || 0}`}
+                                color={
+                                    auctionState?.phase === 'LIVE' ? 'success' : 
+                                    auctionState?.phase === 'PAUSED' ? 'warning' : 
+                                    auctionState?.phase === 'ENDED' ? 'error' : 'default'
+                                }
+                                sx={{ 
+                                    display: { xs: 'none', lg: 'flex' },
+                                    fontWeight: 900, 
+                                    borderRadius: '6px',
+                                    height: 32,
+                                    px: 1,
+                                    fontSize: '0.9rem',
+                                    letterSpacing: '0.05em'
+                                }} 
+                            />
                             <IconButton 
                                 size="small" 
                                 onClick={() => setIsRightDrawerOpen(true)}
@@ -158,38 +207,6 @@ export default function HostPage() {
                             >
                                 <HistoryIcon fontSize="small" />
                             </IconButton>
-                            <Chip 
-                                label={auctionState?.phase || 'READY'} 
-                                color={
-                                    auctionState?.phase === 'LIVE' ? 'success' : 
-                                    auctionState?.phase === 'PAUSED' ? 'warning' : 
-                                    auctionState?.phase === 'ENDED' ? 'error' : 'default'
-                                }
-                                sx={{ 
-                                    fontWeight: 900, 
-                                    borderRadius: '6px',
-                                    height: { xs: 28, sm: 32 },
-                                    px: 1,
-                                    fontSize: { xs: '0.75rem', sm: '0.9rem' },
-                                    letterSpacing: '0.05em'
-                                }} 
-                            />
-                            <Button 
-                                variant="outlined" 
-                                color="inherit" 
-                                size="small" 
-                                startIcon={<LogoutIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />} 
-                                onClick={logout}
-                                sx={{ 
-                                    borderColor: 'divider', 
-                                    color: 'text.secondary', 
-                                    fontWeight: 700, 
-                                    px: { xs: 1, sm: 2 },
-                                    minWidth: { xs: 0, sm: 'auto' }
-                                }}
-                            >
-                                {window.innerWidth < 600 ? <LogoutIcon fontSize="small" /> : 'Sign Out'}
-                            </Button>
                         </Box>
                     </Box>
 
@@ -348,9 +365,9 @@ export default function HostPage() {
                 open={isRightDrawerOpen}
                 onClose={() => setIsRightDrawerOpen(false)}
                 sx={{ display: { lg: 'none' } }}
-                PaperProps={{ sx: { width: { xs: '85vw', sm: 400 }, bgcolor: 'background.paper' } }}
+                PaperProps={{ sx: { width: { xs: '75vw', sm: 320 }, bgcolor: 'background.paper' } }}
             >
-                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ p: 1.5, px: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', minHeight: 56 }}>
                     <Typography variant="overline" fontWeight={900} color="primary">Auction Analytics</Typography>
                     <Button size="small" onClick={() => setIsRightDrawerOpen(false)}>Close</Button>
                 </Box>
@@ -372,6 +389,7 @@ export default function HostPage() {
                             width="100%"
                             isOpen={true}
                             setIsOpen={() => {}} // No-op for mobile
+                            isMobileDrawer
                         />
                     )}
                 </Box>

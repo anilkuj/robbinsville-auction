@@ -14,9 +14,12 @@ import InputLabel from '@mui/material/InputLabel';
 import Alert from '@mui/material/Alert';
 import CircularProgress from '@mui/material/CircularProgress';
 import Typography from '@mui/material/Typography';
+import { useTheme } from '@mui/material/styles';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const { login, user } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -71,7 +74,7 @@ export default function LoginPage() {
       justifyContent: 'center',
       position: 'relative',
       overflow: 'hidden',
-      background: '#0b0e14',
+      bgcolor: 'background.default',
       p: 2,
     }}>
       {/* Background Decorative Elements */}
@@ -102,7 +105,7 @@ export default function LoginPage() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         style={{ width: '100%', maxWidth: 400, zIndex: 1 }}
       >
-        <Card className="glass-panel" sx={{ border: '1px solid rgba(255,255,255,0.08)' }} elevation={0}>
+        <Card className="glass-panel" sx={{ border: '1px solid', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'divider' }} elevation={0}>
           <CardContent sx={{ p: 4 }}>
             <Box sx={{ textAlign: 'center', mb: 4 }}>
               <motion.div
@@ -118,13 +121,14 @@ export default function LoginPage() {
                     width: 'auto', 
                     mb: 2,
                     borderRadius: '12px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                    border: '1px solid rgba(255,255,255,0.1)'
+                    boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)',
+                    border: '1px solid',
+                    borderColor: 'divider'
                   }} 
                 />
               </motion.div>
-              <Typography variant="h4" fontWeight={900} color="text.primary" sx={{ letterSpacing: '0.02em', mb: 0.5 }}>
-                RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+              <Typography variant="h4" fontWeight={900} color="primary.main" sx={{ letterSpacing: '0.02em', mb: 0.5 }}>
+                RPL 2026
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
                 Robbinsville Premier League
@@ -155,7 +159,7 @@ export default function LoginPage() {
                       value="host"
                       disabled
                       fullWidth
-                      sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: '#94a3b8' } }}
+                      sx={{ '& .MuiInputBase-input.Mui-disabled': { WebkitTextFillColor: theme.palette.text.disabled } }}
                     />
                   ) : teams.length > 0 ? (
                     <FormControl fullWidth size="small">

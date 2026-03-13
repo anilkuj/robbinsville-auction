@@ -92,7 +92,7 @@ export default function AdminPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      <AppBar position="static">
+      <AppBar position="static" sx={{ bgcolor: 'background.paper', color: 'text.primary', borderBottom: '1px solid', borderColor: 'divider' }} elevation={0}>
         <Toolbar sx={{ justifyContent: 'space-between', minHeight: 72 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box 
@@ -101,8 +101,8 @@ export default function AdminPage() {
               sx={{ height: 44, width: 'auto', borderRadius: '6px' }} 
             />
             <Box>
-              <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
-                RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+              <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1, color: 'primary.main' }}>
+                RPL 2026
               </Typography>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
                 ADMIN CONTROL SUITE
@@ -111,7 +111,6 @@ export default function AdminPage() {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
-            <ThemeToggle />
             <Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ borderColor: 'divider', color: 'text.secondary', fontSize: '0.8rem' }}>
               Sign Out
             </Button>

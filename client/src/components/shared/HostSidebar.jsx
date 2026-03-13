@@ -53,8 +53,8 @@ export default function HostSidebar({ width = 300, isDrawer = false }) {
                     />
                 </motion.div>
                 <Box>
-                    <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
-                        RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+                    <Typography variant="h6" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1, color: 'primary.main' }}>
+                        RPL 2026
                     </Typography>
                     <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
                         HOST COMMAND CENTER

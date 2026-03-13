@@ -29,8 +29,8 @@ export default function BidHistory({ history = [], teams = {} }) {
           key={i}
           sx={{
             borderRadius: 1,
-            px: 1.5,
-            py: 0.5,
+            px: 1,
+            py: 0.4,
             bgcolor: i === 0 ? (teams?.[entry.teamId]?.color ? `${teams[entry.teamId].color}20` : '#14532d30') : 'background.paper',
             border: '1px solid',
             borderColor: i === 0 ? (teams?.[entry.teamId]?.color || '#22c55e40') : 'divider',

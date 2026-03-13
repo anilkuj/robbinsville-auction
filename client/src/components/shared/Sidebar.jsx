@@ -64,8 +64,8 @@ export default function Sidebar({ width, isDrawer = false }) {
           />
         </motion.div>
         <Box sx={{ textAlign: 'center' }}>
-          <Typography fontWeight={950} sx={{ letterSpacing: '0.05em', fontSize: '1.2rem', lineHeight: 1.1 }}>
-            RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+          <Typography fontWeight={950} sx={{ letterSpacing: '0.05em', fontSize: '1.2rem', lineHeight: 1.1, color: 'primary.main' }}>
+            RPL 2026
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
             AUCTION SYSTEM

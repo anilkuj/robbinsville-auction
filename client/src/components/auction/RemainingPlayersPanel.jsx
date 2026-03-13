@@ -3,16 +3,34 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
+import { useTheme, alpha } from '@mui/material/styles';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
-// Reuse poolColor
-function poolColor(poolId) {
-    if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };
-    if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
-    if (poolId === 'C') return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
-    return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
+// Helper to get pool colors based on theme
+function getPoolColors(poolId, theme) {
+    const isDark = theme.palette.mode === 'dark';
+    if (poolId.startsWith('A')) return { 
+        bg: isDark ? '#1c0d00' : '#fff7ed', 
+        border: '#f59e0b', 
+        text: isDark ? '#f59e0b' : '#c2410c' 
+    };
+    if (poolId.startsWith('B')) return { 
+        bg: isDark ? '#0d1c35' : '#eff6ff', 
+        border: '#3b82f6', 
+        text: isDark ? '#60a5fa' : '#1d4ed8' 
+    };
+    if (poolId === 'C') return { 
+        bg: isDark ? '#150d2e' : '#f5f3ff', 
+        border: '#8b5cf6', 
+        text: isDark ? '#a78bfa' : '#6d28d9' 
+    };
+    return { 
+        bg: isDark ? '#0f1a2e' : '#f8fafc', 
+        border: theme.palette.divider, 
+        text: theme.palette.text.secondary 
+    };
 }
 
 function fmtPts(n) {
@@ -20,41 +38,72 @@ function fmtPts(n) {
     return n?.toLocaleString() ?? '0';
 }
 
-function PColHead({ label, first, right }) {
+function PColHead({ label, first, right, theme }) {
     return (
-        <span style={{
-            padding: '0.3rem 0.6rem',
-            fontSize: '0.62rem', fontWeight: 700,
-            textTransform: 'uppercase', letterSpacing: '0.06em',
-            color: '#64748b',
-            borderLeft: first ? 'none' : '1px solid #1e293b',
-            textAlign: right ? 'right' : first ? 'left' : 'center',
-            whiteSpace: 'nowrap',
-            ...(first && { paddingLeft: '1rem' }),
-            ...(right && { paddingRight: '1rem' }),
-        }}>{label}</span>
+        <Typography
+            component="span"
+            sx={{
+                padding: '0.2rem 0.5rem',
+                fontSize: '0.62rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.06em',
+                color: 'text.secondary',
+                borderLeft: first ? 'none' : '1px solid',
+                borderColor: 'divider',
+                textAlign: right ? 'right' : first ? 'left' : 'center',
+                whiteSpace: 'nowrap',
+                display: 'inline-block',
+                ...(first && { paddingLeft: '1rem' }),
+                ...(right && { paddingRight: '1rem' }),
+            }}
+        >
+            {label}
+        </Typography>
     );
 }
 
-function PCell({ children, first, right, center, style = {} }) {
+function PCell({ children, first, right, center, style = {}, theme }) {
     return (
-        <span style={{
-            padding: '0.32rem 0.6rem',
-            fontSize: '0.74rem',
-            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-            borderLeft: first ? 'none' : '1px solid #1e293b',
-            textAlign: right ? 'right' : center ? 'center' : 'left',
-            alignSelf: 'center',
-            display: 'flex', alignItems: 'center',
-            justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start',
-            ...(first && { paddingLeft: '1rem' }),
-            ...(right && { paddingRight: '1rem' }),
-            ...style,
-        }}>{children}</span>
+        <Box
+            component="span"
+            sx={{
+                padding: '0.25rem 0.5rem',
+                fontSize: '0.74rem',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                borderLeft: first ? 'none' : '1px solid',
+                borderColor: 'divider',
+                textAlign: right ? 'right' : center ? 'center' : 'left',
+                alignSelf: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start',
+                color: 'text.primary',
+                ...(first && { paddingLeft: '1rem' }),
+                ...(right && { paddingRight: '1rem' }),
+                ...style,
+            }}
+        >
+            {children}
+        </Box>
     );
 }
 
-export default function RemainingPlayersPanel({ players, pools, currentPlayerId, spilloverIds = [], width = 280, isOpen, setIsOpen }) {
+export default function RemainingPlayersPanel({ 
+    players, 
+    pools, 
+    currentPlayerId, 
+    spilloverIds = [], 
+    width = 280, 
+    isOpen, 
+    setIsOpen,
+    isMobileDrawer = false
+}) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
+
     if (!players || !pools) return null;
 
     const pending = players.filter(p => p.status === 'PENDING');
@@ -77,7 +126,7 @@ export default function RemainingPlayersPanel({ players, pools, currentPlayerId,
 
     const orderedPools = poolOrder.filter(id => byPool[id]?.length > 0);
 
-    if (!isOpen) {
+    if (!isOpen && !isMobileDrawer) {
         return (
             <Box sx={{ width: 48, height: '100vh', flexShrink: 0, borderLeft: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1, position: 'fixed', top: 0, right: 0, zIndex: 1200 }}>
                 <IconButton size="small" onClick={() => setIsOpen(true)} title="Expand players pane" sx={{ mb: 1 }}>
@@ -92,20 +141,23 @@ export default function RemainingPlayersPanel({ players, pools, currentPlayerId,
 
     return (
         <Box sx={{
-            width: { xs: 300, sm: 340, lg: width },
-            height: '100vh',
+            width: isMobileDrawer ? '100%' : { xs: 300, sm: 340, lg: width },
+            height: isMobileDrawer ? 'auto' : '100vh',
             flexShrink: 0,
-            borderLeft: '1px solid',
+            borderLeft: isMobileDrawer ? 'none' : '1px solid',
             borderColor: 'divider',
-            bgcolor: 'background.default',
+            bgcolor: isMobileDrawer ? 'transparent' : 'background.default',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
-            position: 'fixed',
+            overflow: isMobileDrawer ? 'visible' : 'hidden',
+            position: isMobileDrawer ? 'relative' : 'fixed',
             top: 0,
             right: 0,
-            zIndex: 1200,
-            boxShadow: { xs: '-4px 0 16px rgba(0,0,0,0.5)', lg: 'none' }
+            zIndex: isMobileDrawer ? 1 : 1200,
+            boxShadow: isMobileDrawer ? 'none' : { 
+                xs: isDark ? '-4px 0 16px rgba(0,0,0,0.5)' : '-4px 0 16px rgba(0,0,0,0.1)', 
+                lg: 'none' 
+            }
         }}>
             <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -123,59 +175,102 @@ export default function RemainingPlayersPanel({ players, pools, currentPlayerId,
                 ) : (
                     orderedPools.map(poolId => {
                         const poolPlayers = byPool[poolId];
-                        const clr = poolColor(poolId);
+                        const clr = getPoolColors(poolId, theme);
                         const GRID = 'minmax(0,1fr) 50px 60px';
                         return (
                             <div key={poolId}>
-                                <div style={{
-                                    padding: '0.45rem 1rem',
+                                <Box sx={{
+                                    padding: '0.35rem 0.75rem',
                                     background: clr.bg,
                                     borderTop: `2px solid ${clr.border}`,
-                                    borderBottom: `1px solid ${clr.border}50`,
+                                    borderBottom: `1px solid ${alpha(clr.border, 0.3)}`,
                                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                     position: 'sticky', top: 0, zIndex: 1,
                                 }}>
-                                    <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</span>
-                                    <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
-                                    <PColHead label="Player" first />
-                                    <PColHead label="Pool" center />
-                                    <PColHead label="Base" right />
-                                </div>
+                                    <Typography sx={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</Typography>
+                                    <Typography sx={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: GRID, bgcolor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderBottom: `1px solid ${alpha(clr.border, 0.2)}` }}>
+                                    <PColHead label="Player" first theme={theme} />
+                                    <PColHead label="Pool" center theme={theme} />
+                                    <PColHead label="Base" right theme={theme} />
+                                </Box>
                                 {sortPlayersByPoints(poolPlayers, avgKey).map((p, rowIdx) => {
                                     const isOnBlock = p.id === currentPlayerId;
                                     const isSpillover = spilloverIds.includes(p.id);
                                     const typeKey = Object.keys(p.extra || {}).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
                                     const isOwner = typeKey ? String(p.extra[typeKey]).toLowerCase() === 'owner' : false;
 
-                                    let rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
-                                    if (isSpillover && !isOnBlock) rowBg = '#270a0a'; // Dark red for spillover
+                                    let rowBg = 'transparent';
+                                    if (isOnBlock) rowBg = isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(34, 197, 94, 0.1)';
+                                    else if (isSpillover) rowBg = isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)';
+                                    else if (rowIdx % 2 !== 0) rowBg = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)';
 
                                     return (
-                                        <div key={p.id} style={{
+                                        <Box key={p.id} sx={{
                                             display: 'grid',
                                             gridTemplateColumns: GRID,
                                             background: rowBg,
-                                            borderBottom: '1px solid #0f172a',
+                                            borderBottom: '1px solid',
+                                            borderColor: 'divider',
                                             ...(isSpillover && { borderLeft: '3px solid #ef4444' })
                                         }}>
-                                            <PCell first style={{
-                                                color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#cbd5e1',
+                                            <PCell first theme={theme} style={{
+                                                color: isOnBlock ? theme.palette.success.main : isSpillover ? theme.palette.error.main : isOwner ? theme.palette.secondary.main : theme.palette.text.primary,
                                                 fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400
                                             }}>
                                                 {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
                                                 {p.name}
-                                                {isOwner && <span style={{ marginLeft: '6px', background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
-                                                {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: '#ef4444', border: '1px solid #ef444460', borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
+                                                {isOwner && (
+                                                    <Box component="span" sx={{ 
+                                                        marginLeft: '6px', 
+                                                        bgcolor: isDark ? 'rgba(167, 139, 250, 0.1)' : 'rgba(109, 40, 217, 0.08)', 
+                                                        color: isDark ? '#a78bfa' : '#6d28d9', 
+                                                        border: '1px solid',
+                                                        borderColor: isDark ? 'rgba(167, 139, 250, 0.3)' : 'rgba(109, 40, 217, 0.2)',
+                                                        borderRadius: '3px', 
+                                                        padding: '0px 3px', 
+                                                        fontSize: '0.62rem', 
+                                                        fontWeight: 700 
+                                                    }}>
+                                                        OWNER
+                                                    </Box>
+                                                )}
+                                                {isSpillover && (
+                                                    <Box component="span" sx={{ 
+                                                        marginLeft: '6px', 
+                                                        fontSize: '0.6rem', 
+                                                        color: 'error.main', 
+                                                        border: '1px solid',
+                                                        borderColor: alpha(theme.palette.error.main, 0.4),
+                                                        borderRadius: '2px', 
+                                                        padding: '0px 3px' 
+                                                    }}>
+                                                        MANUAL SALE
+                                                    </Box>
+                                                )}
                                             </PCell>
-                                            <PCell center>
-                                                <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{p.pool}</span>
+                                            <PCell center theme={theme}>
+                                                <Box component="span" sx={{ 
+                                                    bgcolor: clr.bg, 
+                                                    color: clr.text, 
+                                                    border: '1px solid',
+                                                    borderColor: alpha(clr.border, 0.4),
+                                                    borderRadius: '4px', 
+                                                    padding: '0.1rem 0.35rem', 
+                                                    fontSize: '0.65rem', 
+                                                    fontWeight: 700 
+                                                }}>
+                                                    {p.pool}
+                                                </Box>
                                             </PCell>
-                                            <PCell right style={{ color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#475569', fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
+                                            <PCell right theme={theme} style={{ 
+                                                color: isOnBlock ? theme.palette.success.main : isSpillover ? theme.palette.error.main : isOwner ? theme.palette.secondary.main : theme.palette.text.secondary, 
+                                                fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 
+                                            }}>
                                                 {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>AVG-SYNCED</span> : fmtPts(p.basePrice)}
                                             </PCell>
-                                        </div>
+                                        </Box>
                                     );
                                 })}
                             </div>

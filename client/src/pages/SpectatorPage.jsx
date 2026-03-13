@@ -12,10 +12,13 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import { useTheme, alpha } from '@mui/material/styles';
 import TeamLogo from '../components/shared/TeamLogo.jsx';
 import SquadGrid from '../components/auction/SquadGrid.jsx';
 
 export default function SpectatorPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   // Auth state
   const [pinRequired, setPinRequired] = useState(null);
   const [spectatorToken, setSpectatorToken] = useState(() => localStorage.getItem('spectatorToken'));
@@ -107,9 +110,9 @@ export default function SpectatorPage() {
 
   if (error === 'SPECTATOR_BLOCKED') {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center', bgcolor: '#0f172a' }}>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 4, textAlign: 'center', bgcolor: 'background.default' }}>
         <Typography variant="h2" sx={{ mb: 2 }}>🚫</Typography>
-        <Typography variant="h4" fontWeight={800} color="white" gutterBottom>Spectator Screen Blocked</Typography>
+        <Typography variant="h4" fontWeight={800} color="text.primary" gutterBottom>Spectator Screen Blocked</Typography>
         <Typography color="text.secondary">The administrator has temporarily disabled this screen for performance reasons.</Typography>
       </Box>
     );
@@ -122,7 +125,7 @@ export default function SpectatorPage() {
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'center', 
-        bgcolor: '#0b0e14',
+        bgcolor: 'background.default',
         p: 2 
       }}>
         <motion.div
@@ -130,16 +133,16 @@ export default function SpectatorPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.5 }}
         >
-          <Card className="glass-panel" sx={{ width: '100%', maxWidth: 360, color: 'white', border: '1px solid rgba(255,255,255,0.08)' }} elevation={0}>
+          <Card className="glass-panel" sx={{ width: '100%', maxWidth: 360, color: 'text.primary', border: '1px solid', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'divider' }} elevation={0}>
             <CardContent sx={{ p: 4 }}>
               <Box sx={{ textAlign: 'center', mb: 3 }}>
                 <Box 
                   component="img" 
                   src={rplLogo} 
-                  sx={{ height: 80, width: 'auto', mb: 1.5, borderRadius: '8px' }} 
+                  sx={{ height: 80, width: 'auto', mb: 1.5, borderRadius: '8px', boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)' }} 
                 />
-                <Typography variant="h5" fontWeight={900} color="white">SPECTATOR LOGIN</Typography>
-                <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)', mt: 1 }}>
+                <Typography variant="h5" fontWeight={900} color="text.primary">SPECTATOR LOGIN</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 1 }}>
                   Enter the PIN to view live rosters
                 </Typography>
               </Box>
@@ -152,7 +155,7 @@ export default function SpectatorPage() {
                   autoFocus
                   fullWidth
                   error={!!pinError}
-                  inputProps={{ style: { textAlign: 'center', letterSpacing: '0.2em', color: 'white' } }}
+                  inputProps={{ style: { textAlign: 'center', letterSpacing: '0.2em', color: theme.palette.text.primary } }}
                 />
                 {pinError && <Alert severity="error" sx={{ bgcolor: 'rgba(239, 68, 68, 0.05)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.1)' }}>{pinError}</Alert>}
                 <Button
@@ -175,7 +178,7 @@ export default function SpectatorPage() {
 
   if (!state) {
     return (
-      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: '#0f172a' }}>
+      <Box sx={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
         <CircularProgress size={60} thickness={4} />
         <Typography sx={{ mt: 3, color: 'text.secondary', fontWeight: 600 }}>
           {error || 'Connecting to rosters...'}
@@ -187,7 +190,7 @@ export default function SpectatorPage() {
   const isEnded = state?.phase === 'ENDED';
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#0b0e14', p: { xs: 1, md: 2 } }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: { xs: 1, md: 2 } }}>
       <Box sx={{ 
         display: 'flex', 
         flexDirection: { xs: 'column', sm: 'row' },
@@ -204,10 +207,10 @@ export default function SpectatorPage() {
             sx={{ height: { xs: 40, md: 60 }, width: 'auto', borderRadius: '4px' }} 
           />
           <Box>
-            <Typography variant="h4" fontWeight={950} color="white" sx={{ letterSpacing: '0.05em', mb: 0, fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' } }}>
-              RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
+            <Typography variant="h4" fontWeight={950} color="primary.main" sx={{ letterSpacing: '0.05em', mb: 0, fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' } }}>
+              RPL 2026
             </Typography>
-            <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: { xs: '0.5rem', md: '0.6rem' } }}>
+            <Typography variant="caption" color="text.secondary" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: { xs: '0.5rem', md: '0.6rem' }, opacity: 0.7 }}>
               High-Speed Feed • {Object.keys(state?.teams || {}).length} Teams
             </Typography>
           </Box>
@@ -234,7 +237,7 @@ export default function SpectatorPage() {
               localStorage.removeItem('spectatorToken');
               window.location.reload();
             }}
-            sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, mt: { xs: 0, sm: 0.5 }, '&:hover': { color: 'white' } }}
+            sx={{ color: 'text.disabled', fontSize: '0.65rem', fontWeight: 800, mt: { xs: 0, sm: 0.5 }, '&:hover': { color: 'text.primary' } }}
           >
             Sign Out
           </Button>
@@ -269,8 +272,9 @@ export default function SpectatorPage() {
             fontSize: '1.1rem',
             bgcolor: 'success.main',
             color: 'white',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-            border: '1px solid rgba(255,255,255,0.1)'
+            boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 8px 32px rgba(0,0,0,0.1)',
+            border: '1px solid',
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'divider'
           }}
         >
           🏆 {soldNotify?.playerName} was Sold to {soldNotify?.teamName}!

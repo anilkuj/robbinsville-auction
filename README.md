@@ -150,6 +150,18 @@ node server/mock_live_smart_auction.js
 
 ---
 
+## Key Features
+
+- **Real-time Auction**: Authored by a server-side authoritative timer with instant socket updates.
+- **Premium Themes**: Sophisticated **Dark/Light (White Model) Toggle** with persistent user preference.
+- **Responsive Design**: Fully optimized for Desktop (Projector), Tablet (iPad), and Mobile (Owner bidding).
+- **Advanced Mock Simulation**: Tools to simulate full or partial auctions to verify state and logistics.
+- **Roster Posters**: High-definition roster grid with "Download Poster" and "Show/Hide Points" functionality.
+- **Excel-Style Filtering**: Searchable dropdown filters for all player data tables.
+- **Stateless Persistence**: Seamless sync with Upstash Redis for serverless deployment.
+
+---
+
 ## Architecture
 
 - **Backend:** Node.js + Express + Socket.io (authoritative timer)

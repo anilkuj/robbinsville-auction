@@ -68,7 +68,8 @@ robbinsville-auction/
         ├── App.jsx           # Routes: /login, /auction, /admin, /dashboard
         ├── contexts/
         │   ├── AuthContext.jsx    # JWT stored in localStorage (rpl_token, rpl_user)
-        │   └── AuctionContext.jsx # Socket.io connection, exposes auctionState + actions
+        │   ├── AuctionContext.jsx # Socket.io connection, exposes auctionState + actions
+        │   └── ThemeContext.jsx   # Manages Dark/Light mode with persistence
         ├── pages/
         │   ├── LoginPage.jsx
         │   ├── AuctionPage.jsx   # Team bidding view
@@ -76,7 +77,8 @@ robbinsville-auction/
         │   └── DashboardPage.jsx # Read-only spectator view; flex layout: scrollable teams grid (left) + remaining players pane (right, 240px)
         ├── components/
         │   ├── admin/            # AuctionControls, PlayerImport, TeamRosterTable, UnsoldList
-        │   └── auction/          # PlayerCard, BidDisplay, BidHistory, BidButton, CountdownTimer
+        │   ├── auction/          # PlayerCard, BidDisplay, BidHistory, BidButton, CountdownTimer
+        │   └── shared/           # Sidebar, ThemeToggle, TeamLogo, CommentaryFeed
         └── utils/budgetCalc.js   # computeMaxBid + formatPts (mirrors server logic)
 ```
 

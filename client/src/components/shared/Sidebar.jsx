@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import rplLogo from '../../assets/rpl-logo.jpg';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
@@ -18,6 +19,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ThemeToggle from './ThemeToggle.jsx';
 
 export default function Sidebar({ width, isDrawer = false }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const { user, logout } = useAuth();
   const { auctionState, connected } = useAuction();
 
@@ -78,7 +81,7 @@ export default function Sidebar({ width, isDrawer = false }) {
           <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
               <TeamLogo team={team} size={28} border={false} />
-              <Typography fontWeight={700} sx={{ color: team.color || 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Typography fontWeight={700} sx={{ color: team.color || 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {team.name}
               </Typography>
             </Box>
@@ -138,7 +141,7 @@ export default function Sidebar({ width, isDrawer = false }) {
                       <Chip
                         label={r.pool}
                         size="small"
-                        sx={{ height: 18, fontSize: '0.6rem', bgcolor: `${poolColor(r.pool)}20`, color: poolColor(r.pool), fontWeight: 700 }}
+                        sx={{ height: 18, fontSize: '0.6rem', bgcolor: alpha(poolColor(r.pool), 0.2), color: poolColor(r.pool), fontWeight: 700 }}
                       />
                       <Typography variant="caption" color="success.main" fontWeight={700}>
                         {r.price.toLocaleString()}

@@ -1,16 +1,22 @@
 import { motion } from 'framer-motion';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 
 export default function PhaseBar({ phase, size = 'normal' }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const isBig = size === 'big';
+    
     const labels = {
-        SETUP: { text: 'AUCTION SETUP', color: 'text.secondary', bg: 'rgba(255,255,255,0.05)' },
-        LIVE: { text: '● LIVE AUCTION', color: '#10b981', bg: 'rgba(16, 185, 129, 0.1)' },
-        PAUSED: { text: '⏸ AUCTION PAUSED', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.1)' },
-        ENDED: { text: 'AUCTION ENDED', color: 'text.disabled', bg: 'rgba(255,255,255,0.05)' },
+        SETUP: { text: 'AUCTION SETUP', color: 'text.secondary', bg: isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.palette.text.primary, 0.03) },
+        LIVE: { text: '● LIVE AUCTION', color: theme.palette.success.main, bg: alpha(theme.palette.success.main, 0.1) },
+        PAUSED: { text: '⏸ AUCTION PAUSED', color: theme.palette.warning.main, bg: alpha(theme.palette.warning.main, 0.1) },
+        ENDED: { text: 'AUCTION ENDED', color: 'text.disabled', bg: isDark ? 'rgba(255,255,255,0.05)' : alpha(theme.palette.text.primary, 0.03) },
     };
+    
     const cfg = labels[phase] || labels.SETUP;
+    
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', py: isBig ? 1 : 0.5 }}>
             <motion.div

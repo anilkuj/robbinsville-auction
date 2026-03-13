@@ -222,12 +222,16 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
           display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 }, flexWrap: 'wrap',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="overline" color="text.disabled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>On Block</Typography>
+            <Typography variant="overline" color={isDark ? "text.disabled" : "text.secondary"} sx={{ fontWeight: 1000, letterSpacing: '0.1em', lineHeight: 1 }}>
+                  On Block
+                </Typography>
             <Typography fontWeight={700} sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>{currentPlayer.name}</Typography>
-            <Chip label={currentPlayer.pool} size="small" sx={{ height: 20, fontSize: '0.68rem', bgcolor: `${themePoolColor(currentPlayer.pool)}20`, color: themePoolColor(currentPlayer.pool) }} />
+            <Chip label={currentPlayer.pool} size="small" sx={{ height: 20, fontSize: '0.68rem', bgcolor: alpha(themePoolColor(currentPlayer.pool), 0.15), color: themePoolColor(currentPlayer.pool), fontWeight: 700 }} />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="caption" color="text.disabled">Current Bid</Typography>
+              <Typography variant="caption" color={isDark ? "text.disabled" : "text.secondary"} sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Current Bid
+              </Typography>
             <Typography fontWeight={800} color="success.main" sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }}>
               {currentBid?.amount?.toLocaleString()} pts
             </Typography>
@@ -388,7 +392,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
                   const typeKey = Object.keys(player.extra || {}).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
                   const isOwner = typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
 
-                  const rowBg = isOnBlock 
+                  let rowBg = isOnBlock 
                     ? alpha(theme.palette.success.main, 0.1) 
                     : rowIdx % 2 === 0 ? 'transparent' : alpha(theme.palette.text.primary, 0.02);
                   if (isSpillover && !isOnBlock) rowBg = alpha(theme.palette.error.main, 0.1);
@@ -407,14 +411,14 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
                       }}>
                         {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
                         {player.name}
-                        {isOwner && <span style={{ marginLeft: '6px', background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
+                        {isOwner && <span style={{ marginLeft: '6px', background: alpha(theme.palette.secondary.main, 0.2), color: theme.palette.secondary.main, border: `1px solid ${alpha(theme.palette.secondary.main, 0.4)}`, borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
                         {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: theme.palette.error.main, border: `1px solid ${alpha(theme.palette.error.main, 0.4)}`, borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
                       </DCell>
                       <DCell center divider={theme.palette.divider}>
                         <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${alpha(clr.border, 0.3)}`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{player.pool}</span>
                       </DCell>
                       <DCell right divider={theme.palette.divider} style={{ color: isOnBlock ? theme.palette.success.main : isSpillover ? theme.palette.error.main : isOwner ? theme.palette.secondary.main : theme.palette.text.secondary, fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
-                        {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>AVG-SYNCED</span> : fmtPts(player.basePrice)}
+                        {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8, color: theme.palette.secondary.main }}>AVG-SYNCED</span> : fmtPts(player.basePrice)}
                       </DCell>
                     </div>
                   );
@@ -494,12 +498,12 @@ function TeamCard({ team, teams, players, startingBudget, squadSize, isLeading, 
 
       <Box sx={{ px: 2, pb: 1.5, pt: 1 }}>
         <Box sx={{ height: 10, display: 'flex', borderRadius: 5, overflow: 'hidden', bgcolor: 'background.default', mb: 1 }}>
-          {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: '#ef4444', opacity: 0.9 }} />}
-          {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: '#16a34a', opacity: 0.9 }} />}
+          {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: theme.palette.error.main, opacity: 0.9 }} />}
+          {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: theme.palette.success.main, opacity: 0.9 }} />}
         </Box>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="caption" color="text.disabled">0</Typography>
-          <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 900, fontSize: '0.8rem' }}>
+          <Typography variant="caption" sx={{ color: theme.palette.warning.main, fontWeight: 900, fontSize: '0.8rem' }}>
             {spentPct.toFixed(0)}% SPENT
           </Typography>
           <Typography variant="caption" color="text.disabled">{fmtPts(startingBudget)}</Typography>
@@ -539,7 +543,9 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
 
   return (
     <Box sx={{ mb: 3, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1, bgcolor: 'background.paper', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}>
-      <Typography variant="overline" color="text.secondary" fontWeight={700} sx={{ mb: 1.5, display: 'block', letterSpacing: '0.05em' }}>League Budget Overview</Typography>
+      <Typography variant="overline" color={isDark ? "text.disabled" : "text.secondary"} sx={{ fontWeight: 1000, px: 2, py: 1, display: 'block', borderBottom: '1px solid', borderColor: 'divider' }}>
+                  Recent Sales
+                </Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 2 }}>
         {teamList.map(team => {
           const isMyTeam = currentUser?.teamId === team.id;
@@ -561,8 +567,8 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
                 </Typography>
               </Box>
               <Box sx={{ height: 10, display: 'flex', borderRadius: 5, overflow: 'hidden', bgcolor: 'background.default' }}>
-                {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: '#ef4444', opacity: 0.9 }} />}
-                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: '#16a34a', opacity: 0.9 }} />}
+                {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: theme.palette.error.main, opacity: 0.9 }} />}
+                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: theme.palette.success.main, opacity: 0.9 }} />}
               </Box>
             </Box>
           );
@@ -574,22 +580,22 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
 
 function poolColor(poolId, isDark, alpha) {
   if (poolId.startsWith('A')) return { 
-    bg: isDark ? '#1c0d00' : '#fff7ed', 
+    bg: isDark ? alpha('#f59e0b', 0.1) : '#fff7ed', 
     border: '#f59e0b', 
     text: isDark ? '#f59e0b' : '#c2410c' 
   };
   if (poolId.startsWith('B')) return { 
-    bg: isDark ? '#0d1c35' : '#eff6ff', 
+    bg: isDark ? alpha('#3b82f6', 0.1) : '#eff6ff', 
     border: '#3b82f6', 
     text: isDark ? '#60a5fa' : '#1d4ed8' 
   };
   if (poolId === 'C') return { 
-    bg: isDark ? '#150d2e' : '#f5f3ff', 
+    bg: isDark ? alpha('#8b5cf6', 0.1) : '#f5f3ff', 
     border: '#8b5cf6', 
     text: isDark ? '#a78bfa' : '#6d28d9' 
   };
   return { 
-    bg: isDark ? '#0f1a2e' : '#f8fafc', 
+    bg: isDark ? alpha('#64748b', 0.1) : '#f8fafc', 
     border: '#64748b', 
     text: isDark ? '#94a3b8' : '#475569' 
   };

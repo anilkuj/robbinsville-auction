@@ -1,9 +1,12 @@
 import React from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 
 export default function PlayerExtraData({ player, visibleKeys = [], size = 'normal' }) {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const isBig = size === 'big';
     if (!player?.extra) return null;
 
@@ -28,7 +31,7 @@ export default function PlayerExtraData({ player, visibleKeys = [], size = 'norm
             {entries.map(([k, v]) => (
                 <Paper key={k} sx={{ 
                     p: { xs: 1, sm: isBig ? 3 : 2 }, 
-                    bgcolor: 'rgba(30, 41, 59, 0.4)',
+                    bgcolor: isDark ? 'rgba(30, 41, 59, 0.4)' : alpha(theme.palette.background.paper, 0.8),
                     backdropFilter: 'blur(8px)',
                     border: '1px solid',
                     borderColor: 'rgba(255, 255, 255, 0.05)',
@@ -38,16 +41,16 @@ export default function PlayerExtraData({ player, visibleKeys = [], size = 'norm
                     justifyContent: 'center',
                     transition: 'all 0.2s',
                     '&:hover': {
-                        bgcolor: 'rgba(30, 41, 59, 0.6)',
+                        bgcolor: isDark ? 'rgba(30, 41, 59, 0.6)' : alpha(theme.palette.background.paper, 1.0),
                         borderColor: 'primary.main',
                         transform: 'translateY(-2px)'
                     }
                 }}>
                     <Typography variant="caption" sx={{ 
-                        color: 'text.disabled', 
+                        color: isDark ? 'text.disabled' : 'text.secondary', 
                         textTransform: 'uppercase', 
-                        letterSpacing: isBig ? '0.1em' : '0.1em', 
-                        fontWeight: 900, 
+                        letterSpacing: '0.1em', 
+                        fontWeight: 1000, 
                         fontSize: { xs: '0.55rem', sm: isBig ? '0.62rem' : '0.65rem' },
                         mb: 0.25
                     }}>

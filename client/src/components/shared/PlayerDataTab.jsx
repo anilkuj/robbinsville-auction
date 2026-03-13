@@ -112,18 +112,18 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
     const statusCfg = {
         PENDING: { 
-            color: isDark ? '#f59e0b' : '#c2410c', 
-            bg: isDark ? '#451a03' : '#fff7ed', 
+            color: theme.palette.warning.main, 
+            bg: alpha(theme.palette.warning.main, 0.15), 
             label: 'Pending' 
         },
         SOLD: { 
-            color: isDark ? '#22c55e' : '#15803d', 
-            bg: isDark ? '#14532d' : '#f0fdf4', 
+            color: theme.palette.success.main, 
+            bg: alpha(theme.palette.success.main, 0.15), 
             label: 'Sold' 
         },
         UNSOLD: { 
-            color: isDark ? '#ef4444' : '#b91c1c', 
-            bg: isDark ? '#3b0a0a' : '#fef2f2', 
+            color: theme.palette.error.main, 
+            bg: alpha(theme.palette.error.main, 0.15), 
             label: 'Unsold' 
         },
     };
@@ -176,10 +176,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     };
 
     const poolClr = (poolId) => {
-        if (poolId?.startsWith('A')) return { color: isDark ? '#f59e0b' : '#c2410c', bg: isDark ? '#1c0d00' : '#fff7ed', border: isDark ? '#f59e0b40' : '#f59e0b40' };
-        if (poolId?.startsWith('B')) return { color: isDark ? '#60a5fa' : '#1d4ed8', bg: isDark ? '#0d1c35' : '#eff6ff', border: isDark ? '#3b82f640' : '#3b82f640' };
-        if (poolId?.startsWith('C')) return { color: isDark ? '#a78bfa' : '#6d28d9', bg: isDark ? '#150d2e' : '#f5f3ff', border: isDark ? '#8b5cf640' : '#8b5cf640' };
-        return { color: theme.palette.text.secondary, bg: isDark ? '#0f1a2e' : '#f8fafc', border: theme.palette.divider };
+        if (poolId?.startsWith('A')) return { color: theme.palette.warning.main, bg: alpha(theme.palette.warning.main, 0.1), border: alpha(theme.palette.warning.main, 0.3) };
+        if (poolId?.startsWith('B')) return { color: theme.palette.info.main, bg: alpha(theme.palette.info.main, 0.1), border: alpha(theme.palette.info.main, 0.3) };
+        if (poolId?.startsWith('C')) return { color: theme.palette.secondary.main, bg: alpha(theme.palette.secondary.main, 0.1), border: alpha(theme.palette.secondary.main, 0.3) };
+        return { color: theme.palette.text.secondary, bg: alpha(theme.palette.text.primary, 0.05), border: theme.palette.divider };
     };
 
     function handleSort(col) {
@@ -268,8 +268,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                         onClick={(e) => setFilterAnchor({ el: e.currentTarget, col })}
                         sx={{ 
                             ml: 0.5, p: 0.2, 
-                            color: hasFilter ? '#facc15' : 'rgba(100, 116, 139, 0.4)',
-                            '&:hover': { color: '#fff' }
+                            color: hasFilter ? theme.palette.warning.main : alpha(theme.palette.text.secondary, 0.4),
+                            '&:hover': { color: theme.palette.text.primary }
                         }}
                     >
                         <FilterListIcon sx={{ fontSize: '0.9rem' }} />
@@ -311,7 +311,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                     disabled={isEditing}
                                     sx={{
                                         fontSize: '0.72rem',
-                                        bgcolor: active ? `${cfg.color}20` : 'transparent',
+                                        bgcolor: active ? alpha(cfg.color, 0.2) : 'transparent',
                                         color: active ? cfg.color : 'text.disabled',
                                         borderColor: active ? cfg.color : 'divider',
                                         cursor: isEditing ? 'default' : 'pointer',
@@ -426,7 +426,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
                             return (
                                 <tr key={p.id} style={{ background: rowBg, transition: 'background 0.1s' }}
-                                    onMouseEnter={e => !isEditing && (e.currentTarget.style.background = '#162032')}
+                                    onMouseEnter={e => !isEditing && (e.currentTarget.style.background = alpha(theme.palette.primary.main, 0.1))}
                                     onMouseLeave={e => !isEditing && (e.currentTarget.style.background = rowBg)}
                                 >
                                     <TD first theme={theme} style={{ color: theme.palette.text.disabled }}>{i + 1}</TD>
@@ -441,10 +441,10 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                                 {p.name}
                                                 {owner && (
-                                                    <span style={{ background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
+                                                    <span style={{ background: alpha(theme.palette.secondary.main, 0.2), color: theme.palette.secondary.main, border: `1px solid ${alpha(theme.palette.secondary.main, 0.4)}`, borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>
                                                 )}
                                                 {spillovers.includes(p.id) && (
-                                                    <span style={{ background: '#1e293b', color: '#94a3b8', border: '1px solid #47556960', borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }} title="This player will not be drafted randomly and must be auctioned manually">MANUAL SALE</span>
+                                                    <span style={{ background: alpha(theme.palette.text.secondary, 0.1), color: theme.palette.text.secondary, border: `1px solid ${alpha(theme.palette.text.secondary, 0.3)}`, borderRadius: 3, padding: '0.05rem 0.35rem', fontSize: '0.62rem', fontWeight: 700 }} title="This player will not be drafted randomly and must be auctioned manually">MANUAL SALE</span>
                                                 )}
                                             </span>
                                         )}
@@ -493,11 +493,11 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                                     />
                                                 ) : (
                                                     owner && p.soldFor ? (
-                                                        <span style={{ color: '#a78bfa', fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: '#7c3aed', fontSize: '0.65rem' }}>avg</span></span>
+                                                        <span style={{ color: theme.palette.secondary.main, fontWeight: 600 }}>{formatPts(p.soldFor)} <span style={{ color: theme.palette.secondary.dark, fontSize: '0.65rem' }}>avg</span></span>
                                                     ) : p.soldFor ? (
-                                                        <span style={{ color: '#22c55e', fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
+                                                        <span style={{ color: theme.palette.success.main, fontWeight: 600 }}>{formatPts(p.soldFor)}</span>
                                                     ) : (
-                                                        <span style={{ color: '#334155' }}>—</span>
+                                                        <span style={{ color: theme.palette.text.disabled }}>—</span>
                                                     )
                                                 )}
                                             </TD>
@@ -640,7 +640,7 @@ function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
                 }
             }}
         >
-            <Box sx={{ p: 1.5, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+            <Box sx={{ p: 1.5, pb: 1, borderBottom: '1px solid', borderColor: 'divider' }}>
                 <TextField
                     size="small"
                     placeholder="Search values..."
@@ -661,13 +661,13 @@ function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
             <MenuItem 
                 dense 
                 onClick={handleSelectAll}
-                sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}
+                sx={{ borderBottom: '1px solid', borderColor: 'divider', py: 1 }}
             >
                 <Checkbox 
                     size="small" 
                     checked={selected.length === values.length && values.length > 0} 
                     indeterminate={selected.length > 0 && selected.length < values.length}
-                    sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#facc15' }, '&.MuiCheckbox-indeterminate': { color: '#facc15' } }}
+                    sx={{ color: 'text.disabled', '&.Mui-checked': { color: 'primary.main' }, '&.MuiCheckbox-indeterminate': { color: 'primary.main' } }}
                 />
                 <Typography variant="body2" sx={{ fontWeight: 700 }}>Select All</Typography>
             </MenuItem>
@@ -677,7 +677,7 @@ function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
                         <Checkbox 
                             size="small" 
                             checked={selected.includes(v)} 
-                            sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#facc15' } }}
+                            sx={{ color: 'text.disabled', '&.Mui-checked': { color: 'primary.main' } }}
                         />
                         <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>{v}</Typography>
                     </MenuItem>

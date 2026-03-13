@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import rplLogo from '../assets/rpl-logo.jpg';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -43,6 +44,8 @@ import PhaseBar from '../components/auction/PhaseBar.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuctionPage() {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const { auctionState, connected, lastEvent, preparedBid } = useAuction();
   const { user, logout } = useAuth();
   
@@ -229,7 +232,7 @@ export default function AuctionPage() {
                 <Typography variant="h5" fontWeight={900} color="success.main">
                   {formatPts(myTeam?.budget || 0)}
                 </Typography>
-                <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>REMAINING BUDGET</Typography>
+                <Typography variant="caption" color={isDark ? "text.disabled" : "text.secondary"} sx={{ fontWeight: 900, letterSpacing: '0.02em' }}>REMAINING BUDGET</Typography>
               </Box>
             </Box>
           </Box>
@@ -249,11 +252,12 @@ export default function AuctionPage() {
                 width: '100%', 
                 fontWeight: 800, 
                 fontSize: '1.1rem',
-                bgcolor: toast?.type === 'sold' ? 'success.main' : 'rgba(30, 41, 59, 0.9)',
-                color: 'white',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                '& .MuiAlert-icon': { fontSize: '1.6rem' }
+                bgcolor: toast?.type === 'sold' ? 'success.main' : (isDark ? 'rgba(30, 41, 59, 0.9)' : alpha(theme.palette.background.paper, 0.95)),
+                color: toast?.type === 'sold' ? 'white' : 'text.primary',
+                boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.1)',
+                border: '1px solid',
+                borderColor: 'divider',
+                '& .MuiAlert-icon': { fontSize: '1.6rem', color: toast?.type === 'sold' ? 'white' : 'primary.main' }
               }}
             >
               {toast?.msg}
@@ -387,7 +391,7 @@ export default function AuctionPage() {
                     <Box sx={{ py: 0.5 }}>
                       <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
                         {['Player', 'Pool', 'Price'].map(h => (
-                          <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
+                          <Typography key={h} variant="caption" color={isDark ? "text.disabled" : "text.secondary"} sx={{ textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 900, textAlign: h === 'Price' ? 'right' : 'left' }}>{h}</Typography>
                         ))}
                       </Box>
                       {roster.map((r, i) => (
@@ -430,7 +434,7 @@ export default function AuctionPage() {
                             />
                         </Box>
                         <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
-                             <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>
+                             <Typography variant="caption" color={isDark ? "text.disabled" : "text.secondary"} sx={{ fontWeight: 900 }}>
                                  * Latest bids shown at top
                              </Typography>
                         </Box>

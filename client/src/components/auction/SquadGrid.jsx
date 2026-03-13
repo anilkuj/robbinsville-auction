@@ -78,7 +78,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                 }}
             >
                 {!minimal && (
-                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'text.disabled', width: 20 }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'text.secondary', width: 20 }}>
                         {index + 1}
                     </Typography>
                 )}
@@ -96,7 +96,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             fontSize: '0.55rem', 
                             fontWeight: 1000, 
                             bgcolor: teamColor, 
-                            color: '#fff', 
+                            color: theme.palette.getContrastText?.(teamColor) || '#fff', 
                             '& .MuiChip-label': { px: 0.6 } 
                         }} 
                     />
@@ -133,8 +133,8 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     width: '100%'
                 }}
             >
-                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha('#000', 0.5) }}>
-                    <Typography sx={{ fontWeight: 1000, fontSize: { xs: '1.8rem', md: '2.5rem' }, fontStyle: 'italic', color: '#fff', lineHeight: 1 }}>
+                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha(theme.palette.text.primary, 0.2) }}>
+                    <Typography sx={{ fontWeight: 1000, fontSize: { xs: '1.8rem', md: '2.5rem' }, fontStyle: 'italic', color: 'text.primary', lineHeight: 1 }}>
                         {index + 1}
                     </Typography>
                 </Box>
@@ -155,7 +155,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                                     fontSize: '0.65rem', 
                                     fontWeight: 1000, 
                                     bgcolor: teamColor, 
-                                    color: '#fff', 
+                                    color: theme.palette.getContrastText?.(teamColor) || '#fff', 
                                     '& .MuiChip-label': { px: 1 } 
                                 }} 
                             />
@@ -277,7 +277,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             startIcon={showPoints ? <VisibilityOffIcon /> : <VisibilityIcon />}
                             onClick={() => setShowPoints(!showPoints)}
                              sx={{ 
-                                color: isDark ? '#fff' : 'text.primary', 
+                                color: 'text.primary', 
                                 borderColor: 'divider',
                                 '&:hover': { borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) },
                                 borderRadius: '4px'
@@ -292,8 +292,8 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             startIcon={<DownloadIcon />}
                             onClick={handleDownload}
                             sx={{ 
-                                bgcolor: '#facc15', color: '#000', fontWeight: 1000,
-                                '&:hover': { bgcolor: '#eab308' },
+                                bgcolor: 'warning.main', color: 'warning.contrastText', fontWeight: 1000,
+                                '&:hover': { bgcolor: 'warning.dark' },
                                 borderRadius: '4px', px: 3
                             }}
                         >
@@ -323,14 +323,14 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                 {/* Visual Elements */}
                 {!minimal && (
                     <>
-                        <Box sx={{ position: 'absolute', inset: 0, backgroundImage: 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)', backgroundSize: '30px 30px', pointerEvents: 'none' }} />
-                        <Box sx={{ position: 'absolute', top: -100, left: '10%', width: 500, height: 500, background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
+                        <Box sx={{ position: 'absolute', inset: 0, backgroundImage: isDark ? 'linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)' : 'linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px)', backgroundSize: '30px 30px', pointerEvents: 'none' }} />
+                        <Box sx={{ position: 'absolute', top: -100, left: '10%', width: 500, height: 500, background: isDark ? 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%)' : 'radial-gradient(circle, rgba(59, 130, 246, 0.05) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none' }} />
                     </>
                 )}
 
                 {/* Header */}
                 {!minimal && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '4px solid', borderColor: isDark ? '#fff' : 'text.primary', pb: 2, mb: 4, zIndex: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '4px solid', borderColor: isDark ? 'white' : 'text.primary', pb: 2, mb: 4, zIndex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Box component="img" src={rplLogo} sx={{ height: 80, borderRadius: '4px', border: '1px solid', borderColor: 'divider' }} />
@@ -340,7 +340,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             </Box>
                             <Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-                                    <Box sx={{ bgcolor: isDark ? '#fff' : 'text.primary', color: isDark ? '#000' : 'background.paper', px: 1.5, py: 0.3, fontWeight: 1000, fontSize: '1.2rem', borderRadius: '2px' }}>RPL 2026</Box>
+                                    <Box sx={{ bgcolor: isDark ? 'white' : 'text.primary', color: isDark ? 'black' : 'background.paper', px: 1.5, py: 0.3, fontWeight: 1000, fontSize: '1.2rem', borderRadius: '2px' }}>RPL 2026</Box>
                                     <Typography sx={{ fontWeight: 800, textTransform: 'uppercase', color: 'text.secondary', opacity: 0.8, letterSpacing: '0.1em', fontSize: '1rem' }}>
                                         {singleTeamId ? 'OFFICIAL ROSTER' : (phase === 'ENDED' ? 'AUCTION SUMMARY' : 'LIVE AUCTION FEED')}
                                     </Typography>

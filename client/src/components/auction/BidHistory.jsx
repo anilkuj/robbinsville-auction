@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import { formatPts } from '../../utils/budgetCalc.js';
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -7,6 +8,8 @@ import TeamLogo from '../shared/TeamLogo.jsx';
 import Typography from '@mui/material/Typography';
 
 export default function BidHistory({ history = [], teams = {} }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const topRef = useRef(null);
 
   useEffect(() => {
@@ -31,9 +34,9 @@ export default function BidHistory({ history = [], teams = {} }) {
             borderRadius: 1,
             px: 1,
             py: 0.4,
-            bgcolor: i === 0 ? (teams?.[entry.teamId]?.color ? `${teams[entry.teamId].color}20` : '#14532d30') : 'background.paper',
+            bgcolor: i === 0 ? (teams?.[entry.teamId]?.color ? alpha(teams[entry.teamId].color, 0.2) : alpha(theme.palette.success.main, 0.15)) : 'background.paper',
             border: '1px solid',
-            borderColor: i === 0 ? (teams?.[entry.teamId]?.color || '#22c55e40') : 'divider',
+            borderColor: i === 0 ? (teams?.[entry.teamId]?.color || theme.palette.success.main) : 'divider',
             display: 'flex',
             justifyContent: 'space-between',
           }}
@@ -51,7 +54,7 @@ export default function BidHistory({ history = [], teams = {} }) {
           <Typography
             variant="body2"
             fontWeight={600}
-            sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.disabled', fontVariantNumeric: 'tabular-nums' }}
+            sx={{ color: i === 0 ? (teams[entry.teamId]?.color || 'success.main') : 'text.secondary', fontVariantNumeric: 'tabular-nums' }}
           >
             {formatPts(entry.amount)}
           </Typography>

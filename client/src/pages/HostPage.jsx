@@ -35,6 +35,7 @@ import { useTheme, alpha } from '@mui/material/styles';
 
 export default function HostPage() {
     const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const { user, logout } = useAuth();
     const { auctionState, connected } = useAuction();
     const [rightWidth, setRightWidth] = useState(380);
@@ -318,7 +319,7 @@ export default function HostPage() {
                     <>
                         {isRightPaneOpen && (
                             <Box
-                                sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+                                sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: 'divider', zIndex: 10, '&:hover': { bgcolor: 'primary.main' } }}
                                 onMouseDown={startDragRight}
                                 title="Drag to resize"
                             />
@@ -410,11 +411,12 @@ export default function HostPage() {
                         width: '100%', 
                         fontWeight: 800, 
                         fontSize: '1.2rem',
-                        bgcolor: toast?.type === 'sold' ? 'success.main' : 'rgba(30, 41, 59, 0.9)',
-                        color: 'white',
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        '& .MuiAlert-icon': { fontSize: '1.8rem' }
+                        bgcolor: toast?.type === 'sold' ? 'success.main' : (isDark ? 'rgba(30, 41, 59, 0.9)' : alpha(theme.palette.background.paper, 0.95)),
+                        color: toast?.type === 'sold' ? 'white' : 'text.primary',
+                        boxShadow: isDark ? '0 8px 32px rgba(0,0,0,0.4)' : '0 4px 16px rgba(0,0,0,0.1)',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        '& .MuiAlert-icon': { fontSize: '1.8rem', color: toast?.type === 'sold' ? 'white' : 'primary.main' }
                     }}
                 >
                     {toast?.msg}

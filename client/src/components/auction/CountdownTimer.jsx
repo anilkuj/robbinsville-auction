@@ -1,6 +1,7 @@
 import React from 'react';
 import { useCountdown } from '../../hooks/useCountdown.js';
 import { motion } from 'framer-motion';
+import { useTheme, alpha } from '@mui/material/styles';
 import { audioSystem } from '../../utils/audioSystem.js';
 
 const SIZE = 120;
@@ -8,13 +9,15 @@ const STROKE = 8;
 const R = (SIZE - STROKE) / 2;
 const CIRC = 2 * Math.PI * R;
 
-function getColor(pct) {
-  if (pct > 0.5) return '#22c55e';
-  if (pct > 0.25) return '#f59e0b';
-  return '#ef4444';
+function getColor(pct, theme) {
+  if (pct > 0.5) return theme.palette.success.main;
+  if (pct > 0.25) return theme.palette.warning.main;
+  return theme.palette.error.main;
 }
 
 export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainingOnPause, timerSeconds = 30, endMode = 'timer', size = 'normal' }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const isBig = size === 'big';
   const displaySize = isBig ? 130 : { xs: 100, sm: 120 };
   const stroke = isBig ? 8.5 : { xs: 7, sm: 8 };
@@ -28,7 +31,7 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
   const remaining = useCountdown(timerEndsAt, timerPaused, timerRemainingOnPause);
   const awaitingHammer = endMode === 'manual' && !timerPaused && !timerEndsAt;
   const pct = awaitingHammer ? 0 : (timerSeconds > 0 ? Math.min(1, remaining / timerSeconds) : 0);
-  const color = timerPaused ? '#f59e0b' : awaitingHammer ? '#a855f7' : getColor(pct);
+  const color = timerPaused ? theme.palette.warning.main : awaitingHammer ? theme.palette.secondary.main : getColor(pct, theme);
   const dashOffset = circ * (1 - pct);
 
   const warningState = !timerPaused && !awaitingHammer && remaining <= 5 && remaining > 0;
@@ -49,7 +52,7 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
     >
       <svg width={dSize} height={dSize} style={{ transform: 'rotate(-90deg)' }}>
         {/* Track */}
-        <circle cx={dSize / 2} cy={dSize / 2} r={r} fill="none" stroke="#1e293b" strokeWidth={strk} />
+        <circle cx={dSize / 2} cy={dSize / 2} r={r} fill="none" stroke={theme.palette.divider} strokeWidth={strk} />
         {/* Progress */}
         <circle
           cx={dSize / 2} cy={dSize / 2} r={r}
@@ -74,7 +77,7 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
           {timerPaused ? '⏸' : awaitingHammer ? '🔨' : remaining}
         </text>
       </svg>
-      <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: isBig ? '0.8rem' : { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 700 }}>
+      <span style={{ color: awaitingHammer ? theme.palette.secondary.main : theme.palette.text.disabled, fontSize: isBig ? '0.8rem' : { xs: '0.6rem', sm: '0.75rem' }, fontWeight: 700 }}>
         {timerPaused ? 'PAUSED' : awaitingHammer ? 'HAMMER?' : 'seconds'}
       </span>
     </motion.div>

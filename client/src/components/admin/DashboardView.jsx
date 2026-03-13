@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import ExcelJS from 'exceljs';
 import { saveAs } from 'file-saver';
 import Button from '@mui/material/Button';
@@ -201,6 +202,8 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
   }, [rightWidth]);
 
   const { phase, teams = {}, leagueConfig = {}, players = [], currentPlayerIndex, currentBid } = state || {};
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const startingBudget = leagueConfig?.startingBudget ?? 0;
   const squadSize = leagueConfig?.squadSize ?? 0;
   const currentPlayer = (phase === 'LIVE' || phase === 'PAUSED') ? players?.[currentPlayerIndex] : null;
@@ -212,9 +215,9 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
       {/* Current player banner */}
       {currentPlayer && (
         <Paper square sx={{
-          bgcolor: phase === 'PAUSED' ? '#1c0a00' : '#0c1a10',
+          bgcolor: phase === 'PAUSED' ? alpha('#f59e0b', 0.1) : alpha('#10b981', 0.1),
           borderBottom: '1px solid',
-          borderColor: phase === 'PAUSED' ? '#92400e' : '#166534',
+          borderColor: phase === 'PAUSED' ? 'warning.main' : 'success.main',
           px: { xs: 1.5, sm: 3 }, py: 1.5,
           display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 }, flexWrap: 'wrap',
         }}>
@@ -255,7 +258,7 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
             </Button>
           </Box>
 
-          <Box sx={{ p: { xs: 0, sm: 2 }, bgcolor: '#0a0f1e', borderRadius: 2 }}>
+          <Box sx={{ p: { xs: 0, sm: 2 }, bgcolor: isDark ? 'rgba(10, 15, 30, 0.4)' : alpha(theme.palette.background.paper, 0.5), borderRadius: 2 }}>
             <BudgetChart teams={teams} startingBudget={startingBudget} preparedBid={preparedBid} currentUser={currentUser} currentBid={currentBid} />
 
             <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(auto-fill, minmax(320px, 1fr))' }, gap: 2 }}>
@@ -289,7 +292,7 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
             <Box
               onMouseDown={startDragRight}
               title="Drag to resize"
-              sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: '#1e293b', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: '#334155' } }}
+              sx={{ display: { xs: 'none', lg: 'block' }, width: '5px', flexShrink: 0, cursor: 'col-resize', bgcolor: 'divider', transition: 'background 0.15s', zIndex: 10, '&:hover': { bgcolor: 'primary.main' } }}
             />
             <RemainingPlayersPane
               players={players}
@@ -307,6 +310,8 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
 // ── Remaining Players Pane ────────────────────────────────────────────────────
 
 export function RemainingPlayersPane({ players, pools, currentPlayerId, spilloverIds = [], width = 380 }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const [isOpen, setIsOpen] = React.useState(() => window.innerWidth >= 1200);
   const pending = players.filter(p => p.status === 'PENDING');
   const poolOrder = pools.map(p => p.id);
@@ -346,7 +351,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
       top: 0,
       right: 0,
       zIndex: 1200,
-      boxShadow: { xs: '-4px 0 16px rgba(0,0,0,0.5)', lg: 'none' }
+      boxShadow: { xs: isDark ? '-4px 0 16px rgba(0,0,0,0.5)' : '-4px 0 16px rgba(0,0,0,0.08)', lg: 'none' }
     }}>
       <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, bgcolor: 'background.paper' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -364,16 +369,18 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
         ) : (
           orderedPools.map(poolId => {
             const poolPlayers = byPool[poolId];
-            const clr = poolColor(poolId);
+            const clr = poolColor(poolId, isDark, alpha);
             const GRID = 'minmax(0,1fr) 50px 60px';
             return (
               <div key={poolId}>
-                <div style={{ padding: '0.45rem 1rem', background: clr.bg, borderTop: `2px solid ${clr.border}`, borderBottom: `1px solid ${clr.border}50`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
+                <div style={{ padding: '0.45rem 1rem', background: clr.bg, borderTop: `2px solid ${clr.border}`, borderBottom: `1px solid ${alpha(clr.border, 0.3)}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }}>
                   <span style={{ color: clr.text, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700 }}>Pool {poolId}</span>
                   <span style={{ color: clr.text, fontSize: '0.68rem', fontWeight: 700, opacity: 0.75 }}>{poolPlayers.length}</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: GRID, background: '#0c1521', borderBottom: `1px solid ${clr.border}30` }}>
-                  <DColHead label="Player" first /><DColHead label="Pool" center /><DColHead label="Base" right />
+                <div style={{ display: 'grid', gridTemplateColumns: GRID, background: isDark ? alpha('#000', 0.2) : alpha(theme.palette.background.default, 0.5), borderBottom: `1px solid ${theme.palette.divider}` }}>
+                  <DColHead label="Player" first divider={theme.palette.divider} />
+                  <DColHead label="Pool" center divider={theme.palette.divider} />
+                  <DColHead label="Base" right divider={theme.palette.divider} />
                 </div>
                 {sortPlayersByPoints(poolPlayers, avgKey).map((player, rowIdx) => {
                   const isOnBlock = player.id === currentPlayerId;
@@ -381,30 +388,32 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
                   const typeKey = Object.keys(player.extra || {}).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
                   const isOwner = typeKey ? String(player.extra[typeKey]).toLowerCase() === 'owner' : false;
 
-                  let rowBg = isOnBlock ? '#0c1a10' : rowIdx % 2 === 0 ? 'transparent' : '#0d1825';
-                  if (isSpillover && !isOnBlock) rowBg = '#270a0a';
+                  const rowBg = isOnBlock 
+                    ? alpha(theme.palette.success.main, 0.1) 
+                    : rowIdx % 2 === 0 ? 'transparent' : alpha(theme.palette.text.primary, 0.02);
+                  if (isSpillover && !isOnBlock) rowBg = alpha(theme.palette.error.main, 0.1);
 
                   return (
                     <div key={player.id} style={{
                       display: 'grid',
                       gridTemplateColumns: GRID,
                       background: rowBg,
-                      borderBottom: '1px solid #0f172a',
-                      ...(isSpillover && { borderLeft: '3px solid #ef4444' })
+                      borderBottom: `1px solid ${theme.palette.divider}`,
+                      ...(isSpillover && { borderLeft: `3px solid ${theme.palette.error.main}` })
                     }}>
-                      <DCell first style={{
-                        color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#cbd5e1',
+                      <DCell first divider={theme.palette.divider} style={{
+                        color: isOnBlock ? theme.palette.success.main : isSpillover ? theme.palette.error.main : isOwner ? theme.palette.secondary.main : theme.palette.text.primary,
                         fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400
                       }}>
                         {isOnBlock && <span style={{ marginRight: '4px' }}>▶</span>}
                         {player.name}
                         {isOwner && <span style={{ marginLeft: '6px', background: '#1e1035', color: '#a78bfa', border: '1px solid #7c3aed60', borderRadius: 3, padding: '0px 3px', fontSize: '0.62rem', fontWeight: 700 }}>OWNER</span>}
-                        {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: '#ef4444', border: '1px solid #ef444460', borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
+                        {isSpillover && <span style={{ marginLeft: '6px', fontSize: '0.6rem', color: theme.palette.error.main, border: `1px solid ${alpha(theme.palette.error.main, 0.4)}`, borderRadius: '2px', padding: '0px 3px' }}>MANUAL SALE</span>}
                       </DCell>
-                      <DCell center>
-                        <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${clr.border}50`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{player.pool}</span>
+                      <DCell center divider={theme.palette.divider}>
+                        <span style={{ background: clr.bg, color: clr.text, border: `1px solid ${alpha(clr.border, 0.3)}`, borderRadius: '4px', padding: '0.1rem 0.35rem', fontSize: '0.65rem', fontWeight: 700 }}>{player.pool}</span>
                       </DCell>
-                      <DCell right style={{ color: isOnBlock ? '#22c55e' : isSpillover ? '#f87171' : isOwner ? '#a78bfa' : '#475569', fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
+                      <DCell right divider={theme.palette.divider} style={{ color: isOnBlock ? theme.palette.success.main : isSpillover ? theme.palette.error.main : isOwner ? theme.palette.secondary.main : theme.palette.text.secondary, fontWeight: (isOnBlock || isSpillover || isOwner) ? 700 : 400 }}>
                         {isOwner ? <span style={{ fontSize: '0.65rem', opacity: 0.8 }}>AVG-SYNCED</span> : fmtPts(player.basePrice)}
                       </DCell>
                     </div>
@@ -422,6 +431,8 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
 // ── Team Card ─────────────────────────────────────────────────────────────────
 
 function TeamCard({ team, teams, players, startingBudget, squadSize, isLeading, preparedBid, currentUser, currentBid, phase }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const isMyTeam = currentUser?.teamId === team.id;
   const currentBidAmount = isLeading ? (currentBid?.amount || 0) : 0;
   const pendingSpend = isLeading ? currentBidAmount : (isMyTeam && preparedBid > 0 ? preparedBid : 0);
@@ -496,7 +507,7 @@ function TeamCard({ team, teams, players, startingBudget, squadSize, isLeading, 
       </Box>
 
       {roster.length > 0 ? (
-        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: '#0c1221' }}>
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: isDark ? alpha('#000', 0.2) : alpha(team.color || '#000', 0.03) }}>
           <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
             <SquadGrid 
               teams={teams} 
@@ -521,6 +532,8 @@ function TeamCard({ team, teams, players, startingBudget, squadSize, isLeading, 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentBid }) {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === 'dark';
   const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
   if (teamList.length === 0 || startingBudget <= 0) return null;
 
@@ -559,22 +572,38 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
   );
 }
 
-function poolColor(poolId) {
-  if (poolId.startsWith('A')) return { bg: '#1c0d00', border: '#f59e0b', text: '#f59e0b' };
-  if (poolId.startsWith('B')) return { bg: '#0d1c35', border: '#3b82f6', text: '#60a5fa' };
-  if (poolId === 'C') return { bg: '#150d2e', border: '#8b5cf6', text: '#a78bfa' };
-  return { bg: '#0f1a2e', border: '#64748b', text: '#94a3b8' };
+function poolColor(poolId, isDark, alpha) {
+  if (poolId.startsWith('A')) return { 
+    bg: isDark ? '#1c0d00' : '#fff7ed', 
+    border: '#f59e0b', 
+    text: isDark ? '#f59e0b' : '#c2410c' 
+  };
+  if (poolId.startsWith('B')) return { 
+    bg: isDark ? '#0d1c35' : '#eff6ff', 
+    border: '#3b82f6', 
+    text: isDark ? '#60a5fa' : '#1d4ed8' 
+  };
+  if (poolId === 'C') return { 
+    bg: isDark ? '#150d2e' : '#f5f3ff', 
+    border: '#8b5cf6', 
+    text: isDark ? '#a78bfa' : '#6d28d9' 
+  };
+  return { 
+    bg: isDark ? '#0f1a2e' : '#f8fafc', 
+    border: '#64748b', 
+    text: isDark ? '#94a3b8' : '#475569' 
+  };
 }
 
-function DColHead({ label, first, right }) {
+function DColHead({ label, first, right, divider }) {
   return (
-    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748b', borderLeft: first ? 'none' : '1px solid #1e293b', textAlign: right ? 'right' : first ? 'left' : 'center', whiteSpace: 'nowrap', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }) }}>{label}</span>
+    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.62rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'text.disabled', borderLeft: first ? 'none' : `1px solid ${divider}`, textAlign: right ? 'right' : first ? 'left' : 'center', whiteSpace: 'nowrap', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }) }}>{label}</span>
   );
 }
 
-function DCell({ children, first, right, center, style = {} }) {
+function DCell({ children, first, right, center, divider, style = {} }) {
   return (
-    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.74rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: first ? 'none' : '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }), ...style }}>{children}</span>
+    <span style={{ padding: '0.32rem 0.6rem', fontSize: '0.74rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: first ? 'none' : `1px solid ${divider}`, display: 'flex', alignItems: 'center', justifyContent: right ? 'flex-end' : center ? 'center' : 'flex-start', ...(first && { paddingLeft: '1rem' }), ...(right && { paddingRight: '1rem' }), ...style }}>{children}</span>
   );
 }
 

@@ -31,8 +31,8 @@ export const getThemeOptions = (mode) => ({
     success: { main: '#10b981' },
     error: { main: '#ef4444' },
     background: { 
-      default: mode === 'dark' ? '#0b0e14' : '#f8fafc', 
-      paper: mode === 'dark' ? '#111827' : '#ffffff',
+      default: mode === 'dark' ? '#0b0e14' : '#f1f5f9', 
+      paper: mode === 'dark' ? '#111827' : '#f8fafc',
     },
     text: { 
       primary: mode === 'dark' ? '#f8fafc' : '#0f172a', 
@@ -123,7 +123,7 @@ export const getThemeOptions = (mode) => ({
     MuiAppBar: {
       styleOverrides: {
         root: { 
-          background: mode === 'dark' ? 'rgba(17, 24, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          background: mode === 'dark' ? 'rgba(17, 24, 39, 0.8)' : 'rgba(241, 245, 249, 0.8)',
           backdropFilter: 'blur(12px)',
           borderBottom: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)', 
           boxShadow: 'none',
@@ -138,7 +138,7 @@ export const getThemeOptions = (mode) => ({
           margin: 0, 
           padding: 0, 
           minHeight: '100vh',
-          backgroundColor: mode === 'dark' ? '#0b0e14' : '#f8fafc',
+          backgroundColor: mode === 'dark' ? '#0b0e14' : '#f1f5f9',
         },
         body: {
           backgroundImage: mode === 'dark' 
@@ -154,7 +154,7 @@ export const getThemeOptions = (mode) => ({
           '&:hover': { background: mode === 'dark' ? '#475569' : '#94a3b8' },
         },
         '.glass-panel': {
-          background: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(255, 255, 255, 0.7)',
+          background: mode === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(241, 245, 249, 0.7)',
           backdropFilter: 'blur(12px)',
           border: mode === 'dark' ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid rgba(0, 0, 0, 0.06)',
           borderRadius: 16,

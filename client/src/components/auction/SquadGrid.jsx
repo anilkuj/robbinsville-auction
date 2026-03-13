@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useTheme, alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Paper from '@mui/material/Paper';
@@ -25,6 +26,8 @@ import rplLogo from '../../assets/rpl-logo.jpg';
  */
 export default function SquadGrid({ teams = {}, players = [], singleTeamId = null, hideToggle = false, hidePoints = false, phase = 'ENDED', minimal = false }) {
     if (!teams || !players) return null;
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const posterRef = useRef(null);
     const [showPoints, setShowPoints] = useState(false);
     const soldPlayers = players.filter(p => p.status === 'SOLD');
@@ -68,19 +71,19 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     gap: 1.5,
                     py: 0.6,
                     px: minimal ? 1 : 0.5,
-                    bgcolor: isOwner ? `${teamColor}20` : 'transparent',
+                    bgcolor: isOwner ? alpha(teamColor, isDark ? 0.2 : 0.1) : 'transparent',
                     borderLeft: isOwner ? `3px solid ${teamColor}` : 'none',
-                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                    borderBottom: `1px solid ${theme.palette.divider}`,
                     '&:last-child': { borderBottom: 'none' }
                 }}
             >
                 {!minimal && (
-                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', width: 20 }}>
+                    <Typography sx={{ fontWeight: 900, fontSize: '0.8rem', color: 'text.disabled', width: 20 }}>
                         {index + 1}
                     </Typography>
                 )}
                 <Box sx={{ flex: 1, overflow: 'hidden' }}>
-                    <Typography noWrap sx={{ fontWeight: 800, fontSize: minimal ? '0.85rem' : '0.9rem', color: '#fff', textTransform: 'uppercase' }}>
+                    <Typography noWrap sx={{ fontWeight: 800, fontSize: minimal ? '0.85rem' : '0.9rem', color: 'text.primary', textTransform: 'uppercase' }}>
                         {name}
                     </Typography>
                 </Box>
@@ -119,18 +122,18 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     display: 'grid', 
                     gridTemplateColumns: '60px 1fr',
                     alignItems: 'center', 
-                    bgcolor: isOwner ? `${teamColor}35` : 'rgba(15, 20, 35, 0.95)', 
+                    bgcolor: isOwner ? alpha(teamColor, isDark ? 0.35 : 0.15) : (isDark ? 'rgba(15, 20, 35, 0.95)' : 'background.paper'), 
                     border: '1px solid',
-                    borderColor: isOwner ? teamColor : 'rgba(255,255,255,0.15)',
+                    borderColor: isOwner ? teamColor : 'divider',
                     borderLeft: `10px solid ${teamColor}`,
                     borderRadius: '3px',
                     overflow: 'hidden',
                     height: { xs: 70, md: 80 }, 
-                    boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
+                    boxShadow: isDark ? '0 8px 30px rgba(0,0,0,0.6)' : '0 4px 12px rgba(0,0,0,0.05)',
                     width: '100%'
                 }}
             >
-                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.5)' }}>
+                <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: alpha('#000', 0.5) }}>
                     <Typography sx={{ fontWeight: 1000, fontSize: { xs: '1.8rem', md: '2.5rem' }, fontStyle: 'italic', color: '#fff', lineHeight: 1 }}>
                         {index + 1}
                     </Typography>
@@ -139,7 +142,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     <Typography sx={{ fontWeight: 1000, fontSize: '0.7rem', color: teamColor, textTransform: 'uppercase', mb: 0.1 }}>
                         {team?.name || 'Unknown Team'}
                     </Typography>
-                    <Typography noWrap sx={{ fontWeight: 1000, textTransform: 'uppercase', lineHeight: 1, color: '#fff', fontSize: { xs: '1rem', md: '1.2rem' }, fontStyle: 'italic' }}>
+                    <Typography noWrap sx={{ fontWeight: 1000, textTransform: 'uppercase', lineHeight: 1, color: isDark ? '#fff' : 'text.primary', fontSize: { xs: '1rem', md: '1.2rem' }, fontStyle: 'italic' }}>
                         {name}
                     </Typography>
                     {(player.isPendingOwner || player.isVirtualOwner) && (
@@ -232,21 +235,22 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                         p: 1.5, 
                         display: 'flex', 
                         flexDirection: 'column', 
-                        bgcolor: 'rgba(15, 20, 35, 0.7)',
-                        border: '1px solid rgba(255,255,255,0.1)',
+                        bgcolor: isDark ? 'rgba(15, 20, 35, 0.7)' : 'background.paper',
+                        border: '1px solid',
+                        borderColor: 'divider',
                         borderTop: `4px solid ${teamColor}`,
                         borderRadius: '4px',
                         minHeight: 400
                     }}
                 >
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, borderBottom: '1px solid rgba(255,255,255,0.1)', pb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, borderBottom: '1px solid', borderColor: 'divider', pb: 1 }}>
                         <TeamLogo team={safeTeam} size={30} border={false} />
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                             <Typography variant="subtitle2" noWrap sx={{ fontWeight: 1000, textTransform: 'uppercase', fontStyle: 'italic', fontSize: '0.85rem' }}>
                                 {safeTeam.name}
                             </Typography>
                         </Box>
-                        <Typography sx={{ fontWeight: 900, color: 'rgba(255,255,255,0.3)', fontSize: '0.75rem' }}>
+                        <Typography sx={{ fontWeight: 900, color: 'text.disabled', fontSize: '0.75rem' }}>
                             {teamPlayers.length}
                         </Typography>
                     </Box>
@@ -272,9 +276,10 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             variant="outlined"
                             startIcon={showPoints ? <VisibilityOffIcon /> : <VisibilityIcon />}
                             onClick={() => setShowPoints(!showPoints)}
-                            sx={{ 
-                                color: '#fff', borderColor: 'rgba(255,255,255,0.3)',
-                                '&:hover': { borderColor: '#fff', bgcolor: 'rgba(255,255,255,0.05)' },
+                             sx={{ 
+                                color: isDark ? '#fff' : 'text.primary', 
+                                borderColor: 'divider',
+                                '&:hover': { borderColor: 'primary.main', bgcolor: alpha(theme.palette.primary.main, 0.05) },
                                 borderRadius: '4px'
                             }}
                         >
@@ -306,8 +311,8 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     maxWidth: singleTeamId ? 1000 : 1800,
                     minHeight: minimal ? 'auto' : '100vh', 
                     p: minimal ? 1 : 4,
-                    background: minimal ? 'transparent' : 'radial-gradient(circle at 50% 50%, #1a1e2e 0%, #050505 100%)',
-                    color: 'white',
+                    background: minimal ? 'transparent' : (isDark ? 'radial-gradient(circle at 50% 50%, #1a1e2e 0%, #050505 100%)' : 'radial-gradient(circle at 50% 50%, #f1f5f9 0%, #e2e8f0 100%)'),
+                    color: 'text.primary',
                     fontFamily: '"Inter Tight", "Inter", sans-serif',
                     position: 'relative',
                     display: 'flex',
@@ -325,23 +330,23 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
 
                 {/* Header */}
                 {!minimal && (
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '4px solid #fff', pb: 2, mb: 4, zIndex: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', borderBottom: '4px solid', borderColor: isDark ? '#fff' : 'text.primary', pb: 2, mb: 4, zIndex: 1 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <Box component="img" src={rplLogo} sx={{ height: 80, borderRadius: '4px', border: '1px solid rgba(255,255,255,0.3)' }} />
+                                <Box component="img" src={rplLogo} sx={{ height: 80, borderRadius: '4px', border: '1px solid', borderColor: 'divider' }} />
                                 {singleTeamId && teams?.[singleTeamId] && (
                                     <TeamLogo team={teams[singleTeamId]} size={80} border={true} />
                                 )}
                             </Box>
                             <Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 0.5 }}>
-                                    <Box sx={{ bgcolor: '#fff', color: '#000', px: 1.5, py: 0.3, fontWeight: 1000, fontSize: '1.2rem', borderRadius: '2px' }}>RPL 2026</Box>
-                                    <Typography sx={{ fontWeight: 800, textTransform: 'uppercase', opacity: 0.8, letterSpacing: '0.1em', fontSize: '1rem' }}>
+                                    <Box sx={{ bgcolor: isDark ? '#fff' : 'text.primary', color: isDark ? '#000' : 'background.paper', px: 1.5, py: 0.3, fontWeight: 1000, fontSize: '1.2rem', borderRadius: '2px' }}>RPL 2026</Box>
+                                    <Typography sx={{ fontWeight: 800, textTransform: 'uppercase', color: 'text.secondary', opacity: 0.8, letterSpacing: '0.1em', fontSize: '1rem' }}>
                                         {singleTeamId ? 'OFFICIAL ROSTER' : (phase === 'ENDED' ? 'AUCTION SUMMARY' : 'LIVE AUCTION FEED')}
                                     </Typography>
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Typography variant="h3" sx={{ fontWeight: 1000, textTransform: 'uppercase', fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.02em' }}>
+                                    <Typography variant="h3" sx={{ fontWeight: 1000, textTransform: 'uppercase', fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.02em', color: 'text.primary' }}>
                                         {singleTeamId ? (teams?.[singleTeamId]?.name || 'NOT FOUND') : (phase === 'ENDED' ? 'FINAL TEAM SQUADS' : 'CURRENT TEAM SQUADS')}
                                     </Typography>
                                 </Box>

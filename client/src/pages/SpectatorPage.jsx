@@ -11,13 +11,14 @@ import CircularProgress from '@mui/material/CircularProgress';
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import TeamLogo from '../components/shared/TeamLogo.jsx';
 import SquadGrid from '../components/auction/SquadGrid.jsx';
 
 export default function SpectatorPage() {
   // Auth state
   const [pinRequired, setPinRequired] = useState(null);
-  const [spectatorToken, setSpectatorToken] = useState(null);
+  const [spectatorToken, setSpectatorToken] = useState(() => localStorage.getItem('spectatorToken'));
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
@@ -26,6 +27,7 @@ export default function SpectatorPage() {
   const [state, setState] = useState(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState(null);
+  const [soldNotify, setSoldNotify] = useState(null); // { playerName, teamName }
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -70,7 +72,12 @@ export default function SpectatorPage() {
 
     socket.on('state:full', updateState);
     socket.on('auction:settingsChanged', updateState);
-    socket.on('auction:sold', ({ publicState }) => updateState(publicState));
+    socket.on('auction:sold', ({ player, teamName, publicState }) => {
+      if (player && teamName) {
+        setSoldNotify({ playerName: player.name, teamName });
+      }
+      updateState(publicState);
+    });
     socket.on('auction:unsold', ({ publicState }) => updateState(publicState));
     socket.on('auction:phaseChange', (s) => updateState(s));
 
@@ -89,6 +96,7 @@ export default function SpectatorPage() {
       });
       const data = await res.json();
       if (!res.ok) { setPinError(data.error || 'Invalid PIN'); return; }
+      localStorage.setItem('spectatorToken', data.token);
       setSpectatorToken(data.token);
     } catch {
       setPinError('Connection error — is the server running?');
@@ -243,6 +251,31 @@ export default function SpectatorPage() {
           hidePoints={true} 
         />
       </Box>
+
+      {/* Sale Notification */}
+      <Snackbar
+        open={!!soldNotify}
+        autoHideDuration={5000}
+        onClose={() => setSoldNotify(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setSoldNotify(null)} 
+          severity="success" 
+          variant="filled"
+          sx={{ 
+            width: '100%', 
+            fontWeight: 800, 
+            fontSize: '1.1rem',
+            bgcolor: 'success.main',
+            color: 'white',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}
+        >
+          🏆 {soldNotify?.playerName} was Sold to {soldNotify?.teamName}!
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

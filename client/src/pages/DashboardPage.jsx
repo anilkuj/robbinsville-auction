@@ -183,6 +183,19 @@ export default function DashboardPage() {
               <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
               <Typography variant="caption" color="text.disabled">{connected ? 'Live' : 'Reconnecting…'}</Typography>
             </Box>
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              onClick={() => {
+                sessionStorage.removeItem('spectatorToken'); // Check if it's sessionStorage or localStorage
+                localStorage.removeItem('spectatorToken');
+                window.location.reload();
+              }}
+              sx={{ borderColor: 'rgba(255,255,255,0.1)', color: 'text.secondary', ml: 1 }}
+            >
+              Sign Out
+            </Button>
           </Box>
         </Toolbar>
       </AppBar>

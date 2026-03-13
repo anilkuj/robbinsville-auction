@@ -13,6 +13,14 @@ import axios from 'axios';
 import { saveAs } from 'file-saver';
 import { getAvgPointsKey } from '../../utils/playerSort.js';
 import { formatPts } from '../../utils/budgetCalc.js';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
+import IconButton from '@mui/material/IconButton';
+import FilterListIcon from '@mui/icons-material/FilterList';
+import SearchIcon from '@mui/icons-material/Search';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputAdornment from '@mui/material/InputAdornment';
 
 function playerIsOwner(player) {
     if (!player.extra) return false;
@@ -21,6 +29,13 @@ function playerIsOwner(player) {
 }
 
 export default function PlayerDataTab({ auctionState, adminAction, readOnly = false }) {
+    if (!auctionState) {
+        return (
+            <Box sx={{ textAlign: 'center', p: 6, color: 'text.disabled' }}>
+                Connecting to auction data…
+            </Box>
+        );
+    }
     const { players = [], teams = {}, leagueConfig = {} } = auctionState;
     const spillovers = leagueConfig.spilloverPlayerIds || [];
     const [statusFilter, setStatusFilter] = useState('ALL');
@@ -34,6 +49,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     const [isEditing, setIsEditing] = useState(false);
     const [editedPlayers, setEditedPlayers] = useState({}); // id -> { field: val }
     const [saving, setSaving] = useState(false);
+    const [columnFilters, setColumnFilters] = useState({}); // field -> [selectedValues]
+    const [filterAnchor, setFilterAnchor] = useState({ el: null, col: null });
 
     // keep default sort in sync if players array completely changes
     useEffect(() => {
@@ -156,6 +173,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
     let filtered = players.filter(p => {
         if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+        
         if (search) {
             const s = search.toLowerCase();
             const inName = p.name.toLowerCase().includes(s);
@@ -165,8 +183,31 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
             const inTeam = soldTeamName.toLowerCase().includes(s);
             if (!inName && !inPool && !inExtra && !inTeam) return false;
         }
+
+        // --- Per-column Dropdown Filters ---
+        for (const [col, selected] of Object.entries(columnFilters)) {
+            if (!selected || selected.length === 0) continue;
+            
+            let pVal = '';
+            if (col === '#') pVal = String(players.indexOf(p) + 1);
+            else if (col === 'name') pVal = p.name;
+            else if (col === 'pool') pVal = p.pool;
+            else if (col === 'status') pVal = p.status;
+            else if (col === 'soldTo') pVal = p.soldTo ? teams[p.soldTo]?.name || '—' : '—';
+            else if (col === 'soldFor') pVal = p.soldFor ? String(p.soldFor) : '—';
+            else if (col === 'base') pVal = String(p.basePrice ?? '');
+            else pVal = String(p.extra?.[col] ?? '—');
+
+            if (!selected.includes(pVal)) return false;
+        }
+
         return true;
     });
+
+    const sortIndicator = (col) => {
+        if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: 3, fontSize: '0.6rem' }}>⇅</span>;
+        return <span style={{ color: '#94a3b8', marginLeft: 3, fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
+    };
 
     if (sortCol) {
         filtered = [...filtered].sort((a, b) => {
@@ -192,22 +233,35 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
         });
     }
 
-    const sortIndicator = (col) => {
-        if (sortCol !== col) return <span style={{ color: '#334155', marginLeft: 3, fontSize: '0.6rem' }}>⇅</span>;
-        return <span style={{ color: '#94a3b8', marginLeft: 3, fontSize: '0.6rem' }}>{sortDir === 'asc' ? '▲' : '▼'}</span>;
+    const thSort = (col, label, opts = {}) => {
+        const hasFilter = columnFilters[col] && columnFilters[col].length > 0;
+        return (
+            <th key={col} style={{
+                padding: '0.55rem 0.25rem', textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
+                color: sortCol === col ? '#cbd5e1' : '#64748b', fontWeight: 700, fontSize: '0.68rem',
+                textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                borderBottom: '1px solid #1e293b', userSelect: 'none',
+                ...(opts.first && { paddingLeft: '1rem' }), ...(opts.right && { paddingRight: '1rem' }),
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: opts.right ? 'flex-end' : opts.center ? 'center' : 'flex-start' }}>
+                    <span onClick={() => handleSort(col)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                        {label}{sortIndicator(col)}
+                    </span>
+                    <IconButton 
+                        size="small" 
+                        onClick={(e) => setFilterAnchor({ el: e.currentTarget, col })}
+                        sx={{ 
+                            ml: 0.5, p: 0.2, 
+                            color: hasFilter ? '#facc15' : 'rgba(100, 116, 139, 0.4)',
+                            '&:hover': { color: '#fff' }
+                        }}
+                    >
+                        <FilterListIcon sx={{ fontSize: '0.9rem' }} />
+                    </IconButton>
+                </Box>
+            </th>
+        );
     };
-
-    const thSort = (col, label, opts = {}) => (
-        <th key={col} onClick={() => handleSort(col)} style={{
-            padding: '0.55rem 0.75rem', textAlign: opts.right ? 'right' : opts.center ? 'center' : 'left',
-            color: sortCol === col ? '#cbd5e1' : '#64748b', fontWeight: 700, fontSize: '0.68rem',
-            textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
-            borderBottom: '1px solid #1e293b', cursor: 'pointer', userSelect: 'none',
-            ...(opts.first && { paddingLeft: '1rem' }), ...(opts.right && { paddingRight: '1rem' }),
-        }}>
-            {label}{sortIndicator(col)}
-        </th>
-    );
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -250,6 +304,15 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             );
                         })}
                     </Box>
+                    {Object.values(columnFilters).some(v => v && v.length > 0) && (
+                        <Button
+                            size="small"
+                            onClick={() => setColumnFilters({})}
+                            sx={{ color: '#ef4444', fontWeight: 700, textTransform: 'none', fontSize: '0.7rem' }}
+                        >
+                            ✕ Clear Filters
+                        </Button>
+                    )}
                     <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
                         {!isEditing ? (
                             <>
@@ -457,6 +520,14 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                     </tbody>
                 </table>
             </Box>
+            <FilterMenu 
+                anchor={filterAnchor} 
+                onClose={() => setFilterAnchor({ el: null, col: null })}
+                players={players}
+                teams={teams}
+                filters={columnFilters}
+                setFilters={setColumnFilters}
+            />
         </Box >
     );
 }
@@ -487,6 +558,119 @@ function TD({ children, first, right, center, style = {} }) {
             ...(right && { paddingRight: '1rem' }),
             ...style,
         }}>{children}</td>
+    );
+}
+
+function FilterMenu({ anchor, onClose, players, teams, filters, setFilters }) {
+    const [search, setSearch] = useState('');
+    const col = anchor.col;
+    
+    // Get unique values for this column
+    const values = React.useMemo(() => {
+        if (!col) return [];
+        const set = new Set();
+        players.forEach((p, idx) => {
+            let val = '';
+            if (col === '#') val = String(idx + 1);
+            else if (col === 'name') val = p.name;
+            else if (col === 'pool') val = p.pool;
+            else if (col === 'status') val = p.status;
+            else if (col === 'soldTo') val = p.soldTo ? teams[p.soldTo]?.name || '—' : '—';
+            else if (col === 'soldFor') val = p.soldFor ? String(p.soldFor) : '—';
+            else if (col === 'base') val = String(p.basePrice ?? '');
+            else val = String(p.extra?.[col] ?? '—');
+            set.add(val);
+        });
+        return Array.from(set).sort((a, b) => {
+            const na = parseFloat(a), nb = parseFloat(b);
+            if (!isNaN(na) && !isNaN(nb)) return na - nb;
+            return String(a).localeCompare(String(b));
+        });
+    }, [col, players, teams]);
+
+    const filteredValues = values.filter(v => 
+        String(v).toLowerCase().includes(search.toLowerCase())
+    );
+
+    const selected = filters[col] || [];
+    const handleToggle = (val) => {
+        const next = selected.includes(val) 
+            ? selected.filter(v => v !== val) 
+            : [...selected, val];
+        setFilters(prev => ({ ...prev, [col]: next }));
+    };
+
+    const handleSelectAll = () => {
+        if (selected.length === values.length && values.length > 0) {
+            setFilters(prev => ({ ...prev, [col]: [] }));
+        } else {
+            setFilters(prev => ({ ...prev, [col]: values }));
+        }
+    };
+
+    return (
+        <Menu
+            anchorEl={anchor.el}
+            open={Boolean(anchor.el)}
+            onClose={onClose}
+            disableAutoFocusItem
+            PaperProps={{
+                sx: { 
+                    bgcolor: '#1e293b', color: '#fff', minWidth: 220, maxHeight: 450,
+                    border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+                    mt: 1
+                }
+            }}
+        >
+            <Box sx={{ p: 1.5, pb: 1, borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                <TextField
+                    size="small"
+                    placeholder="Search values..."
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    fullWidth
+                    autoFocus
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon sx={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem' }} />
+                            </InputAdornment>
+                        ),
+                        sx: { color: '#fff', fontSize: '0.8rem', bgcolor: 'rgba(0,0,0,0.2)' }
+                    }}
+                />
+            </Box>
+            <MenuItem 
+                dense 
+                onClick={handleSelectAll}
+                sx={{ borderBottom: '1px solid rgba(255,255,255,0.05)', py: 1 }}
+            >
+                <Checkbox 
+                    size="small" 
+                    checked={selected.length === values.length && values.length > 0} 
+                    indeterminate={selected.length > 0 && selected.length < values.length}
+                    sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#facc15' }, '&.MuiCheckbox-indeterminate': { color: '#facc15' } }}
+                />
+                <Typography variant="body2" sx={{ fontWeight: 700 }}>Select All</Typography>
+            </MenuItem>
+            <Box sx={{ maxHeight: 280, overflowY: 'auto' }}>
+                {filteredValues.map(v => (
+                    <MenuItem key={v} dense onClick={() => handleToggle(v)} sx={{ py: 0.5 }}>
+                        <Checkbox 
+                            size="small" 
+                            checked={selected.includes(v)} 
+                            sx={{ color: 'rgba(255,255,255,0.3)', '&.Mui-checked': { color: '#facc15' } }}
+                        />
+                        <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>{v}</Typography>
+                    </MenuItem>
+                ))}
+                {filteredValues.length === 0 && (
+                    <Typography variant="caption" sx={{ p: 2, display: 'block', color: 'text.disabled', textAlign: 'center' }}>
+                        No results
+                    </Typography>
+                )}
+            </Box>
+        </Menu>
     );
 }
 

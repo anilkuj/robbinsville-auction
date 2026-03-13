@@ -467,6 +467,18 @@ function runFullSimulation(state) {
           p.soldTo = team.id;
           p.saleIndex = saleCounter;
           p.soldAt = Date.now();
+          
+          // Pushing to roster immediately ensures they occupy a slot during regular player assignments
+          team.roster.push({
+            playerId: p.id,
+            playerName: p.name,
+            pool: p.pool,
+            price: 0,
+            saleIndex: p.saleIndex,
+            soldAt: p.soldAt,
+            isOwner: true,
+            ...(p.extra && { extra: p.extra }),
+          });
         }
       }
     } else {
@@ -555,8 +567,16 @@ function runFullSimulation(state) {
           soldAt: p.soldAt 
         });
       } else {
-        // Force sell to team with most budget among those with room (or even room + 1 for overflow)
-        const tid = teamIds.sort((a,b) => (state.teams[b].budget - state.teams[a].budget))[0];
+        // Force sell to team with room first, then by most budget
+        const tid = teamIds.sort((a, b) => {
+          const teamA = state.teams[a];
+          const teamB = state.teams[b];
+          const roomA = teamA.roster.length < SQUAD_SIZE;
+          const roomB = teamB.roster.length < SQUAD_SIZE;
+          
+          if (roomA !== roomB) return roomB ? 1 : -1; // Room first
+          return teamB.budget - teamA.budget; // Then budget
+        })[0];
         const team = state.teams[tid];
         saleCounter++;
         p.status = 'SOLD';

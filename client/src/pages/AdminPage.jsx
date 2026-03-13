@@ -122,7 +122,7 @@ export default function AdminPage() {
         {(phase === 'LIVE' || phase === 'PAUSED') && player && (
           <Paper square sx={{ display: { xs: 'none', md: 'flex' }, width: 260, flexShrink: 0, borderRight: '1px solid', borderColor: 'divider', p: 1.5, flexDirection: 'column', gap: 1.5, overflowY: 'auto' }}>
             <Typography variant="overline" color="text.disabled">On Block</Typography>
-            <PlayerCard player={player} />
+            <PlayerCard player={player} size="normal" />
             <CountdownTimer
               timerEndsAt={auctionState.timerEndsAt}
               timerPaused={auctionState.timerPaused}

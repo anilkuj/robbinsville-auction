@@ -26,10 +26,11 @@ export default function Sidebar({ width }) {
   const currentBid = auctionState?.currentBid;
 
   const isLeading = currentBid?.teamId === user?.teamId;
-  const currentBidAmount = isLeading ? currentBid.amount : 0;
-  const preparedBid = auctionState?.preparedBid || useAuction().preparedBid;
+  const currentBidAmount = isLeading ? (currentBid?.amount || 0) : 0;
+  const auctionContext = useAuction();
+  const preparedBid = auctionState?.preparedBid || auctionContext?.preparedBid || 0;
   const pendingSpend = isLeading ? currentBidAmount : (team && preparedBid > 0 ? preparedBid : 0);
-  const effectiveRemaining = team ? team.budget - pendingSpend : 0;
+  const effectiveRemaining = team ? (team.budget || 0) - pendingSpend : 0;
 
   return (
     <Paper
@@ -48,6 +49,7 @@ export default function Sidebar({ width }) {
         height: '100vh',
         position: 'sticky',
         top: 0,
+        overflow: 'hidden', // Parent is overflow capped
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -72,74 +74,84 @@ export default function Sidebar({ width }) {
         </Box>
       </Box>
 
-      {team && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-            <TeamLogo team={team} size={28} border={false} />
-            <Typography fontWeight={700} sx={{ color: team.color || 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {team.name}
-            </Typography>
-          </Box>
-
-          <Typography variant="overline" color="text.disabled" display="block" sx={{ mt: 1.5 }}>Budget Remaining</Typography>
-          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
-            <Typography fontWeight={800} color={pendingSpend > 0 ? 'warning.main' : 'success.main'} fontSize="1.1rem">
-              {formatPts(effectiveRemaining)}
-            </Typography>
-            {pendingSpend > 0 && (
-              <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.75rem' }}>
-                (-{formatPts(pendingSpend)})
+      <Box sx={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2, pt: 1, my: 1 }}>
+        {team && (
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+              <TeamLogo team={team} size={28} border={false} />
+              <Typography fontWeight={700} sx={{ color: team.color || 'white', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {team.name}
               </Typography>
-            )}
-          </Box>
+            </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.75 }}>
-            <Typography variant="caption" color="text.disabled">Squad</Typography>
-            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-              {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)} / {squadSize}
-            </Typography>
-          </Box>
-        </Paper>
-      )}
+            <Typography variant="overline" color="text.disabled" display="block" sx={{ mt: 1.5 }}>Budget Remaining</Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
+              <Typography fontWeight={800} color={pendingSpend > 0 ? 'warning.main' : 'success.main'} fontSize="1.1rem">
+                {formatPts(effectiveRemaining)}
+              </Typography>
+              {pendingSpend > 0 && (
+                <Typography variant="caption" sx={{ color: 'warning.main', fontWeight: 600, fontSize: '0.75rem' }}>
+                  (-{formatPts(pendingSpend)})
+                </Typography>
+              )}
+            </Box>
 
-      {!team && user?.role === 'team' && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
-          <Typography variant="overline" color="text.disabled">Team</Typography>
-          <Typography fontWeight={700}>{user.name}</Typography>
-        </Paper>
-      )}
+            <Box sx={{ mt: 2 }}>
+              <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default', mb: 0.75 }}>
+                <Box sx={{ width: `${Math.min(100, (1 - (effectiveRemaining / (auctionState?.leagueConfig?.startingBudget || 1))) * 100)}%`, bgcolor: '#ef4444', opacity: 0.9 }} />
+                <Box sx={{ width: `${Math.max(0, (effectiveRemaining / (auctionState?.leagueConfig?.startingBudget || 1)) * 100)}%`, bgcolor: '#16a34a', opacity: 0.9 }} />
+              </Box>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 900, fontSize: '0.7rem' }}>
+                  {Math.round((1 - (effectiveRemaining / (auctionState?.leagueConfig?.startingBudget || 1))) * 100)}% SPENT
+                </Typography>
+                <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                  {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)} / {squadSize}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        )}
 
-      {roster.length > 0 && (
-        <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-            <TeamLogo team={team} size={24} border={false} />
-            <Typography variant="overline" color="text.disabled" fontWeight={800}>My Squad</Typography>
-          </Box>
-          <List dense disablePadding sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-            {roster.map((r, i) => (
-              <ListItem
-                key={r.playerId || i}
-                disablePadding
-                sx={{ borderTop: i > 0 ? '1px solid' : 'none', borderColor: 'divider', pt: i > 0 ? 0.5 : 0 }}
-              >
-                <Box sx={{ width: '100%' }}>
-                  <Typography variant="body2" fontWeight={600} noWrap>{r.playerName}</Typography>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.25 }}>
-                    <Chip
-                      label={r.pool}
-                      size="small"
-                      sx={{ height: 18, fontSize: '0.6rem', bgcolor: `${poolColor(r.pool)}20`, color: poolColor(r.pool), fontWeight: 700 }}
-                    />
-                    <Typography variant="caption" color="success.main" fontWeight={700}>
-                      {r.price.toLocaleString()} pts
-                    </Typography>
+        {!team && user?.role === 'team' && (
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2 }}>
+            <Typography variant="overline" color="text.disabled">Team</Typography>
+            <Typography fontWeight={700}>{user.name}</Typography>
+          </Paper>
+        )}
+
+        {roster.length > 0 && (
+          <Paper variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderTop: `4px solid ${team.color || '#3b82f6'}` }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+              <TeamLogo team={team} size={24} border={false} />
+              <Typography variant="overline" color="text.disabled" fontWeight={800}>My Squad</Typography>
+            </Box>
+            <List dense disablePadding sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+              {[...roster].sort((a,b) => (a.saleIndex || 0) - (b.saleIndex || 0)).map((r, i) => (
+                <ListItem
+                  key={r.playerId || i}
+                  disablePadding
+                  sx={{ borderTop: i > 0 ? '1px solid' : 'none', borderColor: 'divider', pt: i > 0 ? 0.5 : 0 }}
+                >
+                  <Box sx={{ width: '100%' }}>
+                    <Typography variant="body2" fontWeight={600} noWrap>{r.playerName}</Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 0.25 }}>
+                      <Chip
+                        label={r.pool}
+                        size="small"
+                        sx={{ height: 18, fontSize: '0.6rem', bgcolor: `${poolColor(r.pool)}20`, color: poolColor(r.pool), fontWeight: 700 }}
+                      />
+                      <Typography variant="caption" color="success.main" fontWeight={700}>
+                        {r.price.toLocaleString()}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              </ListItem>
-            ))}
-          </List>
-        </Paper>
-      )}
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        )}
+      </Box>
 
       <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>

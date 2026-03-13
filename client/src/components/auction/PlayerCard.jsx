@@ -8,11 +8,12 @@ import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function PlayerCard({ player }) {
+export default function PlayerCard({ player, size = 'normal' }) {
+  const isBig = size === 'big';
   if (!player) {
     return (
-      <Card variant="outlined" sx={{ borderStyle: 'dashed', textAlign: 'center', p: 3 }}>
-        <Typography color="text.disabled">Waiting for next player…</Typography>
+      <Card variant="outlined" sx={{ borderStyle: 'dashed', textAlign: 'center', p: isBig ? 6 : 3 }}>
+        <Typography color="text.disabled" variant={isBig ? "h4" : "body1"}>Waiting for next player…</Typography>
       </Card>
     );
   }
@@ -22,24 +23,41 @@ export default function PlayerCard({ player }) {
   return (
     <Card sx={{
       border: '1px solid',
-      borderColor: `${color}40`,
-      boxShadow: `0 0 24px ${color}20`,
-      borderTop: `3px solid ${color}`,
+      borderColor: isBig ? `${color}80` : `${color}40`,
+      boxShadow: isBig ? `0 0 40px ${color}40` : `0 0 24px ${color}20`,
+      borderTop: `${isBig ? '5px' : '3px'} solid ${color}`,
+      transition: 'all 0.3s ease',
+      bgcolor: 'background.paper',
     }}>
-      <CardContent sx={{ position: 'relative' }}>
-        <Box sx={{ mb: 1 }}>
+      <CardContent sx={{ position: 'relative', py: isBig ? 2 : 2, px: isBig ? 1.5 : 2 }}>
+        <Box sx={{ mb: isBig ? 3 : 1 }}>
           <Chip
             label={`POOL ${player.pool}`}
-            size="small"
-            sx={{ bgcolor: color, color: '#fff', fontWeight: 700, fontSize: '0.7rem' }}
+            size={isBig ? 'medium' : 'small'}
+            sx={{ 
+                bgcolor: color, 
+                color: '#fff', 
+                fontWeight: 900, 
+                fontSize: isBig ? '1rem' : '0.7rem',
+                px: isBig ? 1.5 : 0.5,
+                boxShadow: isBig ? `0 0 20px ${color}` : 'none'
+            }}
           />
         </Box>
-        <Typography variant="h4" fontWeight={900} sx={{ lineHeight: 1.2, mb: 0.5 }}>
+        <Typography variant={isBig ? 'h6' : 'h6'} fontWeight={950} sx={{ 
+            lineHeight: 1.1, 
+            mb: isBig ? 0.75 : 0.5, 
+            textTransform: 'uppercase',
+            letterSpacing: isBig ? '0.01em' : 'normal',
+            textShadow: isBig ? `0 0 10px ${color}30` : 'none',
+            fontSize: isBig ? '1.3rem' : 'inherit',
+            color: '#fff'
+        }}>
           {player.name}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Base Price:{' '}
-          <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+        <Typography variant={isBig ? 'caption' : 'caption'} color="text.secondary" sx={{ fontWeight: 800, fontSize: isBig ? '0.7rem' : '0.7rem' }}>
+          BASE PRICE:{' '}
+          <Box component="span" sx={{ color: color, fontWeight: 950, fontSize: isBig ? '1.05rem' : '1.1rem', ml: 1 }}>
             {formatPts(player.basePrice)}
           </Box>
         </Typography>
@@ -57,15 +75,15 @@ export default function PlayerCard({ player }) {
                 left: '60%',
                 transform: 'translate(-50%, -50%) rotate(-15deg)',
                 color: '#ef4444',
-                border: '4px solid #ef4444',
-                padding: '0.5rem 1rem',
-                borderRadius: '8px',
-                fontSize: '2rem',
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                boxShadow: '0 8px 16px rgba(239, 68, 68, 0.35)',
+                fontSize: isBig ? '1.8rem' : '2rem',
+                border: isBig ? '5px solid #ef4444' : '4px solid #ef4444',
                 fontWeight: 900,
                 textTransform: 'uppercase',
                 pointerEvents: 'none',
-                backgroundColor: 'rgba(255,255,255,0.8)',
-                boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                backgroundColor: 'rgba(255,255,255,0.9)',
+                boxShadow: '0 8px 24px rgba(239, 68, 68, 0.5)',
                 zIndex: 10
               }}
             >

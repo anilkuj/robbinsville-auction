@@ -22,7 +22,7 @@ export default function BidHistory({ history = [], teams = {} }) {
   }
 
   return (
-    <List dense disablePadding sx={{ maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+    <List dense disablePadding sx={{ maxHeight: '80vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       <div ref={topRef} />
       {[...history].reverse().map((entry, i) => (
         <ListItem
@@ -31,9 +31,9 @@ export default function BidHistory({ history = [], teams = {} }) {
             borderRadius: 1,
             px: 1.5,
             py: 0.5,
-            bgcolor: i === 0 ? (teams[entry.teamId]?.color ? `${teams[entry.teamId].color}20` : '#14532d30') : 'background.paper',
+            bgcolor: i === 0 ? (teams?.[entry.teamId]?.color ? `${teams[entry.teamId].color}20` : '#14532d30') : 'background.paper',
             border: '1px solid',
-            borderColor: i === 0 ? (teams[entry.teamId]?.color || '#22c55e40') : 'divider',
+            borderColor: i === 0 ? (teams?.[entry.teamId]?.color || '#22c55e40') : 'divider',
             display: 'flex',
             justifyContent: 'space-between',
           }}

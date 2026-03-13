@@ -3,6 +3,7 @@ import rplLogo from '../assets/rpl-logo.jpg';
 import { useAuction } from '../contexts/AuctionContext.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import Sidebar from '../components/shared/Sidebar.jsx';
+import SquadGrid from '../components/auction/SquadGrid.jsx';
 import PlayerCard from '../components/auction/PlayerCard.jsx';
 import BidDisplay from '../components/auction/BidDisplay.jsx';
 import CountdownTimer from '../components/auction/CountdownTimer.jsx';
@@ -25,6 +26,7 @@ import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
 import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
+import LogoutIcon from '@mui/icons-material/Logout';
 import IconButton from '@mui/material/IconButton';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -36,7 +38,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AuctionPage() {
   const { auctionState, connected, lastEvent, preparedBid } = useAuction();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   
   const { phase, players = [], teams = {}, leagueConfig = {}, settings = {}, currentBid, currentPool, currentPlayerIndex } = auctionState || {};
   const player = players[currentPlayerIndex] ?? null;
@@ -97,30 +99,27 @@ export default function AuctionPage() {
   }, [rightWidth]);
 
   const myTeam = teams?.[user?.teamId];
-  const roster = [...(myTeam?.roster ?? [])].sort((a, b) => {
-    const isAOwner = myTeam?.ownerPlayerIds && myTeam.ownerPlayerIds.includes(a.playerId);
-    const isBOwner = myTeam?.ownerPlayerIds && myTeam.ownerPlayerIds.includes(b.playerId);
-    if (isAOwner && !isBOwner) return -1;
-    if (!isAOwner && isBOwner) return 1;
-    return b.price - a.price;
-  });
+  const roster = [...(myTeam?.roster ?? [])].sort((a, b) => (a.saleIndex || 0) - (b.saleIndex || 0));
 
 
   return (
     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', userSelect: 'none' }}>
 
       {/* Left sidebar */}
-      <Box style={{ display: 'none' }} className="desktop-sidebar">
-        <Sidebar width={leftWidth} />
-      </Box>
+      {phase !== 'ENDED' && (
+        <>
+          <Box className="desktop-sidebar">
+            <Sidebar width={leftWidth} />
+          </Box>
 
-      {/* Left drag handle */}
-      <div
-        className="desktop-sidebar drag-handle"
-        style={{ display: 'none' }}
-        onMouseDown={startDragLeft}
-        title="Drag to resize"
-      />
+          {/* Left drag handle */}
+          <div
+            className="desktop-sidebar drag-handle"
+            onMouseDown={startDragLeft}
+            title="Drag to resize"
+          />
+        </>
+      )}
 
       {/* Main content + right panel wrapper */}
       <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', overflow: 'hidden' }}>
@@ -155,11 +154,23 @@ export default function AuctionPage() {
                 </Typography>
               </Box>
             </Box>
-            <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="h5" fontWeight={900} color="success.main">
-                {formatPts(myTeam?.budget || 0)}
-              </Typography>
-              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>REMAINING BUDGET</Typography>
+            <Box sx={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Box>
+                <Typography variant="h5" fontWeight={900} color="success.main">
+                  {formatPts(myTeam?.budget || 0)}
+                </Typography>
+                <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>REMAINING BUDGET</Typography>
+              </Box>
+              <Button 
+                variant="outlined" 
+                color="inherit" 
+                size="small" 
+                startIcon={<LogoutIcon />} 
+                onClick={logout}
+                sx={{ borderColor: 'divider', color: 'text.secondary', fontWeight: 700, px: 2 }}
+              >
+                Sign Out
+              </Button>
             </Box>
           </Box>
 
@@ -221,7 +232,7 @@ export default function AuctionPage() {
             </Box>
           </Paper>
 
-          <Box sx={{ flex: 1, p: 2, maxWidth: currentTab === 0 ? 1200 : '100%', mx: 'auto', width: '100%' }}>
+          <Box sx={{ flex: 1, p: 2, width: '100%' }}>
 
             {currentTab === 1 && <CommentaryFeed commentary={auctionState?.commentary} />}
 
@@ -234,17 +245,17 @@ export default function AuctionPage() {
                 <PhaseBar phase={phase} />
 
                 {phase === 'ENDED' && (
-                  <Paper sx={{ textAlign: 'center', p: 4, mt: 1 }}>
-                    <Typography sx={{ fontSize: '3rem', mb: 1 }}>🏆</Typography>
-                    <Typography variant="h5" fontWeight={800} color="primary" sx={{ mb: 0.5 }}>Auction Complete!</Typography>
-                    <Typography color="text.secondary">All players have been auctioned.</Typography>
-                  </Paper>
+                  <SquadGrid 
+                    teams={teams} 
+                    players={players} 
+                    singleTeamId={user.teamId} 
+                  />
                 )}
 
                 {(phase === 'LIVE' || phase === 'PAUSED') && player && (
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-                    <PlayerCard player={player} />
-                    <PlayerExtraData player={player} visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
+                    <PlayerCard player={player} size="normal" />
+                    <PlayerExtraData player={player} size="normal" visibleKeys={String(leagueConfig?.visibleExtraColumns || '').split(',').map(s => s.trim()).filter(Boolean)} />
                     <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'center' }}>
                       <CountdownTimer
                         timerEndsAt={auctionState.timerEndsAt}
@@ -258,12 +269,6 @@ export default function AuctionPage() {
                       </Box>
                     </Box>
                     {user.role === 'team' && <BidButton />}
-                    <Paper sx={{ p: 2 }}>
-                      <Typography variant="overline" color="text.disabled" display="block" sx={{ mb: 1 }}>
-                        Bid History
-                      </Typography>
-                      <BidHistory history={currentBid?.history} teams={teams} />
-                    </Paper>
                     <RecentSoldPlayers players={players} currentPool={displayPool} teams={teams} />
                   </Box>
                 )}
@@ -301,7 +306,9 @@ export default function AuctionPage() {
                   <Paper className="mobile-roster" sx={{ mt: 2, overflow: 'hidden' }}>
                     <Box sx={{ px: 2, py: 1, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="overline" color="text.secondary" fontWeight={600}>My Squad</Typography>
-                      <Typography variant="caption" color="text.secondary">{teams[currentBid?.teamId]?.name}</Typography>
+                      {currentBid?.teamId && teams[currentBid.teamId] && (
+                        <Typography variant="caption" color="text.secondary">{teams[currentBid.teamId].name}</Typography>
+                      )}
                       <Typography variant="caption" color="text.disabled">{roster.length} player{roster.length !== 1 ? 's' : ''}</Typography>
                     </Box>
                     <Box sx={{ py: 0.5 }}>
@@ -336,16 +343,36 @@ export default function AuctionPage() {
               />
             )}
 
-            <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0 }}>
-              <RemainingPlayersPanel
-                players={auctionState?.players}
-                pools={auctionState?.leagueConfig?.pools}
-                currentPlayerId={player?.id ?? null}
-                spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
-                width={rightWidth}
-                isOpen={isRightPaneOpen}
-                setIsOpen={setIsRightPaneOpen}
-              />
+            <Box sx={{ display: 'flex', width: { xs: '100%', lg: isRightPaneOpen ? rightWidth : 48 }, flexShrink: 0, position: 'relative' }}>
+                {((phase === 'LIVE' || phase === 'PAUSED') && player && isRightPaneOpen) ? (
+                    <Paper sx={{ width: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper', borderLeft: '1px solid', borderColor: 'divider', overflow: 'hidden' }}>
+                        <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="overline" fontWeight={900} color="primary">LIVE BID HISTORY</Typography>
+                            <Button size="small" onClick={() => setIsRightPaneOpen(false)}>Close</Button>
+                        </Box>
+                        <Box sx={{ flex: 1, overflowY: 'auto', p: 1 }}>
+                            <BidHistory 
+                                history={auctionState?.currentBid?.history} 
+                                teams={auctionState?.teams} 
+                            />
+                        </Box>
+                        <Box sx={{ p: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+                             <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800 }}>
+                                 * Latest bids shown at top
+                             </Typography>
+                        </Box>
+                    </Paper>
+                ) : (
+                    <RemainingPlayersPanel
+                        players={auctionState?.players}
+                        pools={auctionState?.leagueConfig?.pools}
+                        currentPlayerId={player?.id ?? null}
+                        spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
+                        width={rightWidth}
+                        isOpen={isRightPaneOpen}
+                        setIsOpen={setIsRightPaneOpen}
+                    />
+                )}
             </Box>
           </>
         )}
@@ -400,8 +427,8 @@ function MobileHeader({ user, auctionState, connected }) {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {team && (
             <Box sx={{ textAlign: 'right' }}>
-              <Typography variant="caption" color="success.main" sx={{ fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{formatPts(team.budget)}</Typography>
-              <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{team.name.toUpperCase()}</Typography>
+              <Typography variant="caption" color="success.main" sx={{ fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{formatPts(team?.budget || 0)}</Typography>
+              <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{(team.name || '').toUpperCase()}</Typography>
             </Box>
           )}
           <motion.div
@@ -410,6 +437,9 @@ function MobileHeader({ user, auctionState, connected }) {
           >
             <FiberManualRecordIcon sx={{ fontSize: 12, color: connected ? 'success.main' : 'error.main' }} />
           </motion.div>
+          <IconButton size="small" onClick={logout} sx={{ color: 'text.secondary', ml: 0.5 }}>
+            <LogoutIcon fontSize="small" />
+          </IconButton>
         </Box>
       </Toolbar>
     </AppBar>

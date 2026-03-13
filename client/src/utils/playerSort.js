@@ -3,6 +3,7 @@ export function getAvgPointsKey(players) {
     const allKeys = new Set();
     for (let i = 0; i < players.length; i++) {
         const p = players[i];
+        if (!p) continue;
         if (p.extra) {
             const keys = Object.keys(p.extra);
             for (let j = 0; j < keys.length; j++) {
@@ -31,6 +32,6 @@ export function sortPlayersByPoints(playersArray, avgPtsKey) {
         const aOrder = a.sortOrder !== undefined ? a.sortOrder : 0;
         const bOrder = b.sortOrder !== undefined ? b.sortOrder : 0;
         if (aOrder !== bOrder) return aOrder - bOrder;
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
     });
 }

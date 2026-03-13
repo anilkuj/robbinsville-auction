@@ -8,14 +8,15 @@ import TeamLogo from '../shared/TeamLogo.jsx';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEvents';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export default function BidDisplay({ currentBid, teams, player }) {
+export default function BidDisplay({ currentBid, teams, player, size = 'normal' }) {
+  const isBig = size === 'big';
   const leadingTeam = currentBid?.teamId ? teams?.[currentBid.teamId] : null;
   const amount = currentBid?.amount;
   const hasBid = !!currentBid?.teamId;
 
   return (
-    <Paper sx={{ p: '1rem 1.25rem', textAlign: 'center', bgcolor: 'background.default' }}>
-      <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em' }}>
+    <Paper sx={{ p: isBig ? '1.25rem 1.75rem' : '1rem 1.25rem', textAlign: 'center', bgcolor: 'background.default', borderRadius: isBig ? 2 : 1 }}>
+      <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em', fontSize: isBig ? '0.8rem' : '0.75rem', fontWeight: 800 }}>
         {hasBid ? 'Highest Bid' : 'Opening Bid'}
       </Typography>
 
@@ -29,42 +30,49 @@ export default function BidDisplay({ currentBid, teams, player }) {
           transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
           <Typography
-            variant="h3"
-            fontWeight={900}
+            variant={isBig ? "h5" : "h4"}
+            fontWeight={950}
             sx={{
               color: hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main',
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.02em',
               lineHeight: 1.1,
+              textShadow: isBig ? `0 0 10px ${hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main'}20` : 'none'
             }}
           >
             {formatPts(amount || player?.basePrice)}
           </Typography>
         </motion.div>
       </AnimatePresence>
-      {hasBid && leadingTeam && (
-        <Chip
-          icon={<TeamLogo team={leadingTeam} size={20} border={false} />}
-          label={leadingTeam.name}
-          size="small"
-          color="success"
-          variant="outlined"
-          sx={{ 
-            mt: 0.75, 
-            fontWeight: 700, 
-            borderColor: leadingTeam?.color || 'success.main',
-            color: leadingTeam?.color || 'success.main',
-            '& .MuiChip-icon': {
-              color: leadingTeam?.color || 'success.main'
-            }
-          }}
-        />
-      )}
-      {!hasBid && (
-        <Typography variant="caption" color="text.disabled" display="block" sx={{ mt: 0.5 }}>
-          No bids yet
-        </Typography>
-      )}
+      <Box sx={{ minHeight: isBig ? 56 : 40, mt: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {hasBid && leadingTeam && (
+          <Chip
+            icon={<TeamLogo team={leadingTeam} size={isBig ? 32 : 20} border={false} />}
+            label={leadingTeam.name}
+            size={isBig ? "big" : "small"}
+            color="success"
+            variant="outlined"
+            sx={{ 
+              fontWeight: 900, 
+              borderColor: leadingTeam?.color || 'success.main',
+              color: leadingTeam?.color || 'success.main',
+              fontSize: isBig ? '1rem' : '0.8rem',
+              px: isBig ? 1.5 : 0,
+              py: isBig ? 2.5 : 0,
+              borderRadius: isBig ? 3 : 2,
+              height: isBig ? 40 : 24,
+              '& .MuiChip-icon': {
+                color: leadingTeam?.color || 'success.main'
+              }
+            }}
+          />
+        )}
+        {!hasBid && (
+          <Typography variant={isBig ? "body1" : "caption"} color="text.disabled" fontWeight={700}>
+            No bids yet
+          </Typography>
+        )}
+      </Box>
     </Paper>
   );
 }

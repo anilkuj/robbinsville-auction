@@ -79,7 +79,7 @@ export default function RecentSoldPlayers({ players, currentPool, teams }) {
                             </Box>
 
                             <Box sx={{ textAlign: 'right' }}>
-                                <Typography variant="body2" fontWeight={700} sx={{ color: 'success.main', fontVariantNumeric: 'tabular-nums' }}>
+                                <Typography variant="body2" fontWeight={800} sx={{ color: 'primary.main', fontVariantNumeric: 'tabular-nums' }}>
                                     {formatPts(p.soldFor)}
                                     {p.extra && (Object.values(p.extra).some(v => String(v).toLowerCase() === 'owner')) && (
                                         <Typography component="span" variant="caption" sx={{ ml: 0.5, fontWeight: 500, fontStyle: 'italic', opacity: 0.8 }}>

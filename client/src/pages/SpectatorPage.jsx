@@ -12,6 +12,7 @@ import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Alert from '@mui/material/Alert';
 import TeamLogo from '../components/shared/TeamLogo.jsx';
+import SquadGrid from '../components/auction/SquadGrid.jsx';
 
 export default function SpectatorPage() {
   // Auth state
@@ -59,10 +60,10 @@ export default function SpectatorPage() {
     });
 
     const updateState = (s) => {
-      if (s.settings && s.settings.spectatorEnabled === false) {
+      if (s?.settings?.spectatorEnabled === false) {
         setError('SPECTATOR_BLOCKED');
-      } else {
-        setState(s);
+      } else if (s && typeof s === 'object') {
+        setState(prev => ({ ...(prev || {}), ...s }));
         setError(null);
       }
     };
@@ -175,8 +176,7 @@ export default function SpectatorPage() {
     );
   }
 
-  const teamList = Object.values(state.teams).sort((a, b) => a.name.localeCompare(b.name));
-  const isEnded = state.phase === 'ENDED';
+  const isEnded = state?.phase === 'ENDED';
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0b0e14', p: { xs: 1, md: 2 } }}>
@@ -192,7 +192,7 @@ export default function SpectatorPage() {
               RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
             </Typography>
             <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6rem' }}>
-              High-Speed Feed • {teamList.length} Teams
+              High-Speed Feed • {Object.keys(state?.teams || {}).length} Teams
             </Typography>
           </Box>
         </Box>
@@ -210,182 +210,32 @@ export default function SpectatorPage() {
               color: isEnded ? 'rgba(255,255,255,0.7)' : undefined,
             }}
           />
+          <Button
+            size="small"
+            variant="text"
+            color="inherit"
+            onClick={() => {
+              localStorage.removeItem('spectatorToken');
+              window.location.reload();
+            }}
+            sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, mt: 0.5, '&:hover': { color: 'white' } }}
+          >
+            Sign Out
+          </Button>
         </Box>
       </Box>
 
-      {/* Grid for 5 columns */}
-      <Box sx={{ 
-        display: 'grid', 
-        gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(5, 1fr)' }, 
-        gap: 2,
-        px: 1,
-        transition: 'all 0.5s'
-      }}>
-        <AnimatePresence>
-          {teamList.map((team, idx) => (
-            <motion.div
-              key={team.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: idx * 0.05, duration: 0.5 }}
-            >
-              <TeamCard team={team} color={team.color || '#3b82f6'} allPlayers={state.players || []} />
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </Box>
-    </Box>
-  );
-}
-
-function TeamCard({ team, color, allPlayers }) {
-  const roster = [...(team.roster || [])];
-  
-  // Final display list: Owner first, then others
-  const displayRows = [];
-
-  // Identify all owners
-  if (team.ownerIsPlayer && team.ownerPlayerIds?.length > 0) {
-    team.ownerPlayerIds.forEach(ownerId => {
-      // 1. Check if they are already in the roster (SOLD)
-      const soldOwner = roster.find(p => p.playerId === ownerId);
-      if (soldOwner) {
-        displayRows.push({ ...soldOwner, isOwner: true });
-      } else {
-        // 2. If not sold yet, find them in global players list to show them as PENDING owner
-        const pendingOwner = allPlayers.find(p => p.id === ownerId);
-        if (pendingOwner) {
-          displayRows.push({
-            playerId: pendingOwner.id,
-            playerName: pendingOwner.name,
-            isOwner: true,
-            status: 'PENDING'
-          });
-        }
-      }
-    });
-  } else if (!team.ownerIsPlayer && team.ownerName) {
-    // Non-player owner virtual row
-    displayRows.push({
-      playerId: 'owner-virtual',
-      playerName: team.ownerName,
-      isOwner: true,
-      virtual: true
-    });
-  }
-
-  // Add the rest of the players (excluding those already added as owners)
-  const ownerIdsInRows = new Set(displayRows.map(r => r.playerId));
-  const otherPlayers = roster.filter(p => !ownerIdsInRows.has(p.playerId));
-  otherPlayers.sort((a, b) => a.playerName.localeCompare(b.playerName));
-  
-  displayRows.push(...otherPlayers);
-
-  return (
-    <Card sx={{
-      height: '100%',
-      background: 'rgba(23, 27, 34, 0.7)',
-      backdropFilter: 'blur(10px)',
-      border: `1px solid rgba(255,255,255,0.05)`,
-      borderTop: `3px solid ${color}`,
-      borderRadius: 2,
-      transition: 'all 0.2s',
-      '&:hover': { borderColor: color, transform: 'translateY(-2px)' }
-    }}>
-      <CardContent sx={{ p: 0 }}>
-        <Box sx={{ p: 1.5, borderBottom: '1px solid rgba(255,255,255,0.05)', bgcolor: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-          <TeamLogo team={team} size={36} border={false} />
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body1" fontWeight={950} color="white" noWrap sx={{ letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '1rem' }}>
-              {team.name}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.25 }}>
-              <Typography variant="caption" sx={{ color: color, fontWeight: 900, fontSize: '0.75rem' }}>
-                {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)}
-              </Typography>
-              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.25)', fontWeight: 800, fontSize: '0.7rem', textTransform: 'uppercase' }}>
-                Players
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ p: 0.75, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-          {displayRows.length === 0 ? (
-            <Box sx={{ py: 3, textAlign: 'center' }}>
-              <Typography variant="caption" color="rgba(255,255,255,0.1)" fontStyle="italic">
-                Empty Roster
-              </Typography>
-            </Box>
-          ) : (
-            displayRows.map((p, idx) => (
-              <PlayerRow 
-                key={p.playerId} 
-                player={p} 
-                isOwner={p.isOwner || team.ownerPlayerIds?.includes(p.playerId)} 
-                index={idx}
-                teamColor={color}
-              />
-            ))
-          )}
-        </Box>
-      </CardContent>
-    </Card>
-  );
-}
-
-function PlayerRow({ player, isOwner, index, teamColor }) {
-  // Uniform styling for all rows
-  const bg = isOwner 
-    ? `linear-gradient(90deg, ${teamColor}33 0%, ${teamColor}05 100%)` 
-    : 'rgba(255,255,255,0.02)';
-
-  return (
-    <Box sx={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      p: 0.75,
-      px: 1,
-      borderRadius: 1,
-      background: bg,
-      border: isOwner ? `1px solid ${teamColor}66` : '1px solid rgba(255,255,255,0.02)',
-      transition: 'all 0.1s',
-      '&:hover': { bgcolor: 'rgba(255,255,255,0.05)' }
-    }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
-         {/* Dot of team color for owner, subtle for others */}
-        <Box sx={{ 
-          width: 5, 
-          height: 5, 
-          borderRadius: '50%', 
-          bgcolor: isOwner ? teamColor : 'rgba(255,255,255,0.2)',
-          boxShadow: isOwner ? `0 0 6px ${teamColor}` : 'none'
-        }} />
-        <Typography 
-          variant="body2" 
-          fontWeight={isOwner ? 950 : 700} 
-          color={isOwner ? 'white' : 'rgba(255,255,255,0.85)'} 
-          noWrap 
-          sx={{ fontSize: '0.9rem', letterSpacing: '0.01em' }}
-        >
-          {player.playerName}
-        </Typography>
-      </Box>
-      {isOwner && (
-        <Chip
-          label="OWNER"
-          size="small"
-          sx={{
-            height: 16,
-            fontSize: '0.6rem',
-            fontWeight: 1000,
-            bgcolor: teamColor,
-            color: '#fff',
-            '& .MuiChip-label': { px: 0.75 }
-          }}
+      {/* Content */}
+      <Box sx={{ flex: 1, width: '100%', maxWidth: 1800, mx: 'auto' }}>
+        <SquadGrid 
+          teams={state.teams} 
+          players={state.players} 
+          phase={state.phase}
+          hideToggle={true} 
+          hidePoints={true} 
         />
-      )}
+      </Box>
     </Box>
   );
 }
+

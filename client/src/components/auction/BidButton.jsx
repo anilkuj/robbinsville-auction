@@ -157,11 +157,13 @@ export default function BidButton() {
           </Box>
         )}
 
-        {customError && (
-          <Typography variant="caption" color="error" sx={{ width: '100%', maxWidth: 320 }}>
-            {customError}
-          </Typography>
-        )}
+        <Box sx={{ minHeight: 42, width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          {customError && (
+            <Typography variant="caption" color="error">
+              {customError}
+            </Typography>
+          )}
+        </Box>
 
         <Button
           variant="contained"
@@ -175,14 +177,16 @@ export default function BidButton() {
           {disabled ? (disabledReason || '—') : `BID ${formatPts(effectiveBid)}`}
         </Button>
 
-        {feedback && (
-          <Alert
-            severity={feedback.type === 'ok' ? 'success' : 'error'}
-            sx={{ py: 0, width: '100%', maxWidth: 320 }}
-          >
-            {feedback.msg}
-          </Alert>
-        )}
+        <Box sx={{ minHeight: 48, width: '100%', maxWidth: 320, mt: 1 }}>
+          {feedback && (
+            <Alert
+              severity={feedback.type === 'ok' ? 'success' : 'error'}
+              sx={{ py: 0 }}
+            >
+              {feedback.msg}
+            </Alert>
+          )}
+        </Box>
       </Box>
 
       {/* Budget warning dialog */}

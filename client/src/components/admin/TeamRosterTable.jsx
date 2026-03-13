@@ -40,8 +40,9 @@ export default function TeamRosterTable({ teams, leagueConfig }) {
                 )}
               </Box>
 
-              <Box sx={{ width: 80 }}>
-                <LinearProgress variant="determinate" value={Math.max(0, Math.min(100, pctBudget * 100))} color={progressColor} sx={{ height: 6, borderRadius: 1 }} />
+              <Box sx={{ width: 100, height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default' }}>
+                <Box sx={{ width: `${Math.min(100, (1 - pctBudget) * 100)}%`, bgcolor: '#ef4444', opacity: 0.9 }} />
+                <Box sx={{ width: `${Math.max(0, pctBudget * 100)}%`, bgcolor: '#16a34a', opacity: 0.9 }} />
               </Box>
 
               <Typography color="success.main" fontWeight={700} fontSize="0.85rem" whiteSpace="nowrap">

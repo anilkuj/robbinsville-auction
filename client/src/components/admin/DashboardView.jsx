@@ -12,10 +12,18 @@ import IconButton from '@mui/material/IconButton';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import TeamLogo from '../shared/TeamLogo.jsx';
+import SquadGrid from '../auction/SquadGrid.jsx';
 import { poolColor as themePoolColor } from '../../theme.js';
 import { getAvgPointsKey, sortPlayersByPoints } from '../../utils/playerSort.js';
 
 export default function DashboardView({ state, hideRemaining = false, preparedBid, currentUser }) {
+  if (!state) {
+    return (
+      <Box sx={{ p: 4, textAlign: 'center' }}>
+        <Typography color="text.disabled">Connecting to dashboard data...</Typography>
+      </Box>
+    );
+  }
   const [rightWidth, setRightWidth] = useState(380);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -23,7 +31,8 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
     setIsExporting(true);
     try {
       const startingBudget = state.leagueConfig?.startingBudget ?? 0;
-      const teamList = Object.values(state.teams).sort((a, b) => a.name.localeCompare(b.name));
+      const teams = state.teams || {};
+      const teamList = Object.values(teams).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
       const workbook = new ExcelJS.Workbook();
       const sheet = workbook.addWorksheet('Rosters', {
@@ -254,12 +263,15 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
                 <TeamCard
                   key={team.id}
                   team={team}
+                  teams={teams}
+                  players={players}
                   startingBudget={startingBudget}
                   squadSize={squadSize}
                   isLeading={state.currentBid?.teamId === team.id}
                   preparedBid={preparedBid}
                   currentUser={currentUser}
                   currentBid={state.currentBid}
+                  phase={phase}
                 />
               ))}
             </Box>
@@ -409,7 +421,7 @@ export function RemainingPlayersPane({ players, pools, currentPlayerId, spillove
 
 // ── Team Card ─────────────────────────────────────────────────────────────────
 
-function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, currentUser, currentBid }) {
+function TeamCard({ team, teams, players, startingBudget, squadSize, isLeading, preparedBid, currentUser, currentBid, phase }) {
   const isMyTeam = currentUser?.teamId === team.id;
   const currentBidAmount = isLeading ? (currentBid?.amount || 0) : 0;
   const pendingSpend = isLeading ? currentBidAmount : (isMyTeam && preparedBid > 0 ? preparedBid : 0);
@@ -470,52 +482,31 @@ function TeamCard({ team, startingBudget, squadSize, isLeading, preparedBid, cur
       </Box>
 
       <Box sx={{ px: 2, pb: 1.5, pt: 1 }}>
-        <LinearProgress
-          variant="determinate"
-          value={Math.min(100, spentPct)}
-          sx={{ 
-            height: 4, 
-            borderRadius: 2, 
-            bgcolor: 'background.default',
-            '& .MuiLinearProgress-bar': {
-              bgcolor: team.color || 'success.main'
-            }
-          }}
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+        <Box sx={{ height: 10, display: 'flex', borderRadius: 5, overflow: 'hidden', bgcolor: 'background.default', mb: 1 }}>
+          {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: '#ef4444', opacity: 0.9 }} />}
+          {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: '#16a34a', opacity: 0.9 }} />}
+        </Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="caption" color="text.disabled">0</Typography>
-          <Typography variant="caption" color="text.disabled">{spentPct.toFixed(0)}% spent</Typography>
+          <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 900, fontSize: '0.8rem' }}>
+            {spentPct.toFixed(0)}% SPENT
+          </Typography>
           <Typography variant="caption" color="text.disabled">{fmtPts(startingBudget)}</Typography>
         </Box>
       </Box>
 
       {roster.length > 0 ? (
-        <Box sx={{ borderTop: '1px solid', borderColor: 'divider' }}>
-          <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 1 }}>
-            {['Player', 'Pool', 'Price'].map((h, i) => (
-              <Typography key={h} variant="caption" color="text.disabled" sx={{ textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: i === 2 ? 'right' : 'left' }}>{h}</Typography>
-            ))}
-          </Box>
-          <Box sx={{ maxHeight: 220, overflowY: 'auto' }}>
-            {roster.map((r, i) => {
-              const isOwner = team.ownerPlayerIds && team.ownerPlayerIds.includes(r.playerId);
-              return (
-                <Box key={i} sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: i % 2 === 0 ? 'transparent' : 'background.default' }}>
-                  <Box sx={{ px: 2, py: 0.5, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: 1, alignItems: 'center' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, overflow: 'hidden' }}>
-                      <Typography variant="body2" noWrap>{r.playerName}</Typography>
-                      {isOwner && <Chip label="★ OWNER" size="small" sx={{ height: 16, fontSize: '0.55rem', bgcolor: 'secondary.dark', color: 'white', fontWeight: 800, flexShrink: 0 }} />}
-                      {!team.ownerIsPlayer && team.ownerName && (
-                        <Typography variant="caption" color="text.secondary" sx={{ fontStyle: 'italic', ml: 0.5 }}>({team.ownerName})</Typography>
-                      )}
-                    </Box>
-                    <Typography variant="body2" color="success.main" fontWeight={600} sx={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {r.price.toLocaleString()}
-                    </Typography>
-                  </Box>
-                </Box>
-              );
-            })}
+        <Box sx={{ borderTop: '1px solid', borderColor: 'divider', bgcolor: '#0c1221' }}>
+          <Box sx={{ maxHeight: 320, overflowY: 'auto' }}>
+            <SquadGrid 
+              teams={teams} 
+              players={players} 
+              singleTeamId={team.id} 
+              hideToggle={true} 
+              hidePoints={false} 
+              minimal={true} 
+              phase={phase}
+            />
           </Box>
         </Box>
       ) : (
@@ -556,9 +547,9 @@ function BudgetChart({ teams, startingBudget, preparedBid, currentUser, currentB
                   {fmtPts(effectiveRemaining)} rem
                 </Typography>
               </Box>
-              <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default' }}>
-                {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
-                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: team.color || 'success.main', opacity: 0.85 }} />}
+              <Box sx={{ height: 10, display: 'flex', borderRadius: 5, overflow: 'hidden', bgcolor: 'background.default' }}>
+                {spentPct > 0 && <Box sx={{ width: `${spentPct}%`, bgcolor: '#ef4444', opacity: 0.9 }} />}
+                {remPct > 0 && <Box sx={{ width: `${remPct}%`, bgcolor: '#16a34a', opacity: 0.9 }} />}
               </Box>
             </Box>
           );

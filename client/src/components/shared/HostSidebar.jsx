@@ -19,7 +19,7 @@ export default function HostSidebar({ width = 300 }) {
 
     const teams = auctionState?.teams || {};
     const startingBudget = auctionState?.leagueConfig?.startingBudget || 50000;
-    const teamList = Object.values(teams).sort((a, b) => a.name.localeCompare(b.name));
+    const teamList = Object.values(teams).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
     return (
         <Paper
@@ -38,6 +38,7 @@ export default function HostSidebar({ width = 300 }) {
                 height: '100vh',
                 position: 'sticky',
                 top: 0,
+                overflow: 'hidden',
             }}
         >
             <Box sx={{ pb: 3, borderBottom: '1px solid', borderColor: 'divider', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
@@ -62,11 +63,11 @@ export default function HostSidebar({ width = 300 }) {
                 </Box>
             </Box>
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, flex: 1 }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, flex: 1, overflowY: 'auto', my: 1, py: 1 }}>
                 {teamList.map(team => {
                     const isLeading = auctionState?.currentBid?.teamId === team.id;
                     const currentBidAmount = isLeading ? (auctionState?.currentBid?.amount || 0) : 0;
-                    const effectiveRemaining = team.budget - currentBidAmount;
+                    const effectiveRemaining = (team.budget || 0) - currentBidAmount;
 
                     const spent = startingBudget - effectiveRemaining;
                     const spentPct = startingBudget > 0 ? (spent / startingBudget) * 100 : 0;
@@ -96,14 +97,14 @@ export default function HostSidebar({ width = 300 }) {
                                 </Typography>
                             </Box>
 
-                            <Box sx={{ height: 6, display: 'flex', borderRadius: 3, overflow: 'hidden', bgcolor: 'background.default', mb: 0.5 }}>
-                                {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: 'error.main', opacity: 0.85 }} />}
-                                {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: team.color || 'success.main', opacity: 0.85 }} />}
+                            <Box sx={{ height: 8, display: 'flex', borderRadius: 4, overflow: 'hidden', bgcolor: 'background.default', mb: 0.5 }}>
+                                {spentPct > 0 && <Box sx={{ width: `${Math.min(100, spentPct)}%`, bgcolor: '#ef4444', opacity: 0.9 }} />}
+                                {spentPct < 100 && <Box sx={{ width: `${Math.max(0, 100 - spentPct)}%`, bgcolor: '#16a34a', opacity: 0.9 }} />}
                             </Box>
 
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-                                    {Math.round(spentPct)}% spent
+                                <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 900, fontSize: '0.72rem' }}>
+                                    {Math.round(spentPct)}% SPENT
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled" sx={{ fontSize: '0.65rem' }}>
                                     {(team.roster?.length || 0) + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !team.roster?.some(rp => rp.playerId === oid)).length : 0)} / {auctionState?.leagueConfig?.squadSize || 18}

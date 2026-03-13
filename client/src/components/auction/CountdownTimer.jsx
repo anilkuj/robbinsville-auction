@@ -14,12 +14,18 @@ function getColor(pct) {
   return '#ef4444';
 }
 
-export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainingOnPause, timerSeconds = 30, endMode = 'timer' }) {
+export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainingOnPause, timerSeconds = 30, endMode = 'timer', size = 'normal' }) {
+  const isBig = size === 'big';
+  const displaySize = isBig ? 130 : 120;
+  const stroke = isBig ? 8.5 : 8;
+  const r = (displaySize - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+
   const remaining = useCountdown(timerEndsAt, timerPaused, timerRemainingOnPause);
   const awaitingHammer = endMode === 'manual' && !timerPaused && !timerEndsAt;
   const pct = awaitingHammer ? 0 : (timerSeconds > 0 ? Math.min(1, remaining / timerSeconds) : 0);
   const color = timerPaused ? '#f59e0b' : awaitingHammer ? '#a855f7' : getColor(pct);
-  const dashOffset = CIRC * (1 - pct);
+  const dashOffset = circ * (1 - pct);
 
   const warningState = !timerPaused && !awaitingHammer && remaining <= 5 && remaining > 0;
 
@@ -33,20 +39,20 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
 
   return (
     <motion.div
-      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: isBig ? '0.5rem' : '0.25rem' }}
       animate={warningState ? { scale: [1, 1.1, 1] } : { scale: 1 }}
       transition={warningState ? { repeat: Infinity, duration: 1 } : {}}
     >
-      <svg width={SIZE} height={SIZE} style={{ transform: 'rotate(-90deg)' }}>
+      <svg width={displaySize} height={displaySize} style={{ transform: 'rotate(-90deg)' }}>
         {/* Track */}
-        <circle cx={SIZE / 2} cy={SIZE / 2} r={R} fill="none" stroke="#1e293b" strokeWidth={STROKE} />
+        <circle cx={displaySize / 2} cy={displaySize / 2} r={r} fill="none" stroke="#1e293b" strokeWidth={stroke} />
         {/* Progress */}
         <circle
-          cx={SIZE / 2} cy={SIZE / 2} r={R}
+          cx={displaySize / 2} cy={displaySize / 2} r={r}
           fill="none"
           stroke={color}
-          strokeWidth={STROKE}
-          strokeDasharray={CIRC}
+          strokeWidth={stroke}
+          strokeDasharray={circ}
           strokeDashoffset={dashOffset}
           strokeLinecap="round"
           style={{ transition: 'stroke-dashoffset 0.1s linear, stroke 0.3s' }}
@@ -57,14 +63,14 @@ export default function CountdownTimer({ timerEndsAt, timerPaused, timerRemainin
           textAnchor="middle"
           dominantBaseline="central"
           fill={color}
-          fontSize={awaitingHammer ? '1.6rem' : '2rem'}
-          fontWeight="700"
+          fontSize={isBig ? (awaitingHammer ? '1.7rem' : '2.5rem') : (awaitingHammer ? '1.6rem' : '2rem')}
+          fontWeight="900"
           style={{ transform: 'rotate(90deg)', transformOrigin: 'center', fontFamily: 'monospace' }}
         >
           {timerPaused ? '⏸' : awaitingHammer ? '🔨' : remaining}
         </text>
       </svg>
-      <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: '0.75rem' }}>
+      <span style={{ color: awaitingHammer ? '#a855f7' : '#64748b', fontSize: isBig ? '0.8rem' : '0.75rem', fontWeight: 700 }}>
         {timerPaused ? 'PAUSED' : awaitingHammer ? 'HAMMER?' : 'seconds'}
       </span>
     </motion.div>

@@ -22,6 +22,8 @@ import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import Alert from '@mui/material/Alert';
 import Snackbar from '@mui/material/Snackbar';
+import DashboardView from '../components/admin/DashboardView.jsx';
+import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
 import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';

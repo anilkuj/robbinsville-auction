@@ -29,6 +29,7 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
 import Drawer from '@mui/material/Drawer';
+import Chip from '@mui/material/Chip';
 
 export default function HostPage() {
     const { user, logout } = useAuth();
@@ -145,25 +146,40 @@ export default function HostPage() {
                                 <Typography variant="h5" fontWeight={950} sx={{ letterSpacing: '0.05em', lineHeight: 1.1 }}>
                                     RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', opacity: 0.6 }}>
-                                    AUCTION BROADCAST HUB
-                                </Typography>
                             </Box>
                         </Box>
-                        <Box sx={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Box>
-                                <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>CONTROL STATUS</Typography>
-                                <Typography variant="h6" fontWeight={950} color="primary" sx={{ lineHeight: 1 }}>{auctionState?.phase || 'READY'}</Typography>
-                            </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 } }}>
+                            <Chip 
+                                label={auctionState?.phase || 'READY'} 
+                                color={
+                                    auctionState?.phase === 'LIVE' ? 'success' : 
+                                    auctionState?.phase === 'PAUSED' ? 'warning' : 
+                                    auctionState?.phase === 'ENDED' ? 'error' : 'default'
+                                }
+                                sx={{ 
+                                    fontWeight: 900, 
+                                    borderRadius: '6px',
+                                    height: { xs: 28, sm: 32 },
+                                    px: 1,
+                                    fontSize: { xs: '0.75rem', sm: '0.9rem' },
+                                    letterSpacing: '0.05em'
+                                }} 
+                            />
                             <Button 
                                 variant="outlined" 
                                 color="inherit" 
                                 size="small" 
-                                startIcon={<LogoutIcon />} 
+                                startIcon={<LogoutIcon sx={{ display: { xs: 'none', sm: 'inline-flex' } }} />} 
                                 onClick={logout}
-                                sx={{ borderColor: 'divider', color: 'text.secondary', fontWeight: 700, px: 2 }}
+                                sx={{ 
+                                    borderColor: 'divider', 
+                                    color: 'text.secondary', 
+                                    fontWeight: 700, 
+                                    px: { xs: 1, sm: 2 },
+                                    minWidth: { xs: 0, sm: 'auto' }
+                                }}
                             >
-                                Sign Out
+                                {window.innerWidth < 600 ? <LogoutIcon fontSize="small" /> : 'Sign Out'}
                             </Button>
                         </Box>
                     </Box>

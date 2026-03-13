@@ -206,41 +206,54 @@ function findNextPendingIndex(fromIndex, randomize = false) {
 
   const spillovers = state.leagueConfig?.spilloverPlayerIds || [];
 
-  // Find all pending eligible players after the fromIndex
-  for (let i = fromIndex; i < state.players.length; i++) {
+  // Find all pending eligible players (PENDING, not owner, not spillover)
+  for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
-    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id)) pending.push(i);
+    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id)) {
+      pending.push(i);
+    }
   }
 
   if (pending.length === 0) return -1;
 
-  // Determine the pool of the VERY FIRST pending player in the entire list
-  // regardless of fromIndex, so we finish pools in order
-  let firstPendingPool = null;
+  // Determine the bracket of the VERY FIRST pending player in the entire list
+  // regardless of fromIndex, so we finish brackets in order.
+  // Bracket is defined by tens: 0-9, 10-19, etc.
+  let firstPending = null;
   for (let i = 0; i < state.players.length; i++) {
     const p = state.players[i];
     if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id)) {
-      firstPendingPool = p.pool;
+      firstPending = p;
       break;
     }
   }
 
   // If randomize is off, just take the first pending from fromIndex (standard flow)
-  if (!randomize) return pending[0];
+  if (!randomize) {
+    // We still want to respect the standard sequence from fromIndex if possible
+    const fromIndexPending = pending.find(idx => idx >= fromIndex);
+    return fromIndexPending !== undefined ? fromIndexPending : pending[0];
+  }
 
-  // If randomize is on, gather ALL pending players from the currently active pool
-  const inPool = [];
-  for (let i = 0; i < state.players.length; i++) {
-    const p = state.players[i];
-    if (p.status === 'PENDING' && !isOwner(p) && !spillovers.includes(p.id) && p.pool === firstPendingPool) {
-      inPool.push(i);
+  // If randomize is on, gather ALL pending players from the currently active bracket of 10
+  const bracketSize = 10;
+  const currentBracket = Math.floor(firstPending.sortOrder / bracketSize);
+  const bracketMin = currentBracket * bracketSize;
+  const bracketMax = bracketMin + (bracketSize - 1);
+
+  const inBracket = [];
+  for (const idx of pending) {
+    const p = state.players[idx];
+    if (p.sortOrder >= bracketMin && p.sortOrder <= bracketMax) {
+      inBracket.push(idx);
     }
   }
 
-  if (inPool.length > 0) {
-    return inPool[Math.floor(Math.random() * inPool.length)];
+  if (inBracket.length > 0) {
+    return inBracket[Math.floor(Math.random() * inBracket.length)];
   }
 
+  // Fallback to first available if bracket logic somehow finds nothing
   return pending[0];
 }
 

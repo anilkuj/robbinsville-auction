@@ -43,8 +43,8 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
     // default to average points descending if found
     const initialSortCol = React.useMemo(() => getAvgPointsKey(players), [players]);
-    const [sortCol, setSortCol] = useState(initialSortCol);
-    const [sortDir, setSortDir] = useState('desc');
+    const [sortCol, setSortCol] = useState('#');
+    const [sortDir, setSortDir] = useState('asc');
     const [editPlayer, setEditPlayer] = useState(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editedPlayers, setEditedPlayers] = useState({}); // id -> { field: val }

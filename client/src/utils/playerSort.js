@@ -24,14 +24,12 @@ export function getAvgPointsKey(players) {
 export function sortPlayersByPoints(playersArray, avgPtsKey) {
     if (!playersArray) return [];
     return [...playersArray].sort((a, b) => {
-        if (avgPtsKey) {
-            const aPts = parseFloat(a.extra?.[avgPtsKey]) || 0;
-            const bPts = parseFloat(b.extra?.[avgPtsKey]) || 0;
-            if (aPts !== bPts) return bPts - aPts; // Descending
-        }
-        const aOrder = a.sortOrder !== undefined ? a.sortOrder : 0;
-        const bOrder = b.sortOrder !== undefined ? b.sortOrder : 0;
+        // Primary: sortOrder (Global Rank)
+        const aOrder = a.sortOrder !== undefined ? a.sortOrder : 999999;
+        const bOrder = b.sortOrder !== undefined ? b.sortOrder : 999999;
         if (aOrder !== bOrder) return aOrder - bOrder;
+
+        // Secondary: Name (Safety)
         return (a.name || '').localeCompare(b.name || '');
     });
 }

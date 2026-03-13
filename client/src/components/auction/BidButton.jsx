@@ -11,6 +11,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogActions from '@mui/material/DialogActions';
 import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 
 export default function BidButton() {
   const { auctionState, placeBid, socket, preparedBid, setPreparedBid } = useAuction();
@@ -205,16 +206,28 @@ export default function BidButton() {
           {disabled ? (disabledReason || '—') : `BID ${formatPts(effectiveBid)}`}
         </Button>
 
-        <Box sx={{ minHeight: 48, width: '100%', maxWidth: 320, mt: 1 }}>
-          {feedback && (
-            <Alert
-              severity={feedback.type === 'ok' ? 'success' : 'error'}
-              sx={{ py: 0 }}
-            >
-              {feedback.msg}
-            </Alert>
-          )}
-        </Box>
+
+        <Snackbar
+          open={!!feedback}
+          autoHideDuration={4000}
+          onClose={() => setFeedback(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          sx={{ zIndex: 1400 }}
+        >
+          <Alert 
+            onClose={() => setFeedback(null)} 
+            severity={feedback?.type === 'ok' ? 'success' : 'error'} 
+            variant="filled"
+            sx={{ 
+              width: '100%', 
+              fontWeight: 800, 
+              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+              border: '1px solid rgba(255,255,255,0.1)'
+            }}
+          >
+            {feedback?.msg}
+          </Alert>
+        </Snackbar>
       </Box>
 
       {/* Budget warning dialog */}

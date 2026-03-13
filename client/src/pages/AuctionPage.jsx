@@ -21,6 +21,8 @@ import Toolbar from '@mui/material/Toolbar';
 import Button from '@mui/material/Button';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import DashboardView from '../components/admin/DashboardView.jsx';
 import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
 import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
@@ -187,32 +189,31 @@ export default function AuctionPage() {
             </Box>
           </Box>
 
-          <AnimatePresence>
-            {toast && (
-              <motion.div
-                initial={{ opacity: 0, y: -20, x: '-50%' }}
-                animate={{ opacity: 1, y: 0, x: '-50%' }}
-                exit={{ opacity: 0, y: -20, x: '-50%' }}
-                style={{ position: 'fixed', top: 16, left: '50%', zIndex: 1000 }}
-              >
-                <Paper sx={{
-                  bgcolor: toast.type === 'sold' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(30, 41, 59, 0.8)',
-                  backdropFilter: toast.type === 'sold' ? 'blur(12px)' : 'none',
-                  border: '1px solid',
-                  borderColor: toast.type === 'sold' ? 'success.main' : 'divider',
-                  color: toast.type === 'sold' ? 'success.main' : 'error.main',
-                  borderRadius: 3, px: 3, py: 1.5,
-                  fontSize: '0.95rem', fontWeight: 800,
-                  boxShadow: '0 10px 40px rgba(0,0,0,0.6)',
-                  maxWidth: '90vw', textAlign: 'center',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em'
-                }}>
-                  {toast.msg}
-                </Paper>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Notifications */}
+          <Snackbar
+            open={!!toast}
+            autoHideDuration={5000}
+            onClose={() => setToast(null)}
+            anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          >
+            <Alert 
+              onClose={() => setToast(null)} 
+              severity={toast?.type === 'sold' ? 'success' : 'info'} 
+              variant="filled"
+              sx={{ 
+                width: '100%', 
+                fontWeight: 800, 
+                fontSize: '1.1rem',
+                bgcolor: toast?.type === 'sold' ? 'success.main' : 'rgba(30, 41, 59, 0.9)',
+                color: 'white',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                '& .MuiAlert-icon': { fontSize: '1.6rem' }
+              }}
+            >
+              {toast?.msg}
+            </Alert>
+          </Snackbar>
 
           <Paper elevation={0} sx={{
             borderBottom: '1px solid',

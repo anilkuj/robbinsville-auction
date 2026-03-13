@@ -20,8 +20,8 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import DashboardView from '../components/admin/DashboardView.jsx';
-import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
 import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
@@ -35,6 +35,7 @@ export default function HostPage() {
     
     const { phase, players = [], teams = {}, leagueConfig = {}, settings = {}, currentBid, currentPool, currentPlayerIndex } = auctionState || {};
     const player = players[currentPlayerIndex] ?? null;
+    const [toast, setToast] = useState(null); // { type, msg }
     
     // Determine the relevant pool for the "Recently Sold" display
     let displayPool = currentPool || player?.pool;
@@ -50,6 +51,25 @@ export default function HostPage() {
     const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
     const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
     const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
+
+    const { lastEvent } = useAuction();
+
+    React.useEffect(() => {
+        if (!lastEvent) return;
+        if (lastEvent.type === 'sold') {
+            const { player, teamName, amount } = lastEvent.data;
+            setToast({ 
+                type: 'sold', 
+                msg: `🏆 ${player.name} Sold to ${teamName} for ${amount?.toLocaleString()} pts!` 
+            });
+        } else if (lastEvent.type === 'unsold') {
+            const { player } = lastEvent.data;
+            setToast({ 
+                type: 'unsold', 
+                msg: `❌ ${player.name} went Unsold` 
+            });
+        }
+    }, [lastEvent]);
 
     const startDragRight = useCallback((e) => {
         e.preventDefault();
@@ -294,6 +314,32 @@ export default function HostPage() {
                     </>
                 )}
             </Box>
+
+            {/* Notifications */}
+            <Snackbar
+                open={!!toast}
+                autoHideDuration={5000}
+                onClose={() => setToast(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert 
+                    onClose={() => setToast(null)} 
+                    severity={toast?.type === 'sold' ? 'success' : 'info'} 
+                    variant="filled"
+                    sx={{ 
+                        width: '100%', 
+                        fontWeight: 800, 
+                        fontSize: '1.2rem',
+                        bgcolor: toast?.type === 'sold' ? 'success.main' : 'rgba(30, 41, 59, 0.9)',
+                        color: 'white',
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        '& .MuiAlert-icon': { fontSize: '1.8rem' }
+                    }}
+                >
+                    {toast?.msg}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

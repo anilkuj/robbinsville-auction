@@ -12,8 +12,9 @@ import LogoutIcon from '@mui/icons-material/Logout';
 import Button from '@mui/material/Button';
 import { useAuth } from '../../contexts/AuthContext.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThemeToggle from './ThemeToggle.jsx';
 
-export default function HostSidebar({ width = 300 }) {
+export default function HostSidebar({ width = 300, isDrawer = false }) {
     const { auctionState, connected } = useAuction();
     const { logout } = useAuth();
 
@@ -24,10 +25,12 @@ export default function HostSidebar({ width = 300 }) {
     return (
         <Paper
             square
+            elevation={0}
             sx={{
-                width,
+                width: width ?? (isDrawer ? '100%' : 300),
+                height: '100%',
                 flexShrink: 0,
-                borderRight: '1px solid',
+                borderRight: isDrawer ? 'none' : '1px solid',
                 borderColor: 'divider',
                 p: 1.5,
                 display: 'flex',
@@ -35,10 +38,6 @@ export default function HostSidebar({ width = 300 }) {
                 gap: 1,
                 overflowY: 'auto',
                 bgcolor: 'background.paper',
-                height: '100vh',
-                position: 'sticky',
-                top: 0,
-                overflow: 'hidden',
             }}
         >
             <Box sx={{ pb: 3, borderBottom: '1px solid', borderColor: 'divider', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
@@ -121,9 +120,12 @@ export default function HostSidebar({ width = 300 }) {
             </Box>
 
             <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1, pt: 1, borderTop: '1px solid', borderColor: 'divider' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-                    <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
-                    <Typography variant="caption" color="text.disabled">{connected ? 'Live' : 'Reconnecting…'}</Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                        <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+                        <Typography variant="caption" color="text.disabled">{connected ? 'Live' : 'Reconnecting…'}</Typography>
+                    </Box>
+                    <ThemeToggle />
                 </Box>
                 <Button
                     variant="outlined"

@@ -117,7 +117,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                 key={player.id}
                 sx={{ 
                     display: 'grid', 
-                    gridTemplateColumns: '60px 70px 1fr',
+                    gridTemplateColumns: '60px 1fr',
                     alignItems: 'center', 
                     bgcolor: isOwner ? `${teamColor}35` : 'rgba(15, 20, 35, 0.95)', 
                     border: '1px solid',
@@ -125,21 +125,21 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                     borderLeft: `10px solid ${teamColor}`,
                     borderRadius: '3px',
                     overflow: 'hidden',
-                    height: 80, 
+                    height: { xs: 70, md: 80 }, 
                     boxShadow: '0 8px 30px rgba(0,0,0,0.6)',
                     width: '100%'
                 }}
             >
                 <Box sx={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'rgba(0,0,0,0.5)' }}>
-                    <Typography sx={{ fontWeight: 1000, fontSize: '2.5rem', fontStyle: 'italic', color: '#fff', lineHeight: 1 }}>
+                    <Typography sx={{ fontWeight: 1000, fontSize: { xs: '1.8rem', md: '2.5rem' }, fontStyle: 'italic', color: '#fff', lineHeight: 1 }}>
                         {index + 1}
                     </Typography>
                 </Box>
-                <Box sx={{ pl: 3, pr: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative', gridColumn: 'span 2' }}>
-                    <Typography sx={{ fontWeight: 1000, fontSize: '0.8rem', color: teamColor, textTransform: 'uppercase', mb: 0.2 }}>
+                <Box sx={{ pl: 3, pr: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', position: 'relative' }}>
+                    <Typography sx={{ fontWeight: 1000, fontSize: '0.7rem', color: teamColor, textTransform: 'uppercase', mb: 0.1 }}>
                         {team?.name || 'Unknown Team'}
                     </Typography>
-                    <Typography noWrap sx={{ fontWeight: 1000, textTransform: 'uppercase', lineHeight: 1, color: '#fff', fontSize: '1.2rem', fontStyle: 'italic' }}>
+                    <Typography noWrap sx={{ fontWeight: 1000, textTransform: 'uppercase', lineHeight: 1, color: '#fff', fontSize: { xs: '1rem', md: '1.2rem' }, fontStyle: 'italic' }}>
                         {name}
                     </Typography>
                     {(player.isPendingOwner || player.isVirtualOwner) && (

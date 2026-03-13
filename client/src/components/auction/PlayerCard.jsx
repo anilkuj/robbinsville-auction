@@ -50,14 +50,14 @@ export default function PlayerCard({ player, size = 'normal' }) {
             textTransform: 'uppercase',
             letterSpacing: isBig ? '0.01em' : 'normal',
             textShadow: isBig ? `0 0 10px ${color}30` : 'none',
-            fontSize: isBig ? '1.3rem' : 'inherit',
+            fontSize: isBig ? { xs: '1.1rem', sm: '1.3rem' } : 'inherit',
             color: '#fff'
         }}>
           {player.name}
         </Typography>
         <Typography variant={isBig ? 'caption' : 'caption'} color="text.secondary" sx={{ fontWeight: 800, fontSize: isBig ? '0.7rem' : '0.7rem' }}>
           BASE PRICE:{' '}
-          <Box component="span" sx={{ color: color, fontWeight: 950, fontSize: isBig ? '1.05rem' : '1.1rem', ml: 1 }}>
+          <Box component="span" sx={{ color: color, fontWeight: 950, fontSize: isBig ? { xs: '0.9rem', sm: '1.05rem' } : '1.1rem', ml: 1 }}>
             {formatPts(player.basePrice)}
           </Box>
         </Typography>

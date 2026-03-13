@@ -27,7 +27,10 @@ import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
+import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
+import ThemeToggle from '../components/shared/ThemeToggle.jsx';
+import Drawer from '@mui/material/Drawer';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { formatPts } from '../utils/budgetCalc.js';
@@ -59,6 +62,7 @@ export default function AuctionPage() {
   const [rightWidth, setRightWidth] = useState(380);
   const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
   const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
+  const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -101,32 +105,41 @@ export default function AuctionPage() {
   const myTeam = teams?.[user?.teamId];
   const roster = [...(myTeam?.roster ?? [])].sort((a, b) => (a.saleIndex || 0) - (b.saleIndex || 0));
 
-
   return (
-    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', userSelect: 'none' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', userSelect: 'none', bgcolor: 'background.default' }}>
+      
+      {/* Mobile/Responsive Drawer */}
+      <Drawer
+        anchor="left"
+        open={isLeftDrawerOpen}
+        onClose={() => setIsLeftDrawerOpen(false)}
+        sx={{ display: { lg: 'none' } }}
+        PaperProps={{ sx: { width: 280, bgcolor: 'background.paper' } }}
+      >
+        <Sidebar isDrawer onClose={() => setIsLeftDrawerOpen(false)} />
+      </Drawer>
 
-      {/* Left sidebar */}
-      {phase !== 'ENDED' && (
-        <>
-          <Box className="desktop-sidebar">
+      <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {/* Left sidebar (Desktop) */}
+        {phase !== 'ENDED' && (
+          <Box sx={{ display: { xs: 'none', lg: 'flex' }, position: 'relative' }}>
             <Sidebar width={leftWidth} />
+            <div
+              className="drag-handle"
+              onMouseDown={startDragLeft}
+              title="Drag to resize"
+            />
           </Box>
+        )}
 
-          {/* Left drag handle */}
-          <div
-            className="desktop-sidebar drag-handle"
-            onMouseDown={startDragLeft}
-            title="Drag to resize"
+        {/* Main Content */}
+        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          <MobileHeader 
+            user={user} 
+            auctionState={auctionState} 
+            connected={connected} 
+            onMenuClick={() => setIsLeftDrawerOpen(true)}
           />
-        </>
-      )}
-
-      {/* Main content + right panel wrapper */}
-      <Box sx={{ flex: 1, display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, minHeight: '100vh', overflow: 'hidden' }}>
-
-        {/* Center content */}
-        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, pr: { xs: '48px', lg: 0 } }}>
-          <MobileHeader user={user} auctionState={auctionState} connected={connected} />
 
           {/* New Prominent Branding Header */}
           <Box sx={{ 
@@ -410,19 +423,22 @@ function poolColor(poolId) {
 
 // ── Phase Bar ──────────────────────────────────────────────────────────────────
 
-function MobileHeader({ user, auctionState, connected }) {
+function MobileHeader({ user, auctionState, connected, onMenuClick }) {
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
     <AppBar position="sticky" sx={{ display: { md: 'none' }, borderBottom: `2px solid ${team?.color || 'transparent'}` }}>
       <Toolbar sx={{ justifyContent: 'space-between', minHeight: '64px !important', px: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton size="small" onClick={onMenuClick} sx={{ color: 'text.primary', mr: 0.5 }}>
+            <MenuIcon />
+          </IconButton>
           <Box 
             component="img" 
             src={rplLogo} 
             sx={{ height: 36, width: 'auto', borderRadius: '6px' }} 
           />
-          <Typography fontWeight={900} sx={{ fontSize: '1.2rem', letterSpacing: '0.02em' }}>RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box></Typography>
+          <Typography fontWeight={950} sx={{ fontSize: '1.2rem', letterSpacing: '0.02em' }}>RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box></Typography>
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           {team && (
@@ -431,6 +447,7 @@ function MobileHeader({ user, auctionState, connected }) {
               <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{(team.name || '').toUpperCase()}</Typography>
             </Box>
           )}
+          <ThemeToggle />
           <motion.div
             animate={{ opacity: connected ? [0.4, 1, 0.4] : 1 }}
             transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}

@@ -15,8 +15,9 @@ import ListItem from '@mui/material/ListItem';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { motion, AnimatePresence } from 'framer-motion';
+import ThemeToggle from './ThemeToggle.jsx';
 
-export default function Sidebar({ width }) {
+export default function Sidebar({ width, isDrawer = false }) {
   const { user, logout } = useAuth();
   const { auctionState, connected } = useAuction();
 
@@ -35,10 +36,12 @@ export default function Sidebar({ width }) {
   return (
     <Paper
       square
+      elevation={0}
       sx={{
-        width: width ?? 240,
+        width: width ?? (isDrawer ? '100%' : 240),
+        height: '100%',
         flexShrink: 0,
-        borderRight: '1px solid',
+        borderRight: isDrawer ? 'none' : '1px solid',
         borderColor: 'divider',
         p: 2,
         display: 'flex',
@@ -46,10 +49,6 @@ export default function Sidebar({ width }) {
         gap: 2,
         overflowY: 'auto',
         bgcolor: 'background.paper',
-        height: '100vh',
-        position: 'sticky',
-        top: 0,
-        overflow: 'hidden', // Parent is overflow capped
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -154,9 +153,12 @@ export default function Sidebar({ width }) {
       </Box>
 
       <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-          <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
-          <Typography variant="caption" color="text.disabled">{connected ? 'Live' : 'Reconnecting…'}</Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+            <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+            <Typography variant="caption" color="text.disabled">{connected ? 'Live' : 'Reconnecting…'}</Typography>
+          </Box>
+          <ThemeToggle />
         </Box>
         <Button
           variant="outlined"

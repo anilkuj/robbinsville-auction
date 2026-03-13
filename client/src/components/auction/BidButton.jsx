@@ -136,6 +136,12 @@ export default function BidButton() {
                 error={!!customError}
                 inputProps={{ min: minNextBid, max: maxBid, step: 100 }}
                 fullWidth
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleBidClick();
+                  }
+                }}
                 sx={{
                   '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { display: 'none' },
                   '& input[type=number]': { MozAppearance: 'textfield' }

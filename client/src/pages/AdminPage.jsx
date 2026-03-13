@@ -47,6 +47,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Switch from '@mui/material/Switch';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
+import ThemeToggle from '../components/shared/ThemeToggle.jsx';
 
 const TABS = ['League Setup', 'Auction Controls', 'Commentary', 'Player Data', 'Settings', 'Dashboard'];
 
@@ -110,6 +111,7 @@ export default function AdminPage() {
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <FiberManualRecordIcon sx={{ fontSize: 10, color: connected ? 'success.main' : 'error.main' }} />
+            <ThemeToggle />
             <Button variant="outlined" color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ borderColor: 'divider', color: 'text.secondary', fontSize: '0.8rem' }}>
               Sign Out
             </Button>

@@ -215,25 +215,25 @@ export default function DashboardView({ state, hideRemaining = false, preparedBi
           bgcolor: phase === 'PAUSED' ? '#1c0a00' : '#0c1a10',
           borderBottom: '1px solid',
           borderColor: phase === 'PAUSED' ? '#92400e' : '#166534',
-          px: 3, py: 1,
-          display: 'flex', alignItems: 'center', gap: 3, flexWrap: 'wrap',
+          px: { xs: 1.5, sm: 3 }, py: 1.5,
+          display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 }, flexWrap: 'wrap',
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Typography variant="overline" color="text.disabled">On Block</Typography>
-            <Typography fontWeight={700}>{currentPlayer.name}</Typography>
+            <Typography variant="overline" color="text.disabled" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>On Block</Typography>
+            <Typography fontWeight={700} sx={{ fontSize: { xs: '0.85rem', sm: '1rem' } }}>{currentPlayer.name}</Typography>
             <Chip label={currentPlayer.pool} size="small" sx={{ height: 20, fontSize: '0.68rem', bgcolor: `${themePoolColor(currentPlayer.pool)}20`, color: themePoolColor(currentPlayer.pool) }} />
           </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Typography variant="caption" color="text.disabled">Current Bid</Typography>
-            <Typography fontWeight={800} color="success.main" fontSize="1.1rem">
+            <Typography fontWeight={800} color="success.main" sx={{ fontSize: { xs: '1rem', sm: '1.1rem' } }}>
               {currentBid?.amount?.toLocaleString()} pts
             </Typography>
             {state.currentBid?.teamId && (
-              <Typography variant="caption" color="text.secondary">— {teams[currentBid?.teamId]?.name}</Typography>
+              <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'inline' } }}>— {teams[currentBid?.teamId]?.name}</Typography>
             )}
           </Box>
           {phase === 'PAUSED' && (
-            <Chip label="⏸ PAUSED" size="small" color="warning" sx={{ fontWeight: 700 }} />
+            <Chip label="⏸ PAUSED" size="small" color="warning" sx={{ fontWeight: 700, height: 20, fontSize: '0.65rem' }} />
           )}
         </Paper>
       )}

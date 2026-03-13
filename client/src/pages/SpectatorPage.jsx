@@ -180,23 +180,31 @@ export default function SpectatorPage() {
 
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: '#0b0e14', p: { xs: 1, md: 2 } }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, px: 2 }}>
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        justifyContent: 'space-between', 
+        alignItems: { xs: 'flex-start', sm: 'center' }, 
+        mb: 2, 
+        px: 2,
+        gap: { xs: 2, sm: 0 }
+      }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Box 
             component="img" 
             src={rplLogo} 
-            sx={{ height: 60, width: 'auto', borderRadius: '4px' }} 
+            sx={{ height: { xs: 40, md: 60 }, width: 'auto', borderRadius: '4px' }} 
           />
           <Box>
-            <Typography variant="h4" fontWeight={950} color="white" sx={{ letterSpacing: '0.05em', mb: 0, fontSize: { xs: '1.2rem', md: '2rem' } }}>
+            <Typography variant="h4" fontWeight={950} color="white" sx={{ letterSpacing: '0.05em', mb: 0, fontSize: { xs: '1.1rem', sm: '1.5rem', md: '2rem' } }}>
               RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box>
             </Typography>
-            <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: '0.6rem' }}>
+            <Typography variant="caption" color="rgba(255,255,255,0.3)" fontWeight={800} sx={{ textTransform: 'uppercase', letterSpacing: '0.2em', fontSize: { xs: '0.5rem', md: '0.6rem' } }}>
               High-Speed Feed • {Object.keys(state?.teams || {}).length} Teams
             </Typography>
           </Box>
         </Box>
-        <Box sx={{ textAlign: 'right' }}>
+        <Box sx={{ textAlign: { xs: 'left', sm: 'right' }, width: { xs: '100%', sm: 'auto' }, display: 'flex', flexDirection: { xs: 'row', sm: 'column' }, alignItems: { xs: 'center', sm: 'flex-end' }, justifyContent: 'space-between' }}>
           <Chip
             size="small"
             label={isEnded ? 'ENDED' : (connected ? 'LIVE' : 'CONNECTING')}
@@ -206,7 +214,7 @@ export default function SpectatorPage() {
               px: 1,
               height: 20,
               fontSize: '0.6rem',
-              bgcolor: isEnded ? 'rgba(255,255,255,0.1)' : undefined,
+              bgcolor: isEnded ? 'rgba(125,125,125,0.2)' : undefined,
               color: isEnded ? 'rgba(255,255,255,0.7)' : undefined,
             }}
           />
@@ -218,7 +226,7 @@ export default function SpectatorPage() {
               localStorage.removeItem('spectatorToken');
               window.location.reload();
             }}
-            sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, mt: 0.5, '&:hover': { color: 'white' } }}
+            sx={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 800, mt: { xs: 0, sm: 0.5 }, '&:hover': { color: 'white' } }}
           >
             Sign Out
           </Button>

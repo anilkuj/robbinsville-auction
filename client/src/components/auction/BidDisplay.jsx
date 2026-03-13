@@ -15,7 +15,7 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
   const hasBid = !!currentBid?.teamId;
 
   return (
-    <Paper sx={{ p: isBig ? '1.25rem 1.75rem' : '1rem 1.25rem', textAlign: 'center', bgcolor: 'background.default', borderRadius: isBig ? 2 : 1 }}>
+    <Paper sx={{ p: isBig ? { xs: '0.8rem 1rem', md: '1.25rem 1.75rem' } : '1rem 1.25rem', textAlign: 'center', bgcolor: 'background.default', borderRadius: isBig ? 2 : 1 }}>
       <Typography variant="overline" color="text.disabled" sx={{ letterSpacing: '0.1em', fontSize: isBig ? '0.8rem' : '0.75rem', fontWeight: 800 }}>
         {hasBid ? 'Highest Bid' : 'Opening Bid'}
       </Typography>
@@ -37,6 +37,7 @@ export default function BidDisplay({ currentBid, teams, player, size = 'normal' 
               fontVariantNumeric: 'tabular-nums',
               letterSpacing: '-0.02em',
               lineHeight: 1.1,
+              fontSize: isBig ? { xs: '1.25rem', md: '1.5rem' } : 'inherit',
               textShadow: isBig ? `0 0 10px ${hasBid ? (leadingTeam?.color || 'success.main') : 'primary.main'}20` : 'none'
             }}
           >

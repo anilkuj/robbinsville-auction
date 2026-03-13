@@ -27,6 +27,7 @@ import PlayerDataTab from '../components/shared/PlayerDataTab.jsx';
 import CommentaryFeed from '../components/shared/CommentaryFeed.jsx';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import HistoryIcon from '@mui/icons-material/History';
 import IconButton from '@mui/material/IconButton';
 import Drawer from '@mui/material/Drawer';
 import Chip from '@mui/material/Chip';
@@ -54,6 +55,7 @@ export default function HostPage() {
     const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
     const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
     const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
+    const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
 
     const { lastEvent } = useAuction();
 
@@ -149,6 +151,13 @@ export default function HostPage() {
                             </Box>
                         </Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 3 } }}>
+                            <IconButton 
+                                size="small" 
+                                onClick={() => setIsRightDrawerOpen(true)}
+                                sx={{ display: { xs: 'inline-flex', lg: 'none' }, color: 'primary.main', bgcolor: 'rgba(56, 189, 248, 0.1)' }}
+                            >
+                                <HistoryIcon fontSize="small" />
+                            </IconButton>
                             <Chip 
                                 label={auctionState?.phase || 'READY'} 
                                 color={
@@ -332,6 +341,41 @@ export default function HostPage() {
                     </>
                 )}
             </Box>
+
+            {/* Right Drawer (Mobile) */}
+            <Drawer
+                anchor="right"
+                open={isRightDrawerOpen}
+                onClose={() => setIsRightDrawerOpen(false)}
+                sx={{ display: { lg: 'none' } }}
+                PaperProps={{ sx: { width: { xs: '85vw', sm: 400 }, bgcolor: 'background.paper' } }}
+            >
+                <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Typography variant="overline" fontWeight={900} color="primary">Auction Analytics</Typography>
+                    <Button size="small" onClick={() => setIsRightDrawerOpen(false)}>Close</Button>
+                </Box>
+                <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                    {((phase === 'LIVE' || phase === 'PAUSED') && player) ? (
+                        <Box sx={{ p: 1 }}>
+                            <Typography variant="caption" color="text.disabled" sx={{ px: 1, fontWeight: 800, textTransform: 'uppercase' }}>Live Bids</Typography>
+                            <BidHistory 
+                                history={auctionState?.currentBid?.history} 
+                                teams={auctionState?.teams} 
+                            />
+                        </Box>
+                    ) : (
+                        <RemainingPlayersPanel
+                            players={auctionState?.players}
+                            pools={auctionState?.leagueConfig?.pools}
+                            currentPlayerId={player?.id ?? null}
+                            spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
+                            width="100%"
+                            isOpen={true}
+                            setIsOpen={() => {}} // No-op for mobile
+                        />
+                    )}
+                </Box>
+            </Drawer>
 
             {/* Notifications */}
             <Snackbar

@@ -30,6 +30,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MenuIcon from '@mui/icons-material/Menu';
+import HistoryIcon from '@mui/icons-material/History';
 import IconButton from '@mui/material/IconButton';
 import ThemeToggle from '../components/shared/ThemeToggle.jsx';
 import Drawer from '@mui/material/Drawer';
@@ -65,6 +66,7 @@ export default function AuctionPage() {
   const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
   const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
   const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
+  const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (!lastEvent) return;
@@ -141,7 +143,44 @@ export default function AuctionPage() {
             auctionState={auctionState} 
             connected={connected} 
             onMenuClick={() => setIsLeftDrawerOpen(true)}
+            onHistoryClick={() => setIsRightDrawerOpen(true)}
           />
+
+          {/* Right Drawer (Mobile) */}
+          <Drawer
+            anchor="right"
+            open={isRightDrawerOpen}
+            onClose={() => setIsRightDrawerOpen(false)}
+            sx={{ display: { lg: 'none' } }}
+            PaperProps={{ sx: { width: { xs: '85vw', sm: 400 }, bgcolor: 'background.paper' } }}
+          >
+            <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="overline" fontWeight={900} color="primary">Auction Intelligence</Typography>
+                <Button size="small" onClick={() => setIsRightDrawerOpen(false)}>Close</Button>
+            </Box>
+            <Box sx={{ flex: 1, overflowY: 'auto' }}>
+                {((phase === 'LIVE' || phase === 'PAUSED') && player) ? (
+                    <Box sx={{ p: 1 }}>
+                        <Typography variant="caption" color="text.disabled" sx={{ px: 1, fontWeight: 800, textTransform: 'uppercase' }}>Live Bids</Typography>
+                        <BidHistory 
+                            history={auctionState?.currentBid?.history} 
+                            teams={auctionState?.teams} 
+                        />
+                    </Box>
+                ) : (
+                    <RemainingPlayersPanel
+                        players={auctionState?.players}
+                        pools={auctionState?.leagueConfig?.pools}
+                        currentPlayerId={player?.id ?? null}
+                        spilloverIds={auctionState?.leagueConfig?.spilloverPlayerIds || []}
+                        width="100%"
+                        isOpen={true}
+                        setIsOpen={() => {}} // No-op for mobile
+                        isMobileDrawer
+                    />
+                )}
+            </Box>
+          </Drawer>
 
           {/* New Prominent Branding Header */}
           <Box sx={{ 
@@ -438,7 +477,7 @@ function poolColor(poolId) {
 
 // ── Phase Bar ──────────────────────────────────────────────────────────────────
 
-function MobileHeader({ user, auctionState, connected, onMenuClick }) {
+function MobileHeader({ user, auctionState, connected, onMenuClick, onHistoryClick }) {
   const team = auctionState?.teams?.[user?.teamId];
   const { logout } = useAuth();
   return (
@@ -455,9 +494,12 @@ function MobileHeader({ user, auctionState, connected, onMenuClick }) {
           />
           <Typography fontWeight={950} sx={{ fontSize: '1.2rem', letterSpacing: '0.02em' }}>RPL <Box component="span" sx={{ color: 'primary.main' }}>2026</Box></Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <IconButton size="small" onClick={onHistoryClick} sx={{ color: 'primary.main', bgcolor: 'rgba(56, 189, 248, 0.1)' }}>
+            <HistoryIcon fontSize="small" />
+          </IconButton>
           {team && (
-            <Box sx={{ textAlign: 'right' }}>
+            <Box sx={{ textAlign: 'right', display: { xs: 'none', sm: 'block' } }}>
               <Typography variant="caption" color="success.main" sx={{ fontWeight: 900, fontSize: '1rem', lineHeight: 1 }}>{formatPts(team?.budget || 0)}</Typography>
               <Typography variant="caption" color="text.secondary" fontWeight={800} display="block" sx={{ fontSize: '0.55rem', opacity: 0.6 }}>{(team.name || '').toUpperCase()}</Typography>
             </Box>

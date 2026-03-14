@@ -43,6 +43,7 @@ const settingsSchema = z.object({
   requireBidConfirm: z.boolean().optional(),
   randomizePool: z.boolean().optional(),
   spectatorEnabled: z.boolean().optional(),
+  ownerAverageMultiplier: z.union([z.string(), z.number()]).optional(),
 });
 
 function registerAdminHandlers(io, socket) {
@@ -387,7 +388,7 @@ function registerAdminHandlers(io, socket) {
       socket.emit('admin:error', { message: 'Invalid settings payload' });
       return;
     }
-    const { timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool, spectatorEnabled } = parsed.data;
+    const { timerSeconds, bidIncrement, timerBumpSeconds, endMode, dashboardPin, requireBidConfirm, randomizePool, spectatorEnabled, ownerAverageMultiplier } = parsed.data;
 
     const state = getState();
 
@@ -414,6 +415,12 @@ function registerAdminHandlers(io, socket) {
     }
     if (spectatorEnabled !== undefined) {
       state.settings.spectatorEnabled = Boolean(spectatorEnabled);
+    }
+    if (ownerAverageMultiplier !== undefined) {
+      const val = parseFloat(ownerAverageMultiplier);
+      if (!isNaN(val) && val >= 0) {
+        state.settings.ownerAverageMultiplier = val;
+      }
     }
 
     saveState();

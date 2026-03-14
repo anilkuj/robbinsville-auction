@@ -21,11 +21,7 @@ export default function CommentaryFeed({ commentary = [] }) {
     const theme = useTheme();
     const bottomRef = useRef(null);
 
-    useEffect(() => {
-        if (commentary && commentary.length > 0) {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }
-    }, [commentary]);
+    // Auto-scroll removed per user request: Latest items will render at the top
 
     if (!Array.isArray(commentary) || commentary.length === 0) {
         return (
@@ -48,7 +44,7 @@ export default function CommentaryFeed({ commentary = [] }) {
             overflowY: 'auto',
             bgcolor: 'background.default'
         }}>
-            {commentary.map((msg, idx) => {
+            {[...commentary].reverse().map((msg, idx) => {
                 if (!msg || !msg.type) return null;
                 const style = getEventStyle(msg.type, theme);
                 const timestamp = msg.timestamp ? new Date(msg.timestamp) : new Date();
@@ -101,7 +97,7 @@ export default function CommentaryFeed({ commentary = [] }) {
                     </Paper>
                 );
             })}
-            <div ref={bottomRef} />
+            <div ref={bottomRef} style={{ display: 'none' }} />
         </Box>
     );
 }

@@ -67,6 +67,7 @@ export default function AuctionPage() {
   const [leftWidth, setLeftWidth] = useState(280);
   const [rightWidth, setRightWidth] = useState(380);
   const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
+  const [isLeftPaneOpen, setIsLeftPaneOpen] = useState(true);
   const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
   const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
   const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
@@ -128,7 +129,7 @@ export default function AuctionPage() {
 
       <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, flex: 1, overflow: 'hidden' }}>
         {/* Left sidebar (Desktop) */}
-        {phase !== 'ENDED' && (
+        {phase !== 'ENDED' && isLeftPaneOpen && (
           <Box sx={{ display: { xs: 'none', lg: 'flex' }, position: 'relative' }}>
             <Sidebar width={leftWidth} />
             <div
@@ -276,7 +277,21 @@ export default function AuctionPage() {
           }}>
             <Tabs 
               value={currentTab} 
-              onChange={(_, v) => setCurrentTab(v)} 
+              onChange={(_, v) => {
+                setCurrentTab(v);
+                if (v === 3) {
+                  setIsRightPaneOpen(false);
+                  setIsLeftPaneOpen(false);
+                }
+                if (v === 4) {
+                  setIsRightPaneOpen(false);
+                  setIsLeftPaneOpen(false);
+                }
+                if (v === 0) {
+                  setIsRightPaneOpen(true);
+                  setIsLeftPaneOpen(true);
+                }
+              }} 
               variant="scrollable" 
               scrollButtons="auto" 
               sx={{ 
@@ -289,6 +304,7 @@ export default function AuctionPage() {
               <Tab label="Commentary" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
               <Tab label="Player Data" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
               <Tab label="Dashboard" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
+              <Tab label="Team Rosters" sx={{ fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.05em' }} />
             </Tabs>
             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
               <PlayerStats players={auctionState?.players} />
@@ -302,6 +318,18 @@ export default function AuctionPage() {
             {currentTab === 2 && <PlayerDataTab auctionState={auctionState} readOnly />}
 
             {currentTab === 3 && <DashboardView state={auctionState} hideRemaining={true} preparedBid={preparedBid} currentUser={user} />}
+
+            {currentTab === 4 && (
+              <Box sx={{ mt: 2 }}>
+                <SquadGrid 
+                  teams={teams} 
+                  players={players} 
+                  phase={phase}
+                  hideToggle={true} 
+                  hidePoints={true} 
+                />
+              </Box>
+            )}
 
             {currentTab === 0 && (
               <>

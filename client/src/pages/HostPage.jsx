@@ -56,6 +56,7 @@ export default function HostPage() {
     }
 
     const [isRightPaneOpen, setIsRightPaneOpen] = useState(() => window.innerWidth >= 1200);
+    const [isLeftPaneOpen, setIsLeftPaneOpen] = useState(true);
     const [currentTab, setCurrentTab] = useState(0); // 0 = Live, 1 = Player Data, 2 = Dashboard
     const [isLeftDrawerOpen, setIsLeftDrawerOpen] = useState(false);
     const [isRightDrawerOpen, setIsRightDrawerOpen] = useState(false);
@@ -113,7 +114,7 @@ export default function HostPage() {
             </Drawer>
 
             <Box sx={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: 'row' }}>
-                {phase !== 'ENDED' && (
+                {phase !== 'ENDED' && isLeftPaneOpen && (
                     <Box sx={{ display: { xs: 'none', lg: 'flex' } }}>
                         <HostSidebar width={320} />
                     </Box>
@@ -224,11 +225,26 @@ export default function HostPage() {
                                 alignItems: 'center',
                                 justifyContent: 'space-between'
                             }}>
-                                <Tabs value={currentTab} onChange={(_, v) => setCurrentTab(v)} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
+                                <Tabs value={currentTab} onChange={(_, v) => {
+                                    setCurrentTab(v);
+                                    if (v === 3) {
+                                        setIsRightPaneOpen(false);
+                                        setIsLeftPaneOpen(false);
+                                    }
+                                    if (v === 4) {
+                                        setIsRightPaneOpen(false);
+                                        setIsLeftPaneOpen(false);
+                                    }
+                                    if (v === 0) {
+                                        setIsRightPaneOpen(true);
+                                        setIsLeftPaneOpen(true);
+                                    }
+                                }} variant="scrollable" scrollButtons="auto" sx={{ flex: 1 }}>
                                     <Tab label="Live Auction" />
                                     <Tab label="Commentary" />
                                     <Tab label="Player Data" />
                                     <Tab label="Dashboard" />
+                                    <Tab label="Team Rosters" />
                                 </Tabs>
                                 <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
                                     <PlayerStats players={auctionState?.players} />
@@ -243,6 +259,19 @@ export default function HostPage() {
 
                             {/* Dashboard Tab */}
                             {currentTab === 3 && <DashboardView state={auctionState} hideRemaining={true} currentUser={user} />}
+
+                            {/* Team Rosters Tab (Spectator View embedded) */}
+                            {currentTab === 4 && (
+                                <Box sx={{ mt: 2 }}>
+                                    <SquadGrid 
+                                      teams={teams} 
+                                      players={players} 
+                                      phase={phase}
+                                      hideToggle={true} 
+                                      hidePoints={true} 
+                                    />
+                                </Box>
+                            )}
 
                             {/* Live Auction Tab */}
                             {currentTab === 0 && (

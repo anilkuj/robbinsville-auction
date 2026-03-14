@@ -1,6 +1,6 @@
 const { getState } = require('../state');
 const { saveState } = require('../persistence');
-const { getPublicState, computeMaxBid, scheduleTimer, addCommentary } = require('../auction');
+const { getPublicState, scheduleTimer, addCommentary, computeTrueMaxBid } = require('../auction');
 const { z } = require('zod');
 
 const bidSchema = z.object({
@@ -93,10 +93,10 @@ function registerBidHandlers(io, socket) {
     }
 
     // 10. Budget constraint
-    const maxBid = computeMaxBid(team.budget, team.roster.length, squadSize, minBid);
+    const maxBid = computeTrueMaxBid(state, user.teamId, playerId);
     if (bidAmount > maxBid) {
       socket.emit('bid:rejected', {
-        reason: `Exceeds your maximum allowable bid of ${maxBid.toLocaleString()} pts`,
+        reason: `Exceeds your maximum allowable bid of ${maxBid.toLocaleString()} pts due to dynamic owner dummy pricing limits`,
       });
       return;
     }

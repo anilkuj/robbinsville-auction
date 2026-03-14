@@ -55,6 +55,9 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     const [saving, setSaving] = useState(false);
     const [columnFilters, setColumnFilters] = useState({}); // field -> [selectedValues]
     const [filterAnchor, setFilterAnchor] = useState({ el: null, col: null });
+    const [inactivePlayerConfirm, setInactivePlayerConfirm] = useState(null); // { id, name }
+    const [page, setPage] = useState(1);
+    const [rowsPerPage] = useState(50);
 
     // keep default sort in sync if players array completely changes
     useEffect(() => {
@@ -126,6 +129,11 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
             bg: alpha(theme.palette.error.main, 0.15), 
             label: 'Unsold' 
         },
+        INACTIVE: {
+            color: theme.palette.text.disabled,
+            bg: alpha(theme.palette.text.primary, 0.1),
+            label: 'Inactive'
+        },
     };
 
     const toggleEdit = () => {
@@ -175,6 +183,22 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
         }
     };
 
+    const handleMarkInactive = (playerId, playerName) => {
+        setInactivePlayerConfirm({ id: playerId, name: playerName });
+    };
+
+    const confirmMarkInactive = () => {
+        if (!inactivePlayerConfirm) return;
+        const { id } = inactivePlayerConfirm;
+        
+        setEditedPlayers(prev => ({
+            ...prev,
+            [id]: { ...prev[id], status: 'INACTIVE' }
+        }));
+        
+        setInactivePlayerConfirm(null);
+    };
+
     const poolClr = (poolId) => {
         if (poolId?.startsWith('A')) return { color: theme.palette.warning.main, bg: alpha(theme.palette.warning.main, 0.1), border: alpha(theme.palette.warning.main, 0.3) };
         if (poolId?.startsWith('B')) return { color: theme.palette.info.main, bg: alpha(theme.palette.info.main, 0.1), border: alpha(theme.palette.info.main, 0.3) };
@@ -188,6 +212,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
     }
 
     let filtered = players.filter(p => {
+        if (readOnly && p.status === 'INACTIVE') return false;
         if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
         
         if (search) {
@@ -248,6 +273,19 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
             return 0;
         });
     }
+
+    // --- Pagination ---
+    const totalPages = Math.ceil(filtered.length / rowsPerPage);
+    const paginated = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+    // Reset page if filters change and current page is out of bounds
+    useEffect(() => {
+        if (page > totalPages && totalPages > 0) {
+            setPage(totalPages);
+        } else if (totalPages === 0) {
+            setPage(1);
+        }
+    }, [filtered.length, totalPages, page]);
 
     const thSort = (col, label, opts = {}) => {
         const hasFilter = columnFilters[col] && columnFilters[col].length > 0;
@@ -329,7 +367,32 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             ✕ Clear Filters
                         </Button>
                     )}
-                    <Box sx={{ ml: 'auto', display: 'flex', gap: 1 }}>
+                    <Box sx={{ ml: 'auto', display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {totalPages > 1 && (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mr: 2 }}>
+                                <Button 
+                                    size="small" 
+                                    variant="outlined" 
+                                    disabled={page <= 1} 
+                                    onClick={() => setPage(p => p - 1)}
+                                    sx={{ minWidth: 32, p: 0.5 }}
+                                >
+                                    ◀
+                                </Button>
+                                <Typography variant="caption" fontWeight={700}>
+                                    Page {page} of {totalPages}
+                                </Typography>
+                                <Button 
+                                    size="small" 
+                                    variant="outlined" 
+                                    disabled={page >= totalPages} 
+                                    onClick={() => setPage(p => p + 1)}
+                                    sx={{ minWidth: 32, p: 0.5 }}
+                                >
+                                    ▶
+                                </Button>
+                            </Box>
+                        )}
                         {!isEditing ? (
                             <>
                                 {!readOnly && (
@@ -388,16 +451,22 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             {thSort('#', '#', { first: true })}
                             {thSort('name', 'Player Name')}
                             {thSort('pool', 'Pool')}
-                            {!readOnly && thSort('status', 'Status', { center: true })}
-                            {!readOnly && thSort('soldTo', 'Sold To')}
-                            {!readOnly && thSort('soldFor', 'Sold Price', { right: true })}
+                            {thSort('status', 'Status', { center: true })}
+                            {!readOnly && isEditing && <th style={{
+                                padding: '0.55rem 0.25rem', textAlign: 'center',
+                                color: theme.palette.text.secondary, fontWeight: 700, fontSize: '0.68rem',
+                                textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap',
+                                borderBottom: `1px solid ${theme.palette.divider}`
+                            }}>Action</th>}
+                            {thSort('soldTo', 'Sold To')}
+                            {thSort('soldFor', 'Sold Price', { right: true })}
                             {extraKeys.map(k => thSort(k, k))}
                             {thSort('base', 'Base Price', { right: true })}
-                            <TH center></TH>
                         </tr>
                     </thead>
                     <tbody>
-                        {filtered.map((p, i) => {
+                        {paginated.map((p, i) => {
+                            const globalIdx = players.indexOf(p);
                             const owner = playerIsOwner(p);
                             const changes = editedPlayers[p.id] || {};
                             const sc = statusCfg[changes.status !== undefined ? changes.status : p.status] || statusCfg.PENDING;
@@ -407,9 +476,12 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
 
                             const soldTeam = p.soldTo ? teams[p.soldTo] : null;
                             const isSpillover = spillovers.includes(p.id);
-                            const rowBg = isSpillover 
-                                ? (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)')
-                                : (i % 2 === 0 ? theme.palette.background.paper : theme.palette.background.default);
+                            const isInactive = (changes.status !== undefined ? changes.status : p.status) === 'INACTIVE';
+                            const rowBg = isInactive
+                                ? (isDark ? 'rgba(71, 85, 105, 0.15)' : 'rgba(241, 245, 249, 1)') // slate-like grey
+                                : isSpillover 
+                                    ? (isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(239, 68, 68, 0.08)')
+                                    : (i % 2 === 0 ? theme.palette.background.paper : theme.palette.background.default);
 
                             const isChanged = (field) => {
                                 if (field === 'extra') return !!changes.extra;
@@ -425,11 +497,16 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                             });
 
                             return (
-                                <tr key={p.id} style={{ background: rowBg, transition: 'background 0.1s' }}
-                                    onMouseEnter={e => !isEditing && (e.currentTarget.style.background = alpha(theme.palette.primary.main, 0.1))}
+                                <tr key={p.id} style={{ 
+                                    background: rowBg, 
+                                    transition: 'background 0.1s',
+                                    opacity: isInactive ? 0.6 : 1,
+                                    filter: isInactive ? 'grayscale(0.5)' : 'none'
+                                }}
+                                    onMouseEnter={e => !isEditing && !isInactive && (e.currentTarget.style.background = alpha(theme.palette.primary.main, 0.1))}
                                     onMouseLeave={e => !isEditing && (e.currentTarget.style.background = rowBg)}
                                 >
-                                    <TD first theme={theme} style={{ color: theme.palette.text.disabled }}>{i + 1}</TD>
+                                    <TD first theme={theme} style={{ color: theme.palette.text.disabled }}>{globalIdx + 1}</TD>
                                     <TD theme={theme} style={{ color: theme.palette.text.primary, fontWeight: 500, ...cellStyle('name') }}>
                                         {isEditing ? (
                                             <input
@@ -464,9 +541,7 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             <span style={{ background: pc.bg, color: pc.color, border: `1px solid ${pc.border}`, borderRadius: 4, padding: '0.15rem 0.45rem', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{p.pool}</span>
                                         )}
                                     </TD>
-                                    {!readOnly && (
-                                        <>
-                                            <TD center theme={theme} style={cellStyle('status')}>
+                                    <TD center theme={theme} style={cellStyle('status')}>
                                                 {isEditing ? (
                                                     <select
                                                         style={{ background: theme.palette.background.paper, border: `1px solid ${theme.palette.divider}`, color: theme.palette.text.primary, borderRadius: 4, padding: '2px 4px', width: '100%' }}
@@ -481,6 +556,32 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                                     <span style={{ background: sc.bg, color: sc.color, borderRadius: 999, padding: '0.15rem 0.55rem', fontSize: '0.68rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{sc.label}</span>
                                                 )}
                                             </TD>
+                                            {isEditing && (
+                                                <TD center theme={theme}>
+                                                    {p.status !== 'SOLD' && !isInactive && (
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="inherit"
+                                                            onClick={() => handleMarkInactive(p.id, p.name)}
+                                                            sx={{ 
+                                                                fontSize: '0.65rem', 
+                                                                py: 0, 
+                                                                minWidth: 'auto',
+                                                                color: 'text.disabled',
+                                                                borderColor: 'divider',
+                                                                '&:hover': {
+                                                                    color: 'error.main',
+                                                                    borderColor: 'error.main',
+                                                                    bgcolor: alpha(theme.palette.error.main, 0.05)
+                                                                }
+                                                            }}
+                                                        >
+                                                            Mark Inactive
+                                                        </Button>
+                                                    )}
+                                                </TD>
+                                            )}
                                             <TD theme={theme} style={{ color: theme.palette.text.primary }}>{soldTeam?.name ?? '—'}</TD>
                                             <TD right theme={theme} style={{ whiteSpace: 'nowrap', ...cellStyle('soldFor') }}>
                                                 {isEditing && (changes.status === 'SOLD' || (!changes.status && p.status === 'SOLD')) ? (
@@ -501,8 +602,6 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                                     )
                                                 )}
                                             </TD>
-                                        </>
-                                    )}
                                     {extraKeys.map(k => {
                                         const extraVal = changes.extra && changes.extra[k] !== undefined ? changes.extra[k] : (p.extra?.[k] ?? '');
                                         return (
@@ -531,7 +630,6 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                                             formatPts(p.basePrice)
                                         )}
                                     </TD>
-                                    <TD center></TD>
                                 </tr>
                             );
                         })}
@@ -546,6 +644,44 @@ export default function PlayerDataTab({ auctionState, adminAction, readOnly = fa
                 filters={columnFilters}
                 setFilters={setColumnFilters}
             />
+
+            <Dialog 
+                open={!!inactivePlayerConfirm} 
+                onClose={() => setInactivePlayerConfirm(null)}
+                maxWidth="xs"
+                fullWidth
+            >
+                <DialogTitle sx={{ color: 'error.main', fontWeight: 700, pb: 1 }}>
+                    ⚠ Confirm Inactivate Player
+                </DialogTitle>
+                <DialogContent>
+                    <Typography gutterBottom>
+                        Are you sure you want to mark <strong>{inactivePlayerConfirm?.name}</strong> as <strong>INACTIVE</strong>?
+                    </Typography>
+                    <Box sx={{ mt: 2, p: 1.5, bgcolor: alpha(theme.palette.error.main, 0.1), border: `1px solid ${alpha(theme.palette.error.main, 0.2)}`, borderRadius: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'error.main', fontWeight: 800, textAlign: 'center' }}>
+                            ⚠ THIS ACTION CANNOT BE REVERSED!
+                        </Typography>
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary', fontSize: '0.8rem' }}>
+                        This will permanently remove the player from the auction pool and promote the next available spillover player to maintain the required roster count.
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 3 }}>
+                    <Button onClick={() => setInactivePlayerConfirm(null)} color="inherit" disabled={saving}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={confirmMarkInactive} 
+                        variant="contained" 
+                        color="error" 
+                        disabled={saving}
+                        sx={{ px: 3, fontWeight: 700 }}
+                    >
+                        {saving ? 'Processing...' : 'Confirm Inactivate'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box >
     );
 }

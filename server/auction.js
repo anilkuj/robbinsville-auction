@@ -11,7 +11,9 @@ function addCommentary(io, type, data) {
   io.emit('commentary:new', { entry, history: state.commentary });
 }
 
-// Pure function — identical logic used on client for BidButton disabled state
+// Pure function — simple budget vs roster size check.
+// We keep this for basic checks, but true valid bids require `computeTrueMaxBid` 
+// which simulates dynamic owner price increments.
 function computeMaxBid(budget, rosterSize, squadSize, minBid) {
   const playersStillNeededAfterThis = Math.max(0, squadSize - rosterSize - 1);
   const mustKeepInReserve = playersStillNeededAfterThis * minBid;
@@ -24,13 +26,31 @@ function computeMaxBid(budget, rosterSize, squadSize, minBid) {
 // case-insensitive) equals "owner" (case-insensitive value).
 function isOwner(player) {
   if (!player.extra) return false;
-  const keys = Object.keys(player.extra);
-  const typeKey = keys.find(k => {
-    const lowKey = k.trim().toLowerCase();
-    return lowKey === 'type' || lowKey === 'player_type';
+  return Object.entries(player.extra).some(([k, v]) => {
+    const lowK = k?.trim().toLowerCase();
+    const lowV = String(v || '').trim().toLowerCase();
+    return (lowK === 'type' || lowK === 'player_type') && lowV === 'owner';
   });
-  if (!typeKey) return false;
-  return String(player.extra[typeKey]).trim().toLowerCase() === 'owner';
+}
+
+// Reusable logic to find which team an owner belongs to
+function getTeamForOwner(state, ownerPlayer) {
+  // Team resolution priority:
+  // 1. League Setup ownerPlayerIds (admin explicitly linked this player to a team)
+  // 2. CSV extra.team column (case-insensitive key + value match)
+  let team = Object.values(state.teams).find(t => t.ownerPlayerIds && t.ownerPlayerIds.includes(ownerPlayer.id));
+
+  if (!team) {
+    const teamKey = Object.keys(ownerPlayer.extra || {}).find(k => {
+      const kl = String(k).trim().toLowerCase();
+      return kl.startsWith('team') || kl === 'soldto';
+    });
+    if (teamKey) {
+      const teamName = String(ownerPlayer.extra[teamKey]).replace(/\s+/g, ' ').trim().toLowerCase();
+      team = Object.values(state.teams).find(t => t.name.replace(/\s+/g, ' ').trim().toLowerCase() === teamName);
+    }
+  }
+  return team;
 }
 
 // Average soldFor of non-owner SOLD players in the same "tens" rank bracket.
@@ -78,21 +98,9 @@ function syncOwnerAverages(state) {
 
     owner.soldFor = avg;
 
-    // Team resolution priority:
-    // 1. League Setup ownerPlayerIds (admin explicitly linked this player to a team)
-    // 2. CSV extra.team column (case-insensitive key + value match)
-    let team = Object.values(state.teams).find(t => t.ownerPlayerIds && t.ownerPlayerIds.includes(owner.id));
+    owner.soldFor = avg;
 
-    if (!team) {
-      const teamKey = Object.keys(owner.extra || {}).find(k => {
-        const kl = String(k).trim().toLowerCase();
-        return kl.startsWith('team') || kl === 'soldto';
-      });
-      if (teamKey) {
-        const teamName = String(owner.extra[teamKey]).replace(/\s+/g, ' ').trim().toLowerCase();
-        team = Object.values(state.teams).find(t => t.name.replace(/\s+/g, ' ').trim().toLowerCase() === teamName);
-      }
-    }
+    const team = getTeamForOwner(state, owner);
 
     if (team) {
       owner.status = 'SOLD';
@@ -123,18 +131,272 @@ function syncOwnerAverages(state) {
   }
 }
 
-// Ensure the count in leagueConfig.pools matches the actual number of players in each pool.
-function syncPoolCounts(state) {
-  const counts = {};
-  for (const p of state.players) {
-    counts[p.pool] = (counts[p.pool] || 0) + 1;
+/**
+ * Computes the true maximum bid for a team.
+ * This function accounts for both the base budget rules AND the dynamic cost 
+ * of dummy players whose price may increase if the active player is in their bracket.
+ */
+function computeTrueMaxBid(state, biddingTeamId, currentPlayerId) {
+  const biddingTeam = state.teams[biddingTeamId];
+  if (!biddingTeam) return 0;
+  
+  const currentPlayer = state.players.find(p => p.id === currentPlayerId);
+  if (!currentPlayer) return 0;
+  
+  const { squadSize, minBid } = state.leagueConfig;
+  
+  // High upper bound — they can never bid more than their total budget
+  const maxPossible = computeMaxBid(biddingTeam.budget, biddingTeam.roster.length, squadSize, minBid);
+
+  // If the player being bid on is an owner (which shouldn't happen, but just in case), 
+  // or if they are in a pool that doesn't affect owner averages, standard maxBid applies.
+  if (isOwner(currentPlayer) || maxPossible <= 0) {
+    return Math.max(0, maxPossible);
   }
 
-  if (state.leagueConfig && state.leagueConfig.pools) {
+  const bracketStart = Math.floor(currentPlayer.sortOrder / 10) * 10;
+  const bracketEnd = bracketStart + 9;
+
+  // Find all owners who are affected by this bracket
+  const affectedOwners = state.players.filter(p => 
+    isOwner(p) && p.sortOrder >= bracketStart && p.sortOrder <= bracketEnd
+  );
+
+  // If no owners are in this bracket, the dynamic price doesn't change
+  if (affectedOwners.length === 0) {
+    return Math.max(0, maxPossible);
+  }
+
+  // Find existing sold players in this bracket to calculate the starting average
+  const soldInBracket = state.players.filter(p =>
+    p.sortOrder >= bracketStart && 
+    p.sortOrder <= bracketEnd && 
+    p.status === 'SOLD' && 
+    !isOwner(p)
+  );
+
+  const existingSum = soldInBracket.reduce((sum, p) => sum + p.soldFor, 0);
+  const newCount = soldInBracket.length + 1;
+
+  // We binary search for the highest bid that doesn't bankrup ANY team
+  let low = currentPlayer.basePrice;
+  let high = maxPossible;
+  let bestValidBid = low - 1; // Default to less than base price if no valid bid exists
+
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    
+    // Simulate average price if the player sells for `mid` points
+    const projectedAverage = Math.round((existingSum + mid) / newCount);
+
+    let isValid = true;
+
+    // Check all affected owners to ensure their new projected price doesn't bankrupt their team
+    for (const owner of affectedOwners) {
+      const ownerTeam = getTeamForOwner(state, owner);
+      if (!ownerTeam) continue;
+
+      let currentOwnerPrice = 0;
+      const rosterEntry = ownerTeam.roster.find(r => r.playerId === owner.id);
+      if (rosterEntry) {
+         currentOwnerPrice = rosterEntry.price;
+      } else if (owner.status === 'SOLD') {
+         currentOwnerPrice = owner.soldFor || 0;
+      }
+      
+      // Calculate how much extra budget this team will lose due to the average increasing
+      const dummyPriceIncrease = Math.max(0, projectedAverage - currentOwnerPrice);
+
+      // We need to verify `ownerTeam` has enough budget remaining after paying this increase
+      // to field the rest of their squad.
+      let projectedBudget = ownerTeam.budget - dummyPriceIncrease;
+      
+      // If the ownerTeam is ALSO the biddingTeam, they also pay the `mid` bid amount!
+      let projectedRosterSize = ownerTeam.roster.length;
+      if (ownerTeam.id === biddingTeamId) {
+        projectedBudget -= mid;
+        projectedRosterSize += 1; // They win the current player
+      }
+
+      // Do they still meet the minimum required reserve?
+      const playersStillNeededAfterThis = Math.max(0, squadSize - projectedRosterSize);
+      let mustKeepInReserve = playersStillNeededAfterThis * minBid;
+
+      // Add a buffer above base price for any owner on this team whose bracket hasn't sold yet
+      // This protects them from spending down to exactly zero and then going bankrupt when their dummy averages spike.
+      const multiplier = (state.settings?.ownerAverageMultiplier ?? 1.5) - 1.0;
+      const teamOwners = state.players.filter(p => isOwner(p) && getTeamForOwner(state, p)?.id === ownerTeam.id);
+      for (const tOwner of teamOwners) {
+        // Only reserve multiplier buffer if the owner's price hasn't locked yet (PENDING)
+        // AND they are NOT actively having their price evaluated in THIS bracket
+        const isCurrentBracket = tOwner.sortOrder >= bracketStart && tOwner.sortOrder <= bracketEnd;
+        if (tOwner.status === 'PENDING' && !isCurrentBracket) {
+          mustKeepInReserve += Math.round(tOwner.basePrice * multiplier);
+        }
+      }
+
+      if (projectedBudget < mustKeepInReserve) {
+        if (ownerTeam.id === biddingTeamId) {
+          isValid = false;
+        }
+        break;
+      }
+    }
+
+    // Check the bidding team itself if it wasn't already checked as an affected owner
+    if (isValid) {
+      const biddingTeamIsAffected = affectedOwners.some(o => getTeamForOwner(state, o)?.id === biddingTeamId);
+      if (!biddingTeamIsAffected) {
+        let projectedBudget = biddingTeam.budget - mid;
+        let projectedRosterSize = biddingTeam.roster.length + 1;
+        const playersStillNeededAfterThis = Math.max(0, squadSize - projectedRosterSize);
+        let mustKeepInReserve = playersStillNeededAfterThis * minBid;
+        
+        const multiplier = (state.settings?.ownerAverageMultiplier ?? 1.5) - 1.0;
+        const teamOwners = state.players.filter(p => isOwner(p) && getTeamForOwner(state, p)?.id === biddingTeam.id);
+        for (const tOwner of teamOwners) {
+          const isCurrentBracket = tOwner.sortOrder >= bracketStart && tOwner.sortOrder <= bracketEnd;
+          if (tOwner.status === 'PENDING' && !isCurrentBracket) {
+            mustKeepInReserve += Math.round(tOwner.basePrice * multiplier);
+          }
+        }
+
+        if (projectedBudget < mustKeepInReserve) {
+          isValid = false;
+        }
+      }
+    }
+
+    if (isValid) {
+      bestValidBid = mid; // This bid is safe, try higher
+      low = mid + 1;
+    } else {
+      high = mid - 1; // This bid bankrupted someone, try lower
+    }
+  }
+
+  return Math.max(0, bestValidBid);
+}
+
+// Side-effects of marking a player inactive (spillover shifts)
+function handlePlayerInactivation(state, player) {
+  if (player.status !== 'INACTIVE') return;
+
+  const wasRegular = !isOwner(player) && !(state.leagueConfig.spilloverPlayerIds || []).includes(player.id);
+
+  // 1. Promotion logic: if we lost a regular player, promote the topmost spillover
+  if (wasRegular && state.leagueConfig.spilloverPlayerIds && state.leagueConfig.spilloverPlayerIds.length > 0) {
+    state.leagueConfig.spilloverPlayerIds.shift(); // Remove the topmost spillover
+  } else if (!wasRegular) {
+    // If it was a spillover, remove it from the spillover list
+    const spillIdx = (state.leagueConfig.spilloverPlayerIds || []).indexOf(player.id);
+    if (spillIdx !== -1) {
+      state.leagueConfig.spilloverPlayerIds.splice(spillIdx, 1);
+    }
+  }
+
+  ensureLeagueViability(state);
+}
+
+// Global health check for league configuration vs player pool
+function ensureLeagueViability(state) {
+  if (!state.leagueConfig) return;
+
+  // 1. Re-calculate pool counts (excluding inactive)
+  const counts = {};
+  for (const p of state.players) {
+    if (p.status !== 'INACTIVE') {
+      counts[p.pool] = (counts[p.pool] || 0) + 1;
+    }
+  }
+  if (state.leagueConfig.pools) {
     for (const pool of state.leagueConfig.pools) {
       pool.count = counts[pool.id] || 0;
     }
   }
+
+  const activePlayers = state.players.filter(p => p.status !== 'INACTIVE');
+  const numTeams = state.leagueConfig.numTeams || 10;
+  let currentSquadSize = state.leagueConfig.squadSize || 18;
+
+  // 2. Auto-adjust squad size if shortage occurs
+  const requiredCount = numTeams * currentSquadSize;
+  const requiredCountBefore = numTeams * currentSquadSize;
+  console.log(`[ensureLeagueViability] start: phase=${state.phase}, active=${activePlayers.length}, numTeams=${numTeams}, squadSize=${currentSquadSize}, required=${requiredCountBefore}`);
+  
+  if (activePlayers.length < requiredCount) {
+    const newSquadSize = Math.floor(activePlayers.length / numTeams);
+    console.log(`[ensureLeagueViability] shortage! newSquadSize candidate=${newSquadSize}`);
+    if (newSquadSize < currentSquadSize) {
+      console.log(`[ensureLeagueViability] ADJUSTING SQUAD SIZE DOWN: ${currentSquadSize} -> ${newSquadSize}`);
+      state.leagueConfig.squadSize = newSquadSize;
+      currentSquadSize = newSquadSize;
+    }
+  } else {
+    // Potential for upward adjustment if we have recovered players (e.g. after reset)
+    // but don't exceed the baseline of 18 unless explicitly configured higher (rare)
+    const baseline = 18;
+    if (currentSquadSize < baseline) {
+      const possibleSquadSize = Math.min(baseline, Math.floor(activePlayers.length / numTeams));
+      if (possibleSquadSize > currentSquadSize) {
+        console.log(`[ensureLeagueViability] ADJUSTING SQUAD SIZE UP: ${currentSquadSize} -> ${possibleSquadSize}`);
+        state.leagueConfig.squadSize = possibleSquadSize;
+        currentSquadSize = possibleSquadSize;
+      }
+    }
+  }
+
+  // 3. Re-calculate spillover requirements
+  const finalRequiredCount = numTeams * (state.leagueConfig.squadSize || 18);
+  const overflow = Math.max(0, activePlayers.length - finalRequiredCount);
+  
+  if (!state.leagueConfig.spilloverPlayerIds) {
+    state.leagueConfig.spilloverPlayerIds = [];
+  }
+
+  // Truncate spillover list if it's too long now
+  if (state.leagueConfig.spilloverPlayerIds.length > overflow) {
+    state.leagueConfig.spilloverPlayerIds = state.leagueConfig.spilloverPlayerIds.slice(0, overflow);
+  }
+  
+  // Self-heal: If we are in SETUP phase (or early auction) and spillovers are missing, auto-fill them
+  const isEarly = state.phase === 'SETUP' || (state.phase === 'LIVE' && (state.currentPlayerIndex === null || state.currentPlayerIndex === 0));
+  if (isEarly && overflow > 0 && (!state.leagueConfig.spilloverPlayerIds || state.leagueConfig.spilloverPlayerIds.length < overflow)) {
+    console.log(`[ensureLeagueViability] Auto-filling spillovers for overflow=${overflow}...`);
+    const currentIds = new Set(state.leagueConfig.spilloverPlayerIds || []);
+    const spillIds = [...(state.leagueConfig.spilloverPlayerIds || [])];
+    
+    const nonOwnerPlayers = activePlayers.filter(p => {
+      if (!p.extra) return true;
+      const is_owner = isOwner(p);
+      return !is_owner;
+    });
+    
+    // Add missing players until we hit overflow count
+    for (const p of nonOwnerPlayers) {
+      if (spillIds.length >= overflow) break;
+      if (!currentIds.has(p.id)) {
+        spillIds.push(p.id);
+        currentIds.add(p.id);
+      }
+    }
+    
+    // Fallback if not enough non-owners
+    if (spillIds.length < overflow) {
+      for (const p of activePlayers) {
+        if (spillIds.length >= overflow) break;
+        if (!currentIds.has(p.id)) {
+          spillIds.push(p.id);
+          currentIds.add(p.id);
+        }
+      }
+    }
+    state.leagueConfig.spilloverPlayerIds = spillIds;
+    console.log(`[ensureLeagueViability] Self-healed spillovers: count now ${state.leagueConfig.spilloverPlayerIds.length}. IDs: ${state.leagueConfig.spilloverPlayerIds.join(',')}`);
+  }
+
+  // 4. Final syncs
+  syncOwnerAverages(state);
 }
 
 // ── Public state ──────────────────────────────────────────────────────────────
@@ -267,7 +529,6 @@ function startPlayer(io, playerIndex) {
 
   if (idx === -1 || idx >= state.players.length) {
     // All non-owner players done — do a final owner average sync before ENDED
-    const poolIds = [...new Set(state.players.map(p => p.pool))];
     syncOwnerAverages(state);
 
     state.phase = 'ENDED';
@@ -283,7 +544,6 @@ function startPlayer(io, playerIndex) {
   if (!player || player.status !== 'PENDING' || isOwner(player)) {
     const nextIdx = findNextPendingIndex(idx + 1, randomize);
     if (nextIdx === -1) {
-      const poolIds = [...new Set(state.players.map(p => p.pool))];
       syncOwnerAverages(state);
 
       state.phase = 'ENDED';
@@ -453,14 +713,16 @@ function runFullSimulation(state) {
     p.soldFor = null;
   });
 
-  // 2. Correct sortOrder based on UI logic (Pool + Average Points desc)
-  const poolOrder = state.leagueConfig.pools.map(p => p.id);
+  // 2. Correct sortOrder based on Average Points (desc)
+  const getAvgPts = (p) => {
+    if (!p.extra) return 0;
+    const key = Object.keys(p.extra).find(k => k.toLowerCase().includes('average_point'));
+    return key ? parseInt(p.extra[key], 10) || 0 : 0;
+  };
+
   state.players.sort((a, b) => {
-    const ai = poolOrder.indexOf(a.pool);
-    const bi = poolOrder.indexOf(b.pool);
-    if (ai !== bi) return ai - bi;
-    const ap = parseInt(a.extra?.average_points || '0', 10);
-    const bp = parseInt(b.extra?.average_points || '0', 10);
+    const ap = getAvgPts(a);
+    const bp = getAvgPts(b);
     if (ap !== bp) return bp - ap;
     return a.name.localeCompare(b.name);
   });
@@ -625,8 +887,11 @@ module.exports = {
   clearAuctionTimer,
   handleTimerExpiry,
   isOwner,
+  getTeamForOwner,
   syncOwnerAverages,
-  syncPoolCounts,
+  computeTrueMaxBid,
+  ensureLeagueViability,
+  handlePlayerInactivation,
   addCommentary,
   runFullSimulation,
 };

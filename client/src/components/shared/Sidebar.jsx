@@ -108,7 +108,7 @@ export default function Sidebar({ width, isDrawer = false }) {
                   {Math.round((1 - (effectiveRemaining / (auctionState?.leagueConfig?.startingBudget || 1))) * 100)}% SPENT
                 </Typography>
                 <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                  {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid)).length : 0)} / {squadSize}
+                  {roster.length + (team.ownerIsPlayer ? (team.ownerPlayerIds || []).filter(oid => !roster.some(rp => rp.playerId === oid) && auctionState.players?.find(p => p.id === oid)?.status !== 'INACTIVE').length : 0)} / {squadSize}
                 </Typography>
               </Box>
             </Box>

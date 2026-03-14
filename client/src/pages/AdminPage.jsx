@@ -48,6 +48,7 @@ import Switch from '@mui/material/Switch';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ThemeToggle from '../components/shared/ThemeToggle.jsx';
+import { useTheme, alpha } from '@mui/material/styles';
 
 const TABS = ['League Setup', 'Auction Controls', 'Commentary', 'Player Data', 'Settings', 'Dashboard'];
 
@@ -270,7 +271,9 @@ export default function AdminPage() {
 // ─── League Setup Tab ─────────────────────────────────────────────────────────
 
 function LeagueSetupTab({ auctionState, onImported }) {
-  const { phase, leagueConfig } = auctionState;
+  const theme = useTheme();
+  const { phase, leagueConfig: rawConfig } = auctionState;
+  const leagueConfig = rawConfig || { pools: [] };
   const isSetup = phase === 'SETUP';
 
   const ownerPlayers = (auctionState.players || []).filter(p => {
@@ -292,7 +295,11 @@ function LeagueSetupTab({ auctionState, onImported }) {
     return Array.from(keys);
   }, [auctionState.players]);
 
-  const [cfg, setCfg] = useState(() => JSON.parse(JSON.stringify(leagueConfig)));
+  const [cfg, setCfg] = useState(() => JSON.parse(JSON.stringify(leagueConfig || { pools: [] })));
+  if (!cfg) {
+    // Force non-null cfg if initialization failed
+    setCfg({ pools: [] });
+  }
   const [teams, setTeams] = useState(() => {
     const t = JSON.parse(JSON.stringify(auctionState.teams));
     if (Object.keys(t).length === 0) {
@@ -321,14 +328,18 @@ function LeagueSetupTab({ auctionState, onImported }) {
   const [splitModal, setSplitModal] = useState({ open: false });
 
   useEffect(() => {
-    setCfg(JSON.parse(JSON.stringify(leagueConfig)));
+    if (leagueConfig) {
+      setCfg(JSON.parse(JSON.stringify(leagueConfig)));
+    }
     if (auctionState.teams && Object.keys(auctionState.teams).length > 0) {
       setTeams(JSON.parse(JSON.stringify(auctionState.teams)));
     }
   }, [leagueConfig, auctionState.teams]);
 
-  const required = parseInt(cfg.numTeams) * parseInt(cfg.squadSize);
-  const poolTotal = cfg.pools.reduce((s, p) => s + (parseInt(p.count) || 0), 0);
+  const nTeams = parseInt(cfg?.numTeams) || 10;
+  const sSize = parseInt(cfg?.squadSize) || 18;
+  const required = nTeams * sSize;
+  const poolTotal = (cfg?.pools || []).reduce((s, p) => s + (parseInt(p.count) || 0), 0);
   const overflow = Math.max(0, poolTotal - required);
   const teamCount = Object.keys(teams).length;
   const poolsValid = poolTotal >= required;
@@ -497,12 +508,25 @@ function LeagueSetupTab({ auctionState, onImported }) {
           ))}
         </Box>
         {overflow > 0 && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'rgba(239, 68, 68, 0.05)', border: '1px solid', borderColor: 'error.main', borderRadius: 1 }}>
+          <Box sx={{ 
+            mt: 2, 
+            p: 2, 
+            bgcolor: !spilloverValid ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)', 
+            border: '2px solid', 
+            borderColor: !spilloverValid ? 'error.main' : 'error.light', 
+            borderRadius: 1,
+            boxShadow: !spilloverValid ? `0 0 12px ${alpha(theme.palette.error.main, 0.2)}` : 'none'
+          }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-              <Typography variant="subtitle2" color="error.main" fontWeight={600}>Action Required: Spillover Players</Typography>
+              <Typography variant="subtitle2" color="error.main" fontWeight={950} sx={{ letterSpacing: '0.02em' }}>
+                {spilloverValid ? 'Spillover Players Designated' : '⚠ ACTION REQUIRED: DESIGNATE SPILLOVER PLAYERS'}
+              </Typography>
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              You imported {poolTotal} players but only need {required} for all team rosters. You must designate exactly {overflow} players for Manual Sale to balance the draft.
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontWeight: 500 }}>
+              {spilloverValid 
+                ? `You have designated the required ${overflow} spillover players.`
+                : `You have ${poolTotal} active players (inc. ${ownerPlayers.length} owners) but only need ${required} for all team rosters. You must designate exactly ${overflow} regular players for Manual Sale to balance the draft.`
+              }
             </Typography>
             {editingGlobal ? (
               <FormControl size="small" fullWidth error={!spilloverValid}>
@@ -515,7 +539,7 @@ function LeagueSetupTab({ auctionState, onImported }) {
                     const val = e.target.value;
                     setCfg(prev => ({ ...prev, spilloverPlayerIds: typeof val === 'string' ? val.split(',') : val }));
                   }}
-                  renderValue={(selected) => selected.map(sid => auctionState.players?.find(p => p.id === sid)?.name || sid).filter(Boolean).join(', ')}
+                  renderValue={(selected) => (selected || []).map(sid => (auctionState.players || []).find(p => p.id === sid)?.name || sid).filter(Boolean).join(', ')}
                 >
                   {auctionState.players?.filter(p => p.status === 'PENDING' && (!p.extra || p.extra.type?.toLowerCase() !== 'owner')).map(p => (
                     <MenuItem key={p.id} value={p.id}>{p.name} ({p.pool})</MenuItem>
@@ -1100,7 +1124,7 @@ function AuctionControlsTab({
           </Box>
 
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, pt: 0.5, borderTop: '1px solid', borderColor: 'divider' }}>
-            {isSetup && auctionState.lastSoldPlayerId && (() => {
+            {auctionState.lastSoldPlayerId && (() => {
               const lsp = (auctionState.players || []).find(p => p.id === auctionState.lastSoldPlayerId);
               return lsp ? (
                 <Button variant="outlined" size="small" sx={{ borderColor: 'secondary.main', color: 'secondary.main' }} onClick={() => setShowRollbackModal(true)} title={`Rollback: ${lsp.name}`}>

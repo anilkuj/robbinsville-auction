@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
-import { computeMaxBid, formatPts } from '../../utils/budgetCalc.js';
+import { computeTrueMaxBid, formatPts } from '../../utils/budgetCalc.js';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
@@ -19,11 +19,14 @@ import MenuItem from '@mui/material/MenuItem';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 
+
+
 export default function AuctionControls() {
   const { auctionState, adminAction, adminError, clearAdminError, lastEvent } = useAuction();
   const [timer, setTimer] = useState('');
   const [increment, setIncrement] = useState('');
   const [bump, setBump] = useState('');
+  const [ownerMultiplier, setOwnerMultiplier] = useState('');
   const [pendingEndMode, setPendingEndMode] = useState(null);
   const [pendingConfirm, setPendingConfirm] = useState(null);
   const [pendingRandomize, setPendingRandomize] = useState(null);
@@ -60,16 +63,45 @@ export default function AuctionControls() {
   const teamsWithMissingOwner = Object.values(auctionState.teams || {})
     .filter(t => t.ownerIsPlayer && (!t.ownerPlayerIds || t.ownerPlayerIds.length === 0));
   const ownerBlocked = teamsWithMissingOwner.length > 0;
+
+  // Player shortage check
+  const lConfig = auctionState.leagueConfig || { pools: [] };
+  const numTeams = parseInt(lConfig.numTeams) || 10;
+  const squadSize = parseInt(lConfig.squadSize) || 18;
+  const minBid = parseInt(lConfig.minBid) || 1000;
+  const requiredPlayers = numTeams * squadSize;
+  
+  const allPlayers = auctionState.players || [];
+  const activePlayersList = allPlayers.filter(p => p.status !== 'INACTIVE');
+  
+  const ownerPlayers = activePlayersList.filter(p => {
+    if (!p.extra) return false;
+    return Object.entries(p.extra).some(([k, v]) => {
+      const lowK = k?.trim().toLowerCase();
+      const lowV = String(v || '').trim().toLowerCase();
+      return (lowK === 'type' || lowK === 'player_type') && lowV === 'owner';
+    });
+  });
+  
+  const regularPlayersCount = activePlayersList.length - ownerPlayers.length;
+  const playerShortage = activePlayersList.length < requiredPlayers;
+
+  // Spillover validity check
+  const overflow = Math.max(0, activePlayersList.length - requiredPlayers);
+  const selectedSpillovers = lConfig.spilloverPlayerIds || [];
+  const spilloverMismatch = overflow > 0 && selectedSpillovers.length !== overflow;
+  const canStartNext = !ownerBlocked && !playerShortage && !spilloverMismatch;
+
   const isManual = settings.endMode === 'manual';
   const awaitingHammer = isLive && isManual && !timerEndsAt;
 
   const displayEndMode = pendingEndMode ?? settings.endMode;
   const displayConfirm = pendingConfirm ?? settings.requireBidConfirm ?? true;
   const displayRandomize = pendingRandomize ?? settings.randomizePool ?? false;
-  const hasChanges = timer || increment || bump !== '' || pendingEndMode !== null || pendingConfirm !== null || pendingRandomize !== null;
+  const currentOwnerMultiplier = settings.ownerAverageMultiplier ?? 1.5;
+  const hasChanges = timer || increment || bump !== '' || ownerMultiplier !== '' || pendingEndMode !== null || pendingConfirm !== null || pendingRandomize !== null;
 
   // Manual sale derived values
-  const { squadSize, minBid } = auctionState.leagueConfig || {};
   const availableForManualSale = (auctionState.players || [])
     .filter(p => p.status === 'PENDING' || p.status === 'UNSOLD')
     .sort((a, b) => {
@@ -79,7 +111,7 @@ export default function AuctionControls() {
   const teamList = Object.values(auctionState.teams || {}).sort((a, b) => a.name.localeCompare(b.name));
   const selectedTeam = msTeam ? auctionState.teams[msTeam] : null;
   const msMaxBid = selectedTeam
-    ? computeMaxBid(selectedTeam.budget, selectedTeam.roster.length, squadSize || 18, minBid || 1000)
+    ? computeTrueMaxBid(auctionState, msTeam, msPlayer)
     : null;
   const msAmountNum = parseInt(msAmount);
   const msAmountInvalid = msAmount !== '' && (isNaN(msAmountNum) || msAmountNum < 0 || (msMaxBid !== null && msAmountNum > msMaxBid));
@@ -99,17 +131,18 @@ export default function AuctionControls() {
     if (timer && parseInt(timer) > 0) updates.timerSeconds = parseInt(timer);
     if (increment && parseInt(increment) > 0) updates.bidIncrement = parseInt(increment);
     if (bump !== '' && parseInt(bump) >= 0) updates.timerBumpSeconds = parseInt(bump);
+    if (ownerMultiplier !== '' && parseFloat(ownerMultiplier) >= 0) updates.ownerAverageMultiplier = parseFloat(ownerMultiplier);
     if (pendingEndMode !== null) updates.endMode = pendingEndMode;
     if (pendingConfirm !== null) updates.requireBidConfirm = pendingConfirm;
     if (pendingRandomize !== null) updates.randomizePool = pendingRandomize;
     if (Object.keys(updates).length) {
       adminAction('admin:updateSettings', updates);
-      setTimer(''); setIncrement(''); setBump('');
+      setTimer(''); setIncrement(''); setBump(''); setOwnerMultiplier('');
       setPendingEndMode(null); setPendingConfirm(null); setPendingRandomize(null);
     }
   }
 
-  const isFirstPlayer = isSetup && (auctionState.players || []).every(p => p.status === 'PENDING');
+  const isFirstPlayer = isSetup && (auctionState.players || []).length > 0 && (auctionState.players || []).every(p => p.status === 'PENDING');
 
   function handleNextPlayer() {
     if (isFirstPlayer) {
@@ -146,6 +179,15 @@ export default function AuctionControls() {
         </Alert>
       )}
 
+      {spilloverMismatch && isSetup && (
+        <Alert severity="error" sx={{ fontSize: '0.8rem' }}>
+          ⚠ <strong>ACTION REQUIRED: SPILLOVER PLAYERS</strong>: 
+          Roster spots are set to <strong>{squadSize}</strong> ({numTeams} teams × {squadSize} spots = {requiredPlayers} required). 
+          You have <strong>{activePlayersList.length}</strong> active players, so you must designate exactly <strong>{overflow}</strong> spillover players in <strong>League Setup</strong> before proceeding. 
+          (Current selection: {selectedSpillovers.length})
+        </Alert>
+      )}
+
       {/* General admin error banner */}
       {adminError && !showManualSale && (
         <Alert severity="error" onClose={() => clearAdminError()} sx={{ fontSize: '0.8rem' }}>
@@ -155,7 +197,7 @@ export default function AuctionControls() {
 
       {/* Phase action buttons */}
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-        <Button variant="contained" color="success" disabled={!isSetup || ownerBlocked} onClick={handleNextPlayer}>
+        <Button variant="contained" color="success" disabled={!canStartNext} onClick={handleNextPlayer}>
           ▶ Next Player
         </Button>
 
@@ -216,6 +258,10 @@ export default function AuctionControls() {
         <Box>
           <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Increment — current: {settings.bidIncrement?.toLocaleString()}</Typography>
           <TextField size="small" type="number" inputProps={{ min: 100 }} placeholder={String(settings.bidIncrement)} value={increment} onChange={e => setIncrement(e.target.value)} sx={{ width: 90 }} />
+        </Box>
+        <Box>
+          <Typography variant="caption" color="text.disabled" display="block" mb={0.5}>Owner avg rate — current: {currentOwnerMultiplier}x</Typography>
+          <TextField size="small" type="number" inputProps={{ min: 1.0, step: 0.1 }} placeholder={String(currentOwnerMultiplier)} value={ownerMultiplier} onChange={e => setOwnerMultiplier(e.target.value)} sx={{ width: 100 }} />
         </Box>
 
         <Box>

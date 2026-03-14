@@ -6,16 +6,12 @@ const authenticate = require('../middleware/authenticate');
 const requireAdmin = require('../middleware/requireAdmin');
 const { getState, DEFAULT_POOLS } = require('../state');
 const { saveState } = require('../persistence');
-const { getPublicState, clearAuctionTimer, syncOwnerAverages, syncPoolCounts } = require('../auction');
+const { getPublicState, clearAuctionTimer, syncOwnerAverages, isOwner, handlePlayerInactivation, ensureLeagueViability } = require('../auction');
 const config = require('../config');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-function isOwner(player) {
-  if (!player.extra) return false;
-  const typeKey = Object.keys(player.extra).find(k => k.toLowerCase() === 'type' || k.toLowerCase() === 'player_type');
-  return typeKey && String(player.extra[typeKey]).toLowerCase() === 'owner';
-}
+// Local version of isOwner removed because we now import it from auction.js
 
 // Factory: accepts `io` so HTTP routes can broadcast socket events after mutations
 function createAdminRouter(io) {
@@ -93,6 +89,11 @@ function createAdminRouter(io) {
           affectedPools.add(oldPool);
         }
       }
+
+      // Handle inactivation side-effects if status changed to INACTIVE
+      if (player.status === 'INACTIVE' && oldStatus !== 'INACTIVE') {
+        handlePlayerInactivation(state, player);
+      }
     }
 
     // Recalculate owner averages for all affected pools
@@ -100,8 +101,8 @@ function createAdminRouter(io) {
       syncOwnerAverages(state);
     }
 
-    // Recalculate pool counts to keep League Setup in sync
-    syncPoolCounts(state);
+    // Global health check to auto-adjust squad size and sync pools/owners
+    ensureLeagueViability(state);
 
     saveState();
     io.emit('state:full', getPublicState());
@@ -221,13 +222,16 @@ function createAdminRouter(io) {
         };
       });
 
-      // Sort by pool order then average_points (desc) then name
+      // Sort by average points (desc) then name
+      const getAvgPts = (p) => {
+        if (!p.extra) return 0;
+        const key = Object.keys(p.extra).find(k => k.toLowerCase().includes('average_point'));
+        return key ? parseInt(p.extra[key], 10) || 0 : 0;
+      };
+
       players.sort((a, b) => {
-        const ai = poolOrder.indexOf(a.pool);
-        const bi = poolOrder.indexOf(b.pool);
-        if (ai !== bi) return ai - bi;
-        const ap = parseInt(a.extra?.average_points || '0', 10);
-        const bp = parseInt(b.extra?.average_points || '0', 10);
+        const ap = getAvgPts(a);
+        const bp = getAvgPts(b);
         if (ap !== bp) return bp - ap;
         return a.name.localeCompare(b.name);
       });
@@ -284,6 +288,13 @@ function createAdminRouter(io) {
       state.unsoldPlayers = [];
 
       clearAuctionTimer();
+      
+      // Ensure squad size is back to 18 if possible
+      if (state.leagueConfig) {
+        state.leagueConfig.squadSize = 18;
+      }
+      
+      ensureLeagueViability(state);
       saveState();
       io.emit('state:full', getPublicState());
       res.json({
@@ -591,7 +602,16 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
       p.status = 'PENDING';
       p.soldTo = null;
       p.soldFor = null;
+      // Restore base price to pool default
+      if (state.leagueConfig && state.leagueConfig.pools) {
+        const pool = state.leagueConfig.pools.find(pol => pol.id === p.pool);
+        if (pool) p.basePrice = pool.basePrice;
+      }
     });
+
+    if (state.leagueConfig) {
+      state.leagueConfig.spilloverPlayerIds = [];
+    }
 
     for (const team of Object.values(state.teams)) {
       team.budget = state.leagueConfig.startingBudget;
@@ -609,6 +629,7 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
     state.commentary = [];
 
     clearAuctionTimer();
+    ensureLeagueViability(state);
     saveState();
     io.emit('state:full', getPublicState());
     res.json({ message: 'Auction reset successfully', publicState: getPublicState() });
@@ -791,13 +812,93 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
     }
   });
 
+  // Mark player as Inactive
+  router.post('/mark-player-inactive', authenticate, requireAdmin, (req, res) => {
+    const { id } = req.body;
+    const state = getState();
+
+    const playerIndex = state.players.findIndex(p => p.id === id);
+    if (playerIndex === -1) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    const player = state.players[playerIndex];
+
+    if (player.status === 'SOLD') {
+      return res.status(400).json({ error: 'Cannot mark a SOLD player as inactive' });
+    }
+
+    if (state.phase === 'LIVE' && state.currentPlayerIndex === playerIndex) {
+      return res.status(400).json({ error: 'Cannot mark the player currently being auctioned as inactive' });
+    }
+
+    const wasRegular = !isOwner(player) && !(state.leagueConfig.spilloverPlayerIds || []).includes(player.id);
+
+    // Update status
+    player.status = 'INACTIVE';
+    player.soldTo = null;
+    player.soldFor = null;
+
+    handlePlayerInactivation(state, player);
+
+    // Re-ranking logic
+    const getAvgPts = (p) => {
+      if (!p.extra) return 0;
+      const key = Object.keys(p.extra).find(k => k.toLowerCase().includes('average_point'));
+      return key ? parseInt(p.extra[key], 10) || 0 : 0;
+    };
+
+    state.players.sort((a, b) => {
+      // 1. Inactive players always go to the bottom
+      if (a.status === 'INACTIVE' && b.status !== 'INACTIVE') return 1;
+      if (a.status !== 'INACTIVE' && b.status === 'INACTIVE') return -1;
+
+      // 2. Average points (desc)
+      const ap = getAvgPts(a);
+      const bp = getAvgPts(b);
+      if (ap !== bp) return bp - ap;
+
+      // 3. Name (asc)
+      return a.name.localeCompare(b.name);
+    });
+
+    // Update sortOrder
+    state.players.forEach((p, i) => {
+      p.sortOrder = i;
+    });
+
+    // Re-calculate viability after import (auto-adjusts counts)
+    ensureLeagueViability(state);
+    saveState();
+    io.emit('state:full', getPublicState());
+
+    res.json({ message: 'Player marked inactive', publicState: getPublicState() });
+  });
+
+  // Reveal all team passwords and PINS (requires admin password)
+  router.post('/reveal-passwords', authenticate, requireAdmin, (req, res) => {
+    const { password } = req.body;
+    const state = getState();
+
+    if (!password || password !== config.admin.password) {
+      return res.status(401).json({ error: 'Invalid admin password' });
+    }
+
+    const teams = {};
+    for (const [id, team] of Object.entries(state.teams)) {
+      teams[id] = { name: team.name, password: team.password };
+    }
+
+    res.json({
+      teams,
+      dashboardPin: state.settings.dashboardPin,
+      hostPin: state.settings.hostPin
+    });
+  });
+
   // Rollback last sold player — returns them to PENDING, refunds team budget
   router.post('/rollback-last-sale', authenticate, requireAdmin, (req, res) => {
     const state = getState();
-
-    if (state.phase !== 'SETUP') {
-      return res.status(400).json({ error: 'Can only rollback between players (SETUP phase). Mark current player unsold or accept bid first.' });
-    }
 
     if (!state.lastSoldPlayerId) {
       return res.status(400).json({ error: 'No recent sale to rollback' });

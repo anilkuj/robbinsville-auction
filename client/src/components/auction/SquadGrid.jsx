@@ -101,7 +101,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                         }} 
                     />
                 )}
-                {(showPoints && !hidePoints && !player.isVirtualOwner && !player.isPendingOwner) && (
+                {(!hidePoints && !player.isVirtualOwner && !player.isPendingOwner) && (
                     <Typography sx={{ fontWeight: 950, color: 'primary.main', fontSize: minimal ? '0.8rem' : '0.75rem', ml: 'auto' }}>
                         {player.soldFor?.toLocaleString()}
                     </Typography>
@@ -161,7 +161,7 @@ export default function SquadGrid({ teams = {}, players = [], singleTeamId = nul
                             />
                         </Box>
                     )}
-                    {(showPoints && !hidePoints && !player.isVirtualOwner && !player.isPendingOwner) && (
+                    {(!hidePoints && !player.isVirtualOwner && !player.isPendingOwner) && (
                         <Box sx={{ position: 'absolute', right: 12, bottom: 4 }}>
                             <Typography sx={{ fontWeight: 900, color: 'primary.main', fontSize: '1rem', textShadow: '0 0 10px rgba(245, 158, 11, 0.2)' }}>
                                 {player.soldFor?.toLocaleString()}

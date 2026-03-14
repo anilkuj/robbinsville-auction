@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuction } from '../../contexts/AuctionContext.jsx';
 import { useAuth } from '../../contexts/AuthContext.jsx';
-import { computeMaxBid, formatPts } from '../../utils/budgetCalc.js';
+import { computeTrueMaxBid, computeMaxBid, formatPts } from '../../utils/budgetCalc.js';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -53,19 +53,28 @@ export default function BidButton() {
   const { currentBid, timerPaused } = auctionState;
 
   const minNextBid = currentBid.teamId === null ? player.basePrice : currentBid.amount + bidIncrement;
-  const maxBid = computeMaxBid(team.budget, team.roster.length, squadSize, minBid);
+  const maxBid = computeTrueMaxBid(auctionState, user.teamId, player.id);
   const minPlayerCost = pools?.length ? Math.min(...pools.map(p => p.basePrice)) : minBid;
 
   const isLeading = currentBid.teamId === user.teamId;
   const rosterFull = team.roster.length >= squadSize;
   const cantAfford = minNextBid > maxBid;
+  
+  // Calculate traditional max to see if we are getting throttled by dynamic dummy prices
+  const traditionalMaxBid = computeMaxBid(team.budget, team.roster.length, squadSize, minBid);
+  const isDynamicallyRestricted = maxBid < traditionalMaxBid;
+
   const disabled = timerPaused || isLeading || rosterFull || cantAfford;
 
   let disabledReason = '';
   if (timerPaused) disabledReason = 'Auction paused';
   else if (isLeading) disabledReason = 'You are leading';
   else if (rosterFull) disabledReason = 'Squad full';
-  else if (cantAfford) disabledReason = `Max: ${formatPts(maxBid)}`;
+  else if (cantAfford) {
+    disabledReason = isDynamicallyRestricted 
+      ? `Average Price Limit: ${formatPts(maxBid)}`
+      : `Max: ${formatPts(maxBid)}`;
+  }
 
   const effectiveBid = preparedBid !== null && preparedBid >= minNextBid ? preparedBid : minNextBid;
 
@@ -76,7 +85,11 @@ export default function BidButton() {
   if (preparedBid !== null) {
     if (preparedBid < minNextBid) customError = `Min bid is ${formatPts(minNextBid)}`;
     else if (preparedBid > maxAffordable) customError = `Max bid is ${formatPts(maxAffordable)} — must keep ${formatPts(slotsAfterThis * minPlayerCost)} for ${slotsAfterThis} remaining player${slotsAfterThis !== 1 ? 's' : ''}`;
-    else if (preparedBid > maxBid) customError = `Max bid is ${formatPts(maxBid)}`;
+    else if (preparedBid > maxBid) {
+      customError = isDynamicallyRestricted
+        ? `Max bid is ${formatPts(maxBid)} (restricted by projecting your owner average price increase)`
+        : `Max bid is ${formatPts(maxBid)}`;
+    }
   }
 
   function handleIncrement(delta) {
@@ -174,8 +187,8 @@ export default function BidButton() {
               <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                 MIN: {formatPts(minNextBid)}
               </Typography>
-              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                MAX: {formatPts(maxBid)}
+              <Typography variant="caption" color="text.disabled" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }} title={isDynamicallyRestricted ? `Restricted because bidding higher would increase your own owner average price, causing your team to drop below the minimum budget required for your squad.` : "Maximum affordable bid"}>
+                MAX: {formatPts(maxBid)} {isDynamicallyRestricted && '⚠'}
               </Typography>
             </Box>
           </Box>
@@ -183,7 +196,7 @@ export default function BidButton() {
 
         <Box sx={{ minHeight: { xs: 20, sm: 42 }, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
           {customError && (
-            <Typography variant="caption" color="error" sx={{ fontWeight: 700, lineHeight: 1.1 }}>
+            <Typography variant="caption" sx={{ color: '#ff6b6b', fontWeight: 800, lineHeight: 1.1, textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}>
               {customError}
             </Typography>
           )}

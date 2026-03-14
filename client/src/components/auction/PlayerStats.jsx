@@ -9,7 +9,7 @@ export default function PlayerStats({ players }) {
 
     const sold = players.filter(p => p.status === 'SOLD').length;
     const unsold = players.filter(p => p.status === 'UNSOLD').length;
-    const remaining = players.filter(p => !['SOLD', 'UNSOLD'].includes(p.status)).length;
+    const remaining = players.filter(p => p.status === 'PENDING').length;
 
     const StatItem = ({ label, count, color }) => (
         <Box sx={{ 

@@ -30,6 +30,8 @@ import Paper from '@mui/material/Paper';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import Alert from '@mui/material/Alert';
+import AlertTitle from '@mui/material/AlertTitle';
+import Avatar from '@mui/material/Avatar';
 import Chip from '@mui/material/Chip';
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
@@ -1582,6 +1584,7 @@ function RollbackModal({ auctionState, onClose }) {
 function ImportStateModal({ importedState: s, onClose }) {
   const [password, setPassword] = useState('');
   const [storagePref, setStoragePref] = useState('local');
+  const [recalculateRanking, setRecalculateRanking] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
@@ -1598,7 +1601,7 @@ function ImportStateModal({ importedState: s, onClose }) {
   async function handleImport() {
     setError(''); setLoading(true);
     try {
-      await axios.post('/api/admin/import-state', { password, state: s, storagePreference: storagePref });
+      await axios.post('/api/admin/import-state', { password, state: s, storagePreference: storagePref, recalculateRanking });
       setDone(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Import failed');
@@ -1640,6 +1643,18 @@ function ImportStateModal({ importedState: s, onClose }) {
             <TextField type="password" label="Admin password" value={password} onChange={e => setPassword(e.target.value)} onKeyDown={e => e.key === 'Enter' && password && handleImport()} autoFocus error={!!error} helperText={error} size="small" fullWidth />
 
             <StoragePreferenceSelector value={storagePref} onChange={setStoragePref} />
+            <Box sx={{ mt: 1 }}>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={recalculateRanking}
+                    onChange={(e) => setRecalculateRanking(e.target.checked)}
+                    size="small"
+                  />
+                }
+                label={<Typography variant="body2">Recalculate Player Ranking on Import</Typography>}
+              />
+            </Box>
           </>
         )}
       </DialogContent>

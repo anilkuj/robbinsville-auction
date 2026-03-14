@@ -943,7 +943,7 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
 
   // Import full state from a previously exported JSON backup
   router.post('/import-state', authenticate, requireAdmin, (req, res) => {
-    const { password, state: s, storagePreference } = req.body;
+    const { password, state: s, storagePreference, recalculateRanking = false } = req.body;
 
     if (!password || password !== config.admin.password) {
       return res.status(401).json({ error: 'Invalid admin password' });
@@ -968,6 +968,22 @@ router.post('/league-config', authenticate, requireAdmin, (req, res) => {
     }
 
     state.players = s.players;
+
+    // Enforce descending sort by Average Points only if explicitly requested
+    if (recalculateRanking) {
+      const getAvgPts = (p) => {
+        if (!p.extra) return 0;
+        const key = Object.keys(p.extra).find(k => k.toLowerCase().includes('average_point'));
+        return key ? parseInt(p.extra[key], 10) || 0 : 0;
+      };
+      state.players.sort((a, b) => {
+        const ap = getAvgPts(a);
+        const bp = getAvgPts(b);
+        if (ap !== bp) return bp - ap;
+        return a?.name?.localeCompare(b?.name || '') || 0;
+      });
+      state.players.forEach((p, i) => { p.sortOrder = i; });
+    }
     state.teams = s.teams;
     state.currentPlayerIndex = s.currentPlayerIndex ?? null;
     state.currentBid = s.currentBid || { amount: 0, teamId: null, history: [] };
